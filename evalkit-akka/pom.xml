@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+      The SDK parent rather than evalkit's own. The TestKit expects the build
+      configuration it supplies, and inheriting a sibling instead produced a runtime
+      that could not read its own config. evalkit-core deliberately has no parent at
+      all, which is why the aggregator is only an aggregator.
+    -->
+    <parent>
+        <groupId>io.akka</groupId>
+        <artifactId>akka-javasdk-parent</artifactId>
+        <version>3.6.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.akka.evalkit</groupId>
+    <artifactId>evalkit-akka</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>evalkit-akka</name>
+    <description>Durable campaigns and a model judge, for services built on the Akka SDK.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.akka.evalkit</groupId>
+            <artifactId>evalkit-core</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.akka</groupId>
+            <artifactId>akka-javasdk</artifactId>
+            <version>3.6.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.akka</groupId>
+            <artifactId>akka-javasdk-testkit</artifactId>
+            <version>3.6.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.24.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,101 @@
+package io.akka.evalkit.application;
+
+import io.akka.evalkit.domain.RunOutcome;
+import akka.javasdk.agent.Agent;
+import akka.javasdk.agent.EvaluationResult;
+import akka.javasdk.agent.MemoryProvider;
+import akka.javasdk.annotations.AgentRole;
+import akka.javasdk.annotations.Component;
+import io.akka.evalkit.domain.Band;
+import io.akka.evalkit.domain.Rubric;
+import io.akka.evalkit.domain.Transcript;
+import io.akka.evalkit.domain.Verdict;
+
+/**
+ * Scores a finished transcript against an expected outcome.
+ *
+ * <p>The prompt is not in this class. It is loaded from {@code rubrics/} and passed in, so
+ * that the judge is the mechanism and the rubric is the data &mdash; see {@link Rubric}
+ * for why that separation is what makes a score interpretable later.
+ *
+ * <p><b>Memory is off.</b> Judging is per-transcript and independent; a judge that
+ * remembered the last twenty scenarios would drift toward its own recent scores, and two
+ * campaigns run in a different order would disagree for no reason connected to the
+ * systems being judged.
+ *
+ * <p><b>The rubric is used verbatim.</b> It asks for "a single value from 1 to 10" and
+ * nothing else, so this asks for nothing else &mdash; no rationale field, no structured
+ * schema. Adding either would change the model's task and break comparability with the
+ * scores already recorded under this rubric. A rationale-producing judge is a legitimate
+ * thing to want; it is a new rubric version, not a tweak to this one.
+ */
+@Component(
+    id = "scenario-judge",
+    name = "Scenario Judge",
+    description = """
+        Measures how well a recorded conversation matches its expected outcome, \
+        returning a score from 1 to 10.""")
+@AgentRole("evaluator")
+public class ScenarioJudge extends Agent {
+
+    /** A transcript plus the rubric to judge it by. */
+    public record JudgeRequest(Transcript transcript, Rubric rubric) {}
+
+    /**
+     * @param explanation why this passed or failed, for traces
+     * @param passed      only {@link Band#FAITHFUL} counts — see {@link Band#passed()}
+     */
+    public record Result(String explanation, boolean passed, int score, Band band)
+        implements EvaluationResult {}
+
+    public Effect<Result> judge(JudgeRequest request) {
+        if (request == null || request.transcript() == null || request.rubric() == null) {
+            return effects().error("a transcript and a rubric are required");
+        }
+
+        return effects()
+            .systemMessage(request.rubric().instructions())
+            .memory(MemoryProvider.none())
+            .userMessage(request.rubric().data(request.transcript()))
+            .map(reply -> toResult(reply, request))
+            .thenReply();
+    }
+
+    private static Result toResult(String reply, JudgeRequest request) {
+        var parsed = Verdict.parseScore(reply);
+        if (parsed.isEmpty()) {
+            // Not a failing score — an absent one. Defaulting would fabricate a judgement
+            // and quietly move a campaign's band distribution.
+            throw new IllegalStateException(
+                "judge returned no score for " + request.transcript().scenarioName()
+                    + ": " + abbreviate(reply));
+        }
+        int score = parsed.get();
+        var band = Band.of(score);
+        return new Result(
+            band + " (" + score + "/10) under " + request.rubric().label(),
+            band.passed(), score, band);
+    }
+
+    private static String abbreviate(String reply) {
+        if (reply == null) return "<null>";
+        return reply.length() <= 120 ? reply : reply.substring(0, 120) + "…";
+    }
+
+    /**
+     * This judge, as the runner's {@link CampaignRunner.Judge}.
+     *
+     * <p>Here rather than in the runner because the runner is the half of this kit that
+     * has no runtime: it schedules lanes, counts outcomes and decides what a campaign may
+     * claim, none of which needs an SDK. Knowing about an Agent would have put one in the
+     * dependency list of every project that only wanted to score a corpus.
+     */
+    public static CampaignRunner.Judge asJudge(
+            java.util.function.BiFunction<Transcript, Rubric, Result> invoke) {
+        return (transcript, rubric) -> {
+            var result = invoke.apply(transcript, rubric);
+            return new RunOutcome.Scored(Verdict.of(
+                transcript.scenarioName(), rubric, result.score(), result.explanation()));
+        };
+    }
+}

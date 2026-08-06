@@ -1,0 +1,49 @@
+package io.akka.evalkit.domain;
+
+import java.util.Optional;
+
+/**
+ * One thing to test: get the system into a state, say something, expect something.
+ *
+ * <p>The reusable part of a Reference row. A run of a scenario carries a transcript, a score
+ * and a session id; the scenario itself is only the three fields below plus how to reach
+ * the state &mdash; which is why a report of past runs can still yield a suite.
+ *
+ * @param specNode the requirement this exercises, when it names one. Present for 510 of
+ *                 the 514 claim-flow scenarios and for none of the FAQ ones, which is the
+ *                 signal used to decide whether a judge is needed at all
+ */
+public record Scenario(String id,
+                       Optional<String> specNode,
+                       Precursor precursor,
+                       String gradedTurn,
+                       String expectedOutcome) {
+
+    public Scenario {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("scenario id required");
+        if (gradedTurn == null || gradedTurn.isBlank()) {
+            throw new IllegalArgumentException("scenario " + id + " has nothing to say");
+        }
+        if (expectedOutcome == null || expectedOutcome.isBlank()) {
+            throw new IllegalArgumentException("scenario " + id + " expects nothing");
+        }
+        specNode = specNode == null ? Optional.empty() : specNode;
+        if (precursor == null) precursor = new Precursor.None();
+    }
+
+    /**
+     * Whether a model has to judge this, or code can assert it.
+     *
+     * <p>A scenario naming a spec node is exercising a decision that is a pure function
+     * here. Judging one is waste that adds variance: it either produced the expected
+     * outcome or it did not.
+     */
+    public boolean needsJudge() {
+        return specNode.isEmpty();
+    }
+
+    /** The same scenario, reached a different way. */
+    public Scenario via(Precursor other) {
+        return new Scenario(id, specNode, other, gradedTurn, expectedOutcome);
+    }
+}

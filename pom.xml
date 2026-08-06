@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.akka.evalkit</groupId>
+    <artifactId>evalkit-aggregator</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>evalkit</name>
+    <description>Replay, seed and score evaluation harness for conversational services</description>
+
+    <!--
+      Two modules, because the split is real rather than tidy. Everything that
+      decides what a run may claim is ordinary Java and depends on nothing: a
+      service written in another language, behind an HTTP port, can be evaluated
+      by implementing one interface. Only durable campaigns and the judge itself
+      need a runtime, and those are the second module.
+
+      A harness that demanded a particular SDK before it would score anything
+      would be a harness for one company's services.
+
+      This file aggregates and nothing else. It is not the parent of either module:
+      evalkit-core has no parent because it has no dependencies to manage, and
+      evalkit-akka inherits the SDK's parent because its TestKit needs the build
+      that supplies.
+    -->
+    <modules>
+        <module>evalkit-core</module>
+        <module>evalkit-akka</module>
+    </modules>
+
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!--
+                  Pinned rather than defaulted so the build is reproducible. 2.22.2 is
+                  what this machine has cached; raise it once the project builds against
+                  a repository rather than an offline mirror.
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.22.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>
