@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>evalkit compared with DeepEval</title>
+<style>
+  /* Akka brand palette. Single theme by design: black is the primary background and
+     every colour below carries a defined role. */
+  :root {
+    --black:      #000000;
+    --black-med:  #141414;
+    --white:      #F1F1F1;
+    --yellow:     #FFCE4A;
+    --blue:       #00DBDD;
+    --red:        #FF5400;
+    --green:      #72D35B;
+    --grey-soft:  #A6A6A6;
+    --grey-med:   #4E4E4E;
+    --rule:       #4E4E4E;
+
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 1160px; margin: 0 auto; padding: 0 24px 88px; }
+
+  /* ---- masthead ---- */
+
+  .masthead {
+    padding: 56px 0 30px;
+    border-bottom: 1px solid var(--rule);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.17em;
+    text-transform: uppercase; color: var(--yellow);
+  }
+  .masthead h1 {
+    margin: 0;
+    font-size: clamp(31px, 4.6vw, 47px);
+    font-weight: 620; letter-spacing: -0.022em; line-height: 1.08;
+    text-wrap: balance; color: var(--white);
+  }
+  .hero {
+    margin: 0; max-width: 60ch; font-size: 20px; line-height: 1.5;
+    color: var(--yellow); font-weight: 400;
+  }
+  .hero b { color: var(--white); font-weight: 620; }
+  .capsule { margin: 0; max-width: 68ch; color: var(--grey-soft); font-size: 16px; }
+  .byline {
+    font-size: 12.5px; color: var(--grey-med);
+    display: flex; flex-wrap: wrap; gap: 6px 22px;
+  }
+
+  /* ---- layout ---- */
+
+  .body-grid { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 1060px) {
+    .body-grid { grid-template-columns: 196px minmax(0, 1fr); gap: 56px; align-items: start; }
+  }
+
+  nav.index { padding: 32px 0 0; font-size: 13px; }
+  @media (min-width: 1060px) { nav.index { position: sticky; top: 24px; } }
+  nav.index h2 {
+    margin: 0 0 13px; font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.17em; text-transform: uppercase; color: var(--grey-med);
+  }
+  nav.index ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  nav.index a {
+    color: var(--grey-soft); text-decoration: none; display: block; line-height: 1.35;
+    border-left: 1px solid var(--rule); padding-left: 12px;
+  }
+  nav.index a:hover, nav.index a:focus-visible { color: var(--blue); border-left-color: var(--blue); }
+
+  main { min-width: 0; padding-top: 14px; }
+  section { padding: 42px 0 10px; }
+  section + section { border-top: 1px solid var(--rule); }
+
+  h2.sec {
+    margin: 0 0 14px; font-size: clamp(21px, 2.5vw, 27px); font-weight: 620;
+    letter-spacing: -0.014em; line-height: 1.22; text-wrap: balance; color: var(--white);
+  }
+  .answer { margin: 0 0 26px; max-width: 68ch; color: var(--yellow); font-size: 16.5px; }
+  h3 { margin: 34px 0 10px; font-size: 16px; font-weight: 620; color: var(--white); letter-spacing: -0.004em; }
+  h4 {
+    margin: 26px 0 9px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--grey-med);
+  }
+
+  p { margin: 0 0 15px; max-width: 70ch; }
+  main ul, main ol { max-width: 70ch; margin: 0 0 15px; padding-left: 21px; }
+  main li { margin-bottom: 8px; }
+  main li::marker { color: var(--grey-med); }
+
+  a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  strong { font-weight: 620; color: var(--yellow); }
+  code {
+    font-family: var(--mono); font-size: 0.86em;
+    background: var(--black-med); color: var(--white);
+    padding: 1.5px 5px; border-radius: 2px;
+  }
+
+  pre {
+    font-family: var(--mono); font-size: 12.8px; line-height: 1.62;
+    background: var(--black-med); color: var(--white);
+    border: 1px solid var(--rule); padding: 17px 19px;
+    overflow-x: auto; margin: 0 0 19px; tab-size: 2;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .c { color: var(--grey-med); }
+  pre .k { color: var(--yellow); }
+
+  /* ---- tables ---- */
+
+  .table-wrap { overflow-x: auto; margin: 0 0 22px; background: var(--black-med); border: 1px solid var(--rule); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.5; }
+  th {
+    text-align: left; font-weight: 600; font-size: 10.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--grey-soft);
+    padding: 12px 15px; border-bottom: 1px solid var(--rule); white-space: nowrap;
+  }
+  td { padding: 13px 15px; border-bottom: 1px solid var(--rule); vertical-align: top; color: var(--white); }
+  tr:last-child td { border-bottom: none; }
+  td.lbl {
+    color: var(--grey-soft); font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.11em; text-transform: uppercase; white-space: nowrap;
+  }
+  td.rival { color: var(--red); }
+  td.akka  { color: var(--green); }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th.rival-col, th.akka-col { color: var(--white); }
+
+  /* ---- note block ---- */
+
+  .note {
+    background: var(--black-med); border: 1px solid var(--rule);
+    padding: 18px 20px; margin: 0 0 22px; max-width: 72ch;
+  }
+  .note h4 { margin: 0 0 8px; color: var(--yellow); }
+  .note p:last-child { margin-bottom: 0; }
+
+  /* ---- file tree ---- */
+
+  .tree {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.78;
+    background: var(--black-med); border: 1px solid var(--rule);
+    padding: 19px 21px; overflow-x: auto; margin: 0 0 19px;
+    color: var(--white); white-space: pre;
+  }
+  .tree b { color: var(--yellow); font-weight: 500; }
+  .tree i { color: var(--grey-med); font-style: normal; }
+
+  ol.protocol { list-style: none; padding: 0; counter-reset: step; max-width: 72ch; }
+  ol.protocol > li { counter-increment: step; position: relative; padding-left: 42px; margin-bottom: 20px; }
+  ol.protocol > li::before {
+    content: counter(step); position: absolute; left: 0; top: 0;
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    color: var(--black); background: var(--yellow); padding: 2px 9px; border-radius: 2px;
+  }
+  ol.protocol h3 { margin: 0 0 5px; }
+
+  footer {
+    margin-top: 54px; padding-top: 22px; border-top: 1px solid var(--rule);
+    font-size: 12.5px; color: var(--grey-med); max-width: 72ch;
+  }
+  footer a { color: var(--blue); }
+
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="masthead">
+    <span class="eyebrow">Akka evalkit &middot; competitive analysis</span>
+    <h1>evalkit compared with DeepEval</h1>
+    <p class="hero"><b>510 of the 514 claim-flow scenarios name a specification node</b>, and evalkit settles every one of them without calling a model.</p>
+    <p class="capsule">This analysis places an eval tree in an Akka Maven project, describes how DeepEval is built, assesses which parts can be ported under its Apache 2.0 licence, and specifies how to measure the two harnesses against each other. Figures come from the evalkit repository and from DeepEval's published documentation.</p>
+    <div class="byline">
+      <span>evalkit at commit 9a0260c</span>
+      <span>DeepEval, Apache 2.0, maintained by Confident AI</span>
+      <span>8 August 2026</span>
+    </div>
+  </header>
+
+  <div class="body-grid">
+
+    <nav class="index">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#structure">Source root placement</a></li>
+        <li><a href="#teardown">How DeepEval is built</a></li>
+        <li><a href="#contract">The metric contract</a></li>
+        <li><a href="#runtime">What the runtime adds</a></li>
+        <li><a href="#semantics">A JUnit authoring surface</a></li>
+        <li><a href="#port">Porting under Apache 2.0</a></li>
+        <li><a href="#perf">Measuring the difference</a></li>
+        <li><a href="#limits">Standing of these figures</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <!-- ================= 1 ================= -->
+      <section id="structure">
+        <h2 class="sec">The eval tree is a separate Maven source root</h2>
+        <p class="answer">Evals cost provider spend and run for minutes to hours, so they must not execute on <code>mvn test</code>. A source root at <code>src/eval/java</code>, added only under a Maven profile, does not compile on a normal build. Placing the same code under <code>src/test/java</code> puts an exclusion pattern between a pull request and a provider bill.</p>
+
+        <p>The proposed folders map onto types that already exist. <code>dataset/</code> holds <code>ScenarioSource</code>, <code>Scenario</code> and <code>Precursor</code>. <code>runner/</code> holds <code>CampaignPlan</code>, <code>CampaignRunner</code>, <code>Lanes</code> and the <code>SystemUnderTest</code> adapter. <code>scorer/</code> holds everything that turns a transcript into a <code>RunOutcome</code>. <code>reports/</code> holds <code>CampaignReport</code> and <code>RunSummary</code>. The layout makes the existing seams visible and moves no responsibility.</p>
+
+        <p>Surefire runs <code>**/*Test.java</code> under the test source root by default. Code placed there is compiled by <code>testCompile</code> whether or not it is meant to run, so the safeguard against an accidental campaign is a Surefire exclusion or a JUnit tag. evalkit already carries a rule that a suppression list may only shrink, and a reachability audit in this repository passed for nine development stages while examining an empty search space. A separate source root removes the suppression instead of maintaining it.</p>
+
+        <div class="tree"><b>&lt;service&gt;/</b>
+├── pom.xml               <i>build-helper adds src/eval under the `eval` profile</i>
+├── <b>specs/</b>
+│   └── refund-policy/
+│       ├── spec.md       <i>acceptance criteria, the source of truth for spec nodes</i>
+│       ├── plan.md
+│       └── tasks.md
+├── <b>src/</b>
+│   ├── main/java/…       <i>the service</i>
+│   ├── test/java/…       <i>unit and integration tests, run on every commit</i>
+│   └── <b>eval/</b>
+│       ├── java/com/acme/evalkit/
+│       │   ├── <b>dataset/</b>    <i>ScenarioSource implementations, corpus loaders</i>
+│       │   ├── <b>runner/</b>     <i>SystemUnderTest adapter, fixtures, lane configuration</i>
+│       │   ├── <b>scorer/</b>
+│       │   │   ├── <b>deterministic/</b>  <i>node match, exact match, schema, tool-call assertions</i>
+│       │   │   ├── <b>heuristic/</b>      <i>similarity, JSON validity, latency and token budgets</i>
+│       │   │   └── <b>agentic/</b>        <i>judge agents, panels, calibration</i>
+│       │   └── <b>reports/</b>    <i>renderers and baseline comparison</i>
+│       └── resources/
+│           ├── datasets/*.jsonl
+│           ├── rubrics/*.txt          <i>versioned, never edited in place</i>
+│           └── baselines/*.json       <i>prior runs, for band movement</i>
+└── target/evalkit/       <i>rendered reports and transcripts, gitignored</i></div>
+
+        <div class="note">
+          <h4>A rendered report is build output</h4>
+          <p><code>reports/</code> holds renderers. A rendered report belongs in <code>target/</code>. A prior run kept so a new run can be compared against it is an input, and it belongs in <code>resources/baselines/</code> under version control.</p>
+        </div>
+
+        <h3>The profile keeps evals off the normal build</h3>
+        <pre><code>&lt;profile&gt;
+  &lt;id&gt;eval&lt;/id&gt;
+  &lt;build&gt;&lt;plugins&gt;
+    &lt;plugin&gt;
+      &lt;groupId&gt;org.codehaus.mojo&lt;/groupId&gt;
+      &lt;artifactId&gt;build-helper-maven-plugin&lt;/artifactId&gt;
+      &lt;executions&gt;&lt;execution&gt;
+        &lt;phase&gt;generate-test-sources&lt;/phase&gt;
+        &lt;goals&gt;&lt;goal&gt;add-test-source&lt;/goal&gt;&lt;/goals&gt;
+        &lt;configuration&gt;&lt;sources&gt;&lt;source&gt;src/eval/java&lt;/source&gt;&lt;/sources&gt;&lt;/configuration&gt;
+      &lt;/execution&gt;&lt;/executions&gt;
+    &lt;/plugin&gt;
+  &lt;/plugins&gt;&lt;/build&gt;
+&lt;/profile&gt;</code></pre>
+        <p>Campaigns run with <code>mvn -Peval verify</code>. The root is added as a test source so the Akka TestKit and JUnit remain on the classpath without a second dependency block.</p>
+
+        <h3>Akka Specify supplies the specification a scenario points at</h3>
+        <p><code>Scenario.specNode()</code> holds a pointer into a specification, and in an Akka Specify project <code>spec.md</code> is that specification.</p>
+        <p>Datasets derive from acceptance criteria instead of being written beside them, so a scenario cannot drift from the requirement it claims to exercise. Coverage becomes a computed figure, because a spec node with no scenario appears as a report line. <code>SystemUnderTest.emittableNodes()</code> can be checked against the spec at plan time, which is the check that would have refused the forty payment scenarios aimed at a conversation emitting a different node set.</p>
+        <p>The coverage figure needs the guard every audit in this repository needs. A check that can pass by finding nothing requires a case it is known to catch.</p>
+        <p>An <code>/akka:eval</code> step scaffolds <code>src/eval/</code> from an approved spec, in the same position <code>/akka:tasks</code> occupies for work items.</p>
+
+        <h3>The eval tree does not use the service package convention</h3>
+        <p>An eval source root declares no endpoints and registers no components, so the <code>domain/application/api</code> convention would produce four near-empty <code>domain</code> packages. The evalkit library keeps that convention. The consuming project's eval tree is organised by function.</p>
+      </section>
+
+      <!-- ================= 2 ================= -->
+      <section id="teardown">
+        <h2 class="sec">DeepEval scores a finished input and output pair</h2>
+        <p class="answer">DeepEval is an open-source Python framework maintained by Confident AI, reporting more than 400,000 monthly downloads and more than 50 metrics. A test case carries an input, an actual output and optional expected output and retrieval context. A metric implements <code>measure()</code>, which sets a score between 0 and 1, a reason, and a pass flag against a threshold that defaults to 0.5.</p>
+
+        <pre><code>test_case = LLMTestCase(
+    input="What if these shoes don't fit?",
+    actual_output="You have 30 days to get a full refund at no extra cost.",
+    expected_output="We offer a 30-day full refund at no extra costs.",
+    retrieval_context=["All customers are eligible for a 30 day full refund…"])
+
+correctness = GEval(name="Correctness", criteria="…", threshold=0.5,
+                    evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT,
+                                       SingleTurnParams.EXPECTED_OUTPUT])
+
+assert_test(test_case, [correctness])        <span class="c"># inside pytest</span>
+evaluate([test_case], [correctness])         <span class="c"># standalone</span>
+for golden in dataset.evals_iterator(metrics=[correctness]): …</code></pre>
+
+        <p>The pytest entry point places evals in the test suite, runs them with the test runner, and fails a build on a failing metric. That entry point accounts for much of DeepEval's adoption and nothing about it requires Python. Section 5 reproduces the entry point in JUnit and changes when execution happens.</p>
+
+        <h3>G-Eval generates its own evaluation steps and weights the score by token probability</h3>
+        <p>Given a <code>criteria</code> string with no <code>evaluation_steps</code> supplied, G-Eval first generates the steps by chain-of-thought prompting. G-Eval then scores between 1 and 5, takes the probabilities of the output tokens, and uses their weighted summation as the score, divided to a 0 to 1 scale. The weighting requires a provider that exposes token probabilities, and DeepEval falls back to plain scoring for custom models.</p>
+
+        <h3>The DAG metric fixes the score and lets the model choose the branch</h3>
+        <p>A DAG metric is a decision tree built from three node types. <code>TaskNode</code> extracts structured evidence and assigns no score. <code>BinaryJudgementNode</code> and <code>NonBinaryJudgementNode</code> classify evidence and branch on the result. Every path terminates at a verdict registered with <code>add_verdict()</code>, and the score attached to that verdict is fixed in code.</p>
+
+        <pre><code>correctness = BinaryJudgementNode(
+    criteria="Is the actual output correct for the input?",
+    evaluation_params=[SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT])
+correctness.add_verdict(verdict=True,  score=10)
+correctness.add_verdict(verdict=False, score=0)
+
+metric = DAGMetric(name="Correctness",
+                   dag=DeepAcyclicGraph(root_nodes=[correctness]))</code></pre>
+
+        <p>The DAG metric is the closest construction in the DeepEval library to the routing evalkit performs in <code>Scenario.needsJudge()</code>. The DAG metric reduces the model calls a scored case costs, and section 6 recommends taking it.</p>
+
+        <h3>DeepEval ships metrics for RAG, agents, multi-turn conversation and safety</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Area</th><th>Contents</th></tr></thead>
+          <tbody>
+            <tr><td class="lbl">RAG</td><td>Answer Relevancy, Faithfulness, Contextual Precision, Contextual Recall, Contextual Relevancy, RAGAS</td></tr>
+            <tr><td class="lbl">Agentic</td><td>Task Completion, Tool Correctness, Argument Correctness, Goal Accuracy, Plan Adherence, Plan Quality, Step Efficiency, Tool Use</td></tr>
+            <tr><td class="lbl">Multi-turn</td><td>Knowledge Retention, Conversation Completeness, Turn Relevancy, Turn Faithfulness, Role Adherence</td></tr>
+            <tr><td class="lbl">Safety and format</td><td>Hallucination, Bias, Toxicity, Summarization, JSON Correctness, Prompt Alignment</td></tr>
+            <tr><td class="lbl">Model benchmarks</td><td>MMLU, HellaSwag, DROP, BIG-Bench Hard, TruthfulQA, HumanEval, GSM8K</td></tr>
+            <tr><td class="lbl">Execution</td><td><code>AsyncConfig(run_async=True, throttle_value=0, max_concurrent=20)</code>, <code>CacheConfig(use_cache=False, write_cache=True)</code>, <code>ErrorConfig(ignore_errors=False, skip_on_missing_params=False)</code></td></tr>
+            <tr><td class="lbl">Tracing</td><td>An <code>@observe()</code> decorator for component-level evaluation, with callback integrations for the common Python agent frameworks</td></tr>
+          </tbody>
+        </table></div>
+        <p>The Python framework integrations are the part evalkit will not match. A team already writing agents in Python installs a DeepEval callback and starts evaluating the same afternoon.</p>
+      </section>
+
+      <!-- ================= 3 ================= -->
+      <section id="contract">
+        <h2 class="sec">The metric contract returns a float, so an unscoreable run has no representation</h2>
+        <p class="answer">A DeepEval metric produces a score or raises. The documented handling for a judge that refuses or returns unparseable output is <code>ErrorConfig(ignore_errors=True)</code>, and for a case missing a field, <code>skip_on_missing_params=True</code>. Both remove the run from the result set. evalkit names the missing result and keeps it in the report.</p>
+
+        <p>A content filter refused to score a <code>GenUC-02</code> identification-failure transcript during calibration of this kit. Dropping that run would have raised the reported agreement between the judge and the human reviewer above the figure the run earned. <code>RunOutcome</code> is a sealed interface with four variants, and two of the four are not verdicts on the system under test.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Outcome</th><th>Meaning</th><th>Counted</th></tr></thead>
+          <tbody>
+            <tr><td class="lbl akka">Scored</td><td>A judge read the reply and gave it a score</td><td class="akka">Yes</td></tr>
+            <tr><td class="lbl akka">Asserted</td><td>The reply was compared against a stated answer, with no model involved</td><td class="akka">Yes</td></tr>
+            <tr><td class="lbl">NotReached</td><td>The setup failed, or the service sent nothing back</td><td>No</td></tr>
+            <tr><td class="lbl">Unscoreable</td><td>The judge timed out, refused, or returned something unreadable</td><td>No</td></tr>
+          </tbody>
+        </table></div>
+
+        <p>The switches over these variants are exhaustive and carry no <code>default</code>, so a fifth outcome is a compile error at every site that must handle it. Python offers no equivalent enforcement. A Python author adding a fifth outcome finds the call sites by search, and a missed site returns the old shape at runtime.</p>
+
+        <h3>A criteria string carries no version, so scores change meaning silently</h3>
+        <p>Editing a <code>criteria=</code> string in DeepEval changes what every subsequent score means, and nothing records that the change happened. Scores taken before and after the edit are not commensurable and look identical in a report.</p>
+        <p>evalkit loads <code>Rubric(id, version, prompt)</code> from <code>resources/rubrics/</code>, stamps the id and version onto every <code>Verdict</code>, and throws from <code>Scoring.compare</code> when two verdict sets carry different rubric versions. Comparing across versions attributes a change in the rubric to the service being measured.</p>
+
+        <h3>A continuous score invites an average the corpus does not support</h3>
+        <p>Identical runs of this corpus scored 7, 8, 9 and 10 on the same as-specified scenarios. Measured agreement between the judge and an independent reviewer is 89 to 91 percent on clear-cut replies and 53 percent on borderline ones. A mean over scores that unstable describes the judge.</p>
+        <p><code>Scoring</code> works in bands and reports movement between them. The middle band counts as undecided, because at 53 percent agreement a pass would be an invented result.</p>
+
+        <h3>A DeepEval run spends before it discovers an unsatisfiable case</h3>
+        <p>DeepEval discovers a broken case when that case executes. <code>CampaignPlan.check</code> validates that the target can build every named fixture and emit every asserted node before the first call goes out. Forty payment scenarios once ran against a conversation that emits a different node set, failed on every fixture and every run, and read as forty product defects. <code>CampaignPlan.check</code> refuses the same campaign in under a second.</p>
+
+        <div class="note">
+          <h4>A DeepEval user can build the deterministic comparison, the versioning, the banding and the plan check</h4>
+          <p>A <code>BaseMetric</code> subclass compares deterministically. Prompt files can be versioned by hand. Scores can be banded downstream. A plan check can be written by hand. The customer writes and maintains each of those. <strong>DeepEval's defaults work in the opposite direction</strong>: <code>use_cache</code> is off, <code>ignore_errors</code> is the documented remedy for an unreliable judge, and the metric contract returns a float.</p>
+        </div>
+      </section>
+
+      <!-- ================= 4 ================= -->
+      <section id="runtime">
+        <h2 class="sec">Durable execution and agent orchestration change what a campaign can guarantee</h2>
+        <p class="answer">A single Python process cannot supply the properties evalkit already draws from the Akka runtime. A campaign survives a restart. A fixture writes the state that a replay spends a conversation to produce. The report states the concurrency the run sustained alongside the concurrency it requested.</p>
+
+        <h3>A restart costs one wave</h3>
+        <p><code>CampaignWorkflow</code> runs in waves against a cursor and folds counts into workflow state at each transition. A restart loses at most one wave, and the wave size is a parameter. DeepEval's recovery mechanism is a JSON cache whose <code>use_cache</code> flag defaults to off. A six-hour run terminated at minute 200 is a six-hour run repeated.</p>
+
+        <h3>A fixture seeds the state that a replay spends 22 messages to produce</h3>
+        <p>Of 2,365 recorded scenarios, 502 carry setup, and the claim corpora run to a median of 22 messages against a single graded exchange. An evaluation harness outside the service walks those turns through the front door. evalkit, co-located with the service, writes the state into the entity that owns it. <code>Precursor.Replay</code> remains in the kit because a walked path is the only evidence that the state is reachable, and <code>CampaignReport</code> counts walked runs separately so a seeded campaign cannot claim reachability it never tested.</p>
+
+        <h3>The report separates configured lanes from sustained lanes</h3>
+        <p><code>Lanes.Utilisation</code> reports mean concurrent calls in flight against the configured lane count, and states which of the two was the constraint. DeepEval exposes <code>max_concurrent</code> and <code>throttle_value</code> and reports neither figure. A campaign that requested 64 lanes and sustained 9 under provider throttling produces the same DeepEval output as one that sustained 64, and the two require opposite remedies.</p>
+
+        <h3>A judge panel converts the 53 percent agreement figure into a per-transcript measurement</h3>
+        <p>The borderline agreement figure is currently a sentence in the report. Multi-agent orchestration makes it a measurement on each transcript. Running several judges over one transcript, on different models or under different rubric lenses, produces a distribution of scores for that transcript.</p>
+        <p>Judges that agree produce <code>Scored</code>, and the report states that the panel was unanimous. Judges that disagree produce the undecided band, which already carries that meaning. A panel that cannot reach its quorum, because judges timed out or refused, produces <code>Unscoreable</code> on the same terms as a single judge. An undecided verdict then reports a measured disagreement about one transcript, in place of a band boundary someone chose.</p>
+
+        <h3>Calibration becomes a gate on the campaign</h3>
+        <p><code>JudgeCalibrationTest</code> exists as a test today. As a durable component it re-measures the judge against a held-out human-labelled set, stores the agreement figure, and refuses a campaign whose judge has drifted below a stated threshold. DeepEval holds no state between runs, so it cannot compare a judge's agreement today against its agreement last month. The figure answers the question a reader of any eval report should ask about the judge and cannot answer from the report itself.</p>
+
+        <h3>Live interactions can be scored on the same types as a corpus</h3>
+        <p>DeepEval runs before deployment and provides no production feedback loop or drift detection. Akka logs every agent interaction. A Consumer samples real interactions into <code>Transcript</code> records, a Workflow judges them off the request path, a View projects band distribution over time, and a Timer schedules the campaign. <code>Transcript</code> already carries no field that distinguishes a recorded corpus from live traffic.</p>
+
+        <h3>A decision graph expressed as a Workflow retries one branch point</h3>
+        <p>The DeepEval DAG metric evaluates inside a single metric call. The same graph expressed as an Akka Workflow gets per-node retry, per-node tracing and independent step timeouts, so a branch point that stalls does not discard the branches already resolved. Four node types also map onto a sealed interface with an exhaustive switch.</p>
+
+        <h3>Each scorer family is defined by what settles the result</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Family</th><th>Settles the result by</th><th>Cost</th><th>Report treatment</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="lbl">deterministic</td>
+              <td>Comparison settles it. Node reached, exact match, schema valid, tool called with these arguments. <code>Scenario.needsJudge()</code> routes to it automatically.</td>
+              <td class="num">0 model calls</td>
+              <td>A pass or a fail. The undecided cell carries a dash, because a figure there would be a defect in the kit.</td>
+            </tr>
+            <tr>
+              <td class="lbl">heuristic</td>
+              <td>Computation over the text settles it. Similarity, JSON validity, latency and token budgets. Repeatable in execution and approximate in meaning.</td>
+              <td class="num">0 model calls</td>
+              <td>Undecided. <code>RunOutcome</code> holds no variant for this family and one has to be added.</td>
+            </tr>
+            <tr>
+              <td class="lbl">agentic</td>
+              <td>A judge agent or a panel reading the transcript against a versioned rubric.</td>
+              <td class="num">n model calls</td>
+              <td>A band, quoted as a range, printed beside the measured agreement for that rubric.</td>
+            </tr>
+          </tbody>
+        </table></div>
+
+        <div class="note">
+          <h4>The heuristic family needs an outcome variant before it has an implementation</h4>
+          <p>A heuristic result is not <code>Asserted</code>, because that variant's contract is that comparison has no confidence to be borderline about. A heuristic result is not <code>Scored</code>, because that variant carries a rubric id and version. Adding a fifth variant produces a compile error at every exhaustive switch, which is the design working as intended. The report currently prints deterministic and judged in separate columns, so a heuristic family needs its own column or an argued reason to fold into an existing one.</p>
+        </div>
+      </section>
+
+      <!-- ================= 5 ================= -->
+      <section id="semantics">
+        <h2 class="sec">A JUnit extension reproduces the authoring experience and defers execution</h2>
+        <p class="answer">DeepEval fires a metric call when its test case executes. Suite cost therefore grows linearly with case count. Continuous integration needs 10 to 15 minute timeouts, and no case can be refused before the suite starts. A JUnit extension that collects scenarios during discovery and runs one planned campaign keeps the authoring experience, spends once per campaign, and refuses an unsatisfiable class before the first call.</p>
+
+        <pre><code><span class="k">@EvalCampaign</span>(rubric = "scenario-judge", version = 2, lanes = 8)
+class RefundPolicyEval {
+
+    <span class="k">@Eval</span>("an authenticated customer is told the 30-day window")
+    Scenario refundWindowStated() {
+        <span class="k">return</span> scenario("refund-30d")
+            .from(fixture("authenticated-claim-open"))
+            .say("What if these shoes don't fit?")
+            .expect("a 30-day full refund at no extra cost");
+    }
+
+    <span class="k">@Eval</span>("a delivered bag is not assessed as lost")
+    Scenario deliveredBagRoutes() {
+        <span class="k">return</span> scenario("GenUC-16a.3")
+            .from(replay("I lost my bag", "it arrived yesterday"))
+            .say("so what happens now?")
+            .reaches("GenUC-16a.3");   <span class="c">// names a node, so comparison settles it</span>
+    }
+}</code></pre>
+
+        <p>Each method returns a scenario instead of asserting on one. The extension collects the class during discovery, builds one <code>CampaignPlan</code>, runs <code>check()</code> and refuses the whole class in under a second when a fixture is unimplemented or a node unemittable, then executes across lanes and reports per method. A developer writes something that reads as a test and the runtime receives a plan.</p>
+
+        <h3>A scorer returns an outcome</h3>
+        <pre><code><span class="k">public interface</span> Scorer {
+    RunOutcome score(Transcript transcript, Rubric rubric);
+}</code></pre>
+        <p>A <code>double</code> return type can express a low score and cannot express the absence of a score. The number it returns instead lands in someone's pass rate. Returning <code>RunOutcome</code> keeps <code>Unscoreable</code> reachable from a metric.</p>
+      </section>
+
+      <!-- ================= 6 ================= -->
+      <section id="port">
+        <h2 class="sec">Apache 2.0 permits porting the metric definitions</h2>
+        <p class="answer">DeepEval is licensed under Apache 2.0, which permits porting, adapting and redistributing the work with the licence and attribution notices preserved. Verify <code>LICENSE.md</code> at the commit the port is taken from. Record the derived metric definitions and their source revision in a <code>NOTICE</code> file, which is also the record that supports re-syncing when a prompt improves upstream.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Component</th><th class="rival-col">DeepEval implementation</th><th class="akka-col">Disposition in evalkit</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="lbl">DAG node model</td>
+              <td class="rival">Four node types with verdict edges, evaluated inside one metric call.</td>
+              <td class="akka">Take. Maps onto a sealed interface, and reduces judge calls at branch points.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Metric definitions</td>
+              <td class="rival">Prompts and assembly logic for faithfulness, contextual precision and recall, answer relevancy, tool and argument correctness.</td>
+              <td class="akka">Take these. The definitions work in any language and are the bulk of what the library provides.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Dataset format</td>
+              <td class="rival">A golden and dataset JSONL shape used across the Python ecosystem.</td>
+              <td class="akka">Take as an importer. An existing corpus transfers without a rewrite.</td>
+            </tr>
+            <tr>
+              <td class="lbl">G-Eval</td>
+              <td class="rival">Criteria to generated steps to a 1 to 5 score, normalised by output token probabilities.</td>
+              <td class="akka">Adapt this. Keep the generated steps, emit a band, drop the token-probability normalisation.</td>
+            </tr>
+            <tr>
+              <td class="lbl">pytest entry point</td>
+              <td class="rival">One metric call per test case at the moment the case executes.</td>
+              <td class="akka">Adapt to a JUnit extension with deferred execution, per section 5.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Model benchmarks</td>
+              <td class="rival">MMLU, HellaSwag, GSM8K and others, which measure a model instead of an application.</td>
+              <td class="akka">Skip these. Model benchmarking is a separate category with its own established tooling.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Error suppression</td>
+              <td class="rival"><code>ignore_errors</code> and <code>skip_on_missing_params</code> remove a failed case from the result set.</td>
+              <td class="akka">Skip these. Porting them would port the silent failure evalkit was written to stop.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Hosted platform</td>
+              <td class="rival">Confident AI dataset and trace management, integrated through the SDK.</td>
+              <td class="akka">Skip this. Confident AI sells it as a hosted service.</td>
+            </tr>
+          </tbody>
+        </table></div>
+
+        <p>The token-probability normalisation is dropped for two measured reasons. The weighting requires a provider that exposes output token probabilities, and DeepEval falls back to plain scoring without them. A continuous 0 to 1 score also supports the mean that <code>Scoring</code> refuses to compute.</p>
+
+        <div class="note">
+          <h4>A ported metric without a calibration case is an audit that examines nothing</h4>
+          <p>Fifty metrics is a large surface. A reachability check in this repository anchored its pattern on indentation that had already been stripped, matched nothing, iterated an empty set and passed for nine development stages. A faithfulness metric ported without a transcript it is known to catch behaves the same way at higher cost. <strong>Port in tiers and require a failing case for each metric</strong> before it enters the kit.</p>
+        </div>
+      </section>
+
+      <!-- ================= 7 ================= -->
+      <section id="perf">
+        <h2 class="sec">Model calls, spend and recovery cost are the measurable differences</h2>
+        <p class="answer">Almost all of an eval run's wall clock is spent waiting on a model provider, so a JVM against CPython comparison would report a property of the evaluation harness and say nothing about the service under test. evalkit refuses to print that class of figure. The differences that can be measured and defended are model calls issued, provider spend, work lost to a restart, and time taken to refuse an unsatisfiable campaign.</p>
+
+        <p>One language comparison is worth a controlled test and no headline. Against a self-hosted or high-limit endpoint, where the provider is not the constraint, CPython's event loop and JSON handling become measurable while JVM virtual threads stay off the request path. That test states its endpoint and its concurrency and claims nothing beyond them.</p>
+
+        <p>The figures below are estimates derived from DeepEval's documented metric shapes and from corpus statistics recorded in this repository. The estimates stand until the protocol runs.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Measure, on the 514-scenario claim-flow corpus</th><th class="rival-col">DeepEval</th><th class="akka-col">evalkit</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="lbl">Judge calls</td>
+              <td class="rival num">514 to 2,056</td>
+              <td class="akka num">4</td>
+            </tr>
+            <tr>
+              <td class="lbl">Setup calls</td>
+              <td class="rival num">~10,500</td>
+              <td class="akka num">~0</td>
+            </tr>
+            <tr>
+              <td class="lbl">Work lost to a restart at minute 200 of 360</td>
+              <td class="rival num">the full run</td>
+              <td class="akka num">one wave</td>
+            </tr>
+            <tr>
+              <td class="lbl">Time to refuse an unsatisfiable campaign</td>
+              <td class="rival num">the full run</td>
+              <td class="akka num">under 1 second</td>
+            </tr>
+            <tr>
+              <td class="lbl">Time from edit to first result</td>
+              <td class="akka num">pytest startup</td>
+              <td class="rival num">JVM and Maven startup</td>
+            </tr>
+          </tbody>
+        </table></div>
+
+        <p>The judge-call figure comes from routing. 510 of the 514 scenarios name a specification node, and <code>Scenario.needsJudge()</code> sends those to comparison. A DeepEval metric issues at least one model call per test case, and a multi-step metric such as faithfulness issues two to four, because it extracts claims and then verifies each one.</p>
+
+        <p>The setup figure comes from seeding. 502 of the recorded scenarios carry setup at a median of 22 messages, and a fixture writes that state directly.</p>
+
+        <p>Both figures need a stated limit. A custom deterministic <code>BaseMetric</code> subclass closes most of the judge-call gap, and an HTTP fixture endpoint closes the setup gap. The customer writes and maintains both, unprompted by the framework, and the resulting code is <code>SystemUnderTest.prepare()</code> and <code>Scenario.needsJudge()</code> under different names.</p>
+
+        <h3>Benchmark protocol</h3>
+        <ol class="protocol">
+          <li>
+            <h3>Fix the corpus, the target and the provider</h3>
+            <p>Run both harnesses over the same scenarios against the same service on the same model. Publish the provider and the account rate limit. A throughput figure without them cannot be interpreted.</p>
+          </li>
+          <li>
+            <h3>Report model calls and spend as the primary measures</h3>
+            <p>Count calls issued, input and output tokens, and provider cost. Every one of those figures is attributable to the provider's own records. Report calls whose usage the target could not see as a separate figure, and label the total a floor.</p>
+          </li>
+          <li>
+            <h3>Report wall clock beside utilisation</h3>
+            <p><code>Lanes.Utilisation</code> already separates a lane-bound run from a downstream-bound one. A wall-clock figure without that separation supports no decision.</p>
+          </li>
+          <li>
+            <h3>Measure recovery and refusal directly</h3>
+            <p>Terminate both runs at the same scenario and count the work repeated. Point both at a corpus the target cannot satisfy and record the time to the first refusal.</p>
+          </li>
+          <li>
+            <h3>State what the protocol does not establish</h3>
+            <p>The protocol measures cost and recovery for one corpus against one target. The protocol establishes nothing about which kit scores more accurately, which is a calibration question against human labels and a separate exercise.</p>
+          </li>
+        </ol>
+      </section>
+
+      <!-- ================= 8 ================= -->
+      <section id="limits">
+        <h2 class="sec">The figures here are estimates until the protocol runs</h2>
+        <p class="answer">DeepEval's behaviour in this analysis is read from its published documentation and README. No run against this corpus was made. The call counts in section 7 are derived from documented metric shapes and from corpus statistics in this repository. Quote them as estimates.</p>
+
+        <p>Nothing here establishes that either kit judges more accurately. Every difference argued above concerns cost, recovery, and which numbers a report prints. Accuracy is measured against human labels, and the figure for this corpus remains 89 to 91 percent agreement on clear-cut replies and 53 percent on borderline ones. A judge panel is proposed to improve the second figure and has not been measured.</p>
+
+        <p>The adoption difference is real and none of this addresses it. DeepEval has the Python framework integrations, the tutorials and the download volume. evalkit returns <code>Scored</code>, <code>Asserted</code>, <code>NotReached</code> or <code>Unscoreable</code> where DeepEval returns a float, and throws on a comparison across rubric versions where DeepEval permits one.</p>
+      </section>
+
+      <footer>
+        <p>Sources: <a href="https://github.com/confident-ai/deepeval">confident-ai/deepeval</a>, <a href="https://deepeval.com/docs/metrics-llm-evals">G-Eval documentation</a>, <a href="https://deepeval.com/docs/metrics-dag">DAG metric documentation</a>, <a href="https://deepeval.com/docs/evaluation-flags-and-configs">evaluation flags and configs</a>, <a href="https://www.zenml.io/blog/deepeval-alternatives">ZenML on DeepEval scaling</a>. Repository figures from <code>docs/design-history.md</code> and the <code>evalkit-core</code> domain types. 8 August 2026.</p>
+      </footer>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

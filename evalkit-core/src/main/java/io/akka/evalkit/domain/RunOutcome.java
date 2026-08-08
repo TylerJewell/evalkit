@@ -29,6 +29,29 @@ public sealed interface RunOutcome {
     record Asserted(boolean passed, String expectedNode, String actualNode)
         implements RunOutcome {}
 
+    /**
+     * Settled by computing a number over the reply and comparing it to a threshold.
+     *
+     * <p>Repeatable in execution and approximate in meaning. The same reply produces the
+     * same number on every run, and the number a person chose for the threshold decides
+     * what that number means.
+     *
+     * <p>The metric id and version travel with the result for the reason a rubric version
+     * travels with a verdict: raising a threshold from 0.75 to 0.80 turns passing runs
+     * into failing ones with no change to the system under test, and a bare number six
+     * weeks later cannot tell the two apart.
+     */
+    record Measured(String metricId, int metricVersion, double value,
+                    double threshold, boolean withinThreshold) implements RunOutcome {
+
+        public Measured {
+            if (metricId == null || metricId.isBlank()) {
+                throw new IllegalArgumentException("measured outcome needs a metric id");
+            }
+            if (metricVersion < 1) throw new IllegalArgumentException("metric version starts at 1");
+        }
+    }
+
     /** Why a run produced nothing, decided where it happened rather than parsed after. */
     enum Cause {
         /** The starting state could not be built, so nothing was ever asked. */
@@ -51,13 +74,14 @@ public sealed interface RunOutcome {
      * the denominator of "did the system answer correctly".
      */
     default boolean isEvidence() {
-        return this instanceof Scored || this instanceof Asserted;
+        return this instanceof Scored || this instanceof Asserted || this instanceof Measured;
     }
 
     default boolean passed() {
         return switch (this) {
             case Scored s -> s.verdict().passed();
             case Asserted a -> a.passed();
+            case Measured m -> m.withinThreshold();
             case NotReached ignored -> false;
             case Unscoreable ignored -> false;
         };
@@ -75,6 +99,8 @@ public sealed interface RunOutcome {
             case Asserted a -> a.passed()
                 ? "reached " + a.expectedNode()
                 : "expected " + a.expectedNode() + ", reached " + a.actualNode();
+            case Measured m -> "%s v%d: %.2f against %.2f".formatted(
+                m.metricId(), m.metricVersion(), m.value(), m.threshold());
             case NotReached n -> switch (n.cause()) {
                 case SETUP_FAILED -> "never reached the question — " + n.reason();
                 case NO_REPLY -> "no reply — " + n.reason();

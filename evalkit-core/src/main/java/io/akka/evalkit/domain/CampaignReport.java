@@ -18,13 +18,16 @@ import java.util.List;
  * @param unscoreable the judge did not answer. Also says nothing about the system
  * @param asserted    settled by comparison against a named decision, with no model call
  * @param assertedPassed of those, how many reached the decision they named
+ * @param measured    settled by a metric computing a number and comparing it to a threshold
+ * @param measuredPassed of those, how many came in within the threshold
  * @param walked      of the judged runs, how many proved the path rather than seeding it
  * @param setupFailed of the not-reached, how many stopped before anything was asked
  * @param noReply     of the not-reached, how many were asked and did not answer
  */
 public record CampaignReport(int passed, int review, int failed,
                              int notReached, int unscoreable, int walked, int asserted,
-                             int assertedPassed, int setupFailed, int noReply) {
+                             int assertedPassed, int measured, int measuredPassed,
+                             int setupFailed, int noReply) {
 
     /**
      * A deterministic run has two outcomes, never three.
@@ -38,12 +41,17 @@ public record CampaignReport(int passed, int review, int failed,
         return asserted - assertedPassed;
     }
 
+    /** Of the measured runs, how many missed their threshold. */
+    public int measuredFailed() {
+        return measured - measuredPassed;
+    }
+
     public int scoredPassed() {
-        return passed - assertedPassed;
+        return passed - assertedPassed - measuredPassed;
     }
 
     public int scoredFailed() {
-        return failed - assertedFailed();
+        return failed - assertedFailed() - measuredFailed();
     }
 
     public static CampaignReport of(List<RunOutcome> outcomes, List<Precursor> precursors) {
@@ -51,7 +59,8 @@ public record CampaignReport(int passed, int review, int failed,
             throw new IllegalArgumentException("one precursor per outcome");
         }
         int passed = 0, review = 0, failed = 0, notReached = 0, unscoreable = 0, walked = 0;
-        int asserted = 0, assertedPassed = 0, setupFailed = 0, noReply = 0;
+        int asserted = 0, assertedPassed = 0, measured = 0, measuredPassed = 0;
+        int setupFailed = 0, noReply = 0;
         for (int i = 0; i < outcomes.size(); i++) {
             RunOutcome outcome = outcomes.get(i);
             switch (outcome) {
@@ -71,6 +80,16 @@ public record CampaignReport(int passed, int review, int failed,
                     }
                     if (precursors.get(i).provesReachability()) walked++;
                 }
+                case RunOutcome.Measured m -> {
+                    measured++;
+                    if (m.withinThreshold()) {
+                        passed++;
+                        measuredPassed++;
+                    } else {
+                        failed++;
+                    }
+                    if (precursors.get(i).provesReachability()) walked++;
+                }
                 case RunOutcome.NotReached n -> {
                     notReached++;
                     if (n.cause() == RunOutcome.Cause.SETUP_FAILED) setupFailed++;
@@ -80,11 +99,11 @@ public record CampaignReport(int passed, int review, int failed,
             }
         }
         return new CampaignReport(passed, review, failed, notReached, unscoreable, walked,
-            asserted, assertedPassed, setupFailed, noReply);
+            asserted, assertedPassed, measured, measuredPassed, setupFailed, noReply);
     }
 
     public static CampaignReport empty() {
-        return new CampaignReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        return new CampaignReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     /**
@@ -101,6 +120,7 @@ public record CampaignReport(int passed, int review, int failed,
             notReached + other.notReached, unscoreable + other.unscoreable,
             walked + other.walked, asserted + other.asserted,
             assertedPassed + other.assertedPassed,
+            measured + other.measured, measuredPassed + other.measuredPassed,
             setupFailed + other.setupFailed, noReply + other.noReply);
     }
 
@@ -156,9 +176,9 @@ public record CampaignReport(int passed, int review, int failed,
         return notReached + unscoreable;
     }
 
-    /** Judged runs that cost a model call. The rest were settled by comparison. */
+    /** Runs that cost a model call. Comparison and computation settled the rest. */
     public int scored() {
-        return judged() - asserted;
+        return judged() - asserted - measured;
     }
 
     public String summary() {

@@ -49,13 +49,38 @@ public interface SystemUnderTest {
      *             comparison instead of by a model — the difference between a tick and
      *             a paid, slightly random opinion
      */
-    record Reply(String text, java.util.Optional<String> node) {
+    record Reply(String text, java.util.Optional<String> node,
+                 java.util.Optional<java.time.Duration> latency,
+                 java.util.List<ToolCall> toolsCalled) {
+
+        public Reply {
+            node = node == null ? java.util.Optional.empty() : node;
+            latency = latency == null ? java.util.Optional.empty() : latency;
+            toolsCalled = toolsCalled == null ? java.util.List.of()
+                : java.util.List.copyOf(toolsCalled);
+        }
+
+        /** A reply carrying only what the system said. */
+        public Reply(String text, java.util.Optional<String> node) {
+            this(text, node, java.util.Optional.empty(), java.util.List.of());
+        }
+
         public static Reply of(String text) {
             return new Reply(text, java.util.Optional.empty());
         }
 
         public static Reply from(String text, String node) {
             return new Reply(text, java.util.Optional.ofNullable(node));
+        }
+
+        /** The same reply, with how long it took. */
+        public Reply taking(java.time.Duration elapsed) {
+            return new Reply(text, node, java.util.Optional.ofNullable(elapsed), toolsCalled);
+        }
+
+        /** The same reply, with the tools the system invoked while answering. */
+        public Reply calling(ToolCall... tools) {
+            return new Reply(text, node, latency, java.util.List.of(tools));
         }
     }
 

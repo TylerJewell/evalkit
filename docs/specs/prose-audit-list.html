@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>Prose audit list</title>
+<!-- prose-audit: catalogue — this page quotes every term it rejects. -->
+<style>
+  :root {
+    --black:#000000; --black-med:#141414; --white:#F1F1F1; --yellow:#FFCE4A;
+    --blue:#00DBDD; --red:#FF5400; --green:#72D35B; --grey-soft:#A6A6A6;
+    --grey-med:#4E4E4E; --rule:#4E4E4E;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--black); color:var(--white); font-family:var(--sans);
+         font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased; }
+  .shell { max-width:1180px; margin:0 auto; padding:0 24px 88px; }
+  .masthead { padding:56px 0 30px; border-bottom:1px solid var(--rule);
+              display:flex; flex-direction:column; gap:16px; }
+  .eyebrow { font-size:11px; font-weight:600; letter-spacing:.17em;
+             text-transform:uppercase; color:var(--yellow); }
+  h1 { margin:0; font-size:clamp(31px,4.6vw,47px); font-weight:620;
+       letter-spacing:-.022em; line-height:1.08; text-wrap:balance; }
+  .hero { margin:0; max-width:62ch; font-size:20px; line-height:1.5; color:var(--yellow); }
+  .hero b { color:var(--white); font-weight:620; }
+  .capsule { margin:0; max-width:70ch; color:var(--grey-soft); font-size:16px; }
+  .byline { font-size:12.5px; color:var(--grey-med); display:flex; flex-wrap:wrap; gap:6px 22px; }
+  section { padding:42px 0 10px; }
+  section + section { border-top:1px solid var(--rule); }
+  h2 { margin:0 0 14px; font-size:clamp(20px,2.4vw,26px); font-weight:620;
+       letter-spacing:-.014em; line-height:1.22; text-wrap:balance; }
+  .answer { margin:0 0 24px; max-width:70ch; color:var(--yellow); }
+  p { margin:0 0 15px; max-width:72ch; }
+  a { color:var(--blue); }
+  strong { color:var(--yellow); font-weight:620; }
+  code { font-family:var(--mono); font-size:.86em; background:var(--black-med);
+         color:var(--white); padding:1.5px 5px; border-radius:2px; }
+  .table-wrap { overflow-x:auto; margin:0 0 24px; background:var(--black-med);
+                border:1px solid var(--rule); }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; line-height:1.5; }
+  th { text-align:left; font-weight:600; font-size:10.5px; letter-spacing:.12em;
+       text-transform:uppercase; color:var(--grey-soft); padding:12px 15px;
+       border-bottom:1px solid var(--rule); white-space:nowrap; }
+  td { padding:12px 15px; border-bottom:1px solid var(--rule); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  td.term { font-family:var(--mono); font-size:12.4px; color:var(--red); white-space:nowrap; }
+  td.fix  { font-family:var(--mono); font-size:12.4px; color:var(--green); }
+  td.n { font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right;
+         white-space:nowrap; color:var(--grey-soft); }
+  td.on { color:var(--green); font-size:12px; white-space:nowrap; }
+  td.off { color:var(--grey-med); font-size:12px; white-space:nowrap; }
+  .note { background:var(--black-med); border:1px solid var(--rule);
+          padding:18px 20px; margin:0 0 22px; max-width:74ch; }
+  .note h3 { margin:0 0 8px; font-size:10.5px; font-weight:600; letter-spacing:.15em;
+             text-transform:uppercase; color:var(--yellow); }
+  .note p:last-child { margin-bottom:0; }
+  footer { margin-top:54px; padding-top:22px; border-top:1px solid var(--rule);
+           font-size:12.5px; color:var(--grey-med); max-width:72ch; }
+  :focus-visible { outline:2px solid var(--blue); outline-offset:3px; }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="masthead">
+    <span class="eyebrow">Akka evalkit &middot; prose audit</span>
+    <h1>Terms that fail an engineering reader</h1>
+    <p class="hero"><b>Thirty-one terms across the evalkit documents and the public API.</b> Nine are method and field names, so fixing those changes code.</p>
+    <p class="capsule">Counts come from a grep over <code>docs/specs/</code>, <code>docs/site/</code> and <code>AGENTS.md</code> on 8 August 2026. The Enforced column records whether <code>tools/audit-prose.py</code> rejects the term today.</p>
+    <div class="byline">
+      <span>evalkit at commit 9a0260c</span>
+      <span>8 August 2026</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Courtroom vocabulary</h2>
+    <p class="answer">Six terms, more than any other group. An evaluation produces measurements, and the documents describe them as testimony. A reader who writes software reads "evidence" and "claim" as imported from somewhere else.</p>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>Term</th><th class="n">Uses</th><th>Reads as</th><th>Replacement</th><th>Enforced</th></tr></thead>
+      <tbody>
+        <tr><td class="term">what a run may claim</td><td class="n">2</td><td>A run is granted permission by an authority.</td><td class="fix">which numbers the report prints</td><td class="off">no</td></tr>
+        <tr><td class="term">absent evidence</td><td class="n">3</td><td>A finding in a hearing.</td><td class="fix">no result</td><td class="off">no</td></tr>
+        <tr><td class="term">produced no evidence</td><td class="n">4</td><td>Same.</td><td class="fix">produced no result</td><td class="off">no</td></tr>
+        <tr><td class="term">the findings below stand</td><td class="n">2</td><td>A ruling survives appeal.</td><td class="fix">the 9 failures are listed below</td><td class="off">no</td></tr>
+        <tr><td class="term">quotable / not quotable</td><td class="n">1</td><td>A press guideline.</td><td class="fix">complete enough to report</td><td class="off">no</td></tr>
+        <tr><td class="term">verdict</td><td class="n">31</td><td>Defensible for a judge's output, and it spreads. <code>Verdict</code> is a type name.</td><td class="fix">keep on the judge, drop elsewhere</td><td class="off">no</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="note">
+      <h3>API names carry this vocabulary into the compiler</h3>
+      <p><code>RunOutcome.isEvidence()</code>, <code>CampaignReport.isTrustworthy()</code>, <code>Verdict</code> and <code>Unscoreable</code> put this vocabulary in the compiler. A caller reading <code>isTrustworthy()</code> cannot tell what it checks. <code>hasCompleteResults()</code> names the condition.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Metaphors standing in for the thing</h2>
+    <p class="answer">Every term in this group replaces a name that already exists in the codebase.</p>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>Term</th><th class="n">Uses</th><th>Reads as</th><th>Replacement</th><th>Enforced</th></tr></thead>
+      <tbody>
+        <tr><td class="term">the ruler / one ruler</td><td class="n">6</td><td>A physical object measuring length.</td><td class="fix">the rubric, named with its version</td><td class="off">no</td></tr>
+        <tr><td class="term">band movement</td><td class="n">3</td><td>Invented noun phrase.</td><td class="fix">how many scenarios changed band</td><td class="off">no</td></tr>
+        <tr><td class="term">the seam</td><td class="n">2</td><td>Sewing.</td><td class="fix">the interface, named</td><td class="on">yes</td></tr>
+        <tr><td class="term">pre-flight</td><td class="n">7</td><td>Aviation.</td><td class="fix">the plan check, or <code>CampaignPlan.check</code></td><td class="off">no</td></tr>
+        <tr><td class="term">lanes</td><td class="n">40</td><td>Roads. It is the existing type name, so prose follows the code.</td><td class="fix">keep, and define it at first use</td><td class="off">no</td></tr>
+        <tr><td class="term">waves</td><td class="n">12</td><td>Same position: the field is named <code>wave</code>.</td><td class="fix">keep, and define it at first use</td><td class="off">no</td></tr>
+        <tr><td class="term">a floor rather than a figure</td><td class="n">2</td><td>The second half says nothing.</td><td class="fix">a lower bound</td><td class="off">no</td></tr>
+        <tr><td class="term">the kit</td><td class="n">3</td><td>Vague antecedent.</td><td class="fix">evalkit</td><td class="off">no</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Product-management vocabulary</h2>
+    <p class="answer">These carry no engineering content. A maintainer reading a design document cannot act on any of them.</p>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>Term</th><th class="n">Uses</th><th>Reads as</th><th>Replacement</th><th>Enforced</th></tr></thead>
+      <tbody>
+        <tr><td class="term">adoption lever</td><td class="n">0</td><td>Removed earlier. Kept here so it stays removed.</td><td class="fix">state the task it saves</td><td class="off">no</td></tr>
+        <tr><td class="term">the product</td><td class="n">2</td><td>Which artifact? evalkit is a library.</td><td class="fix">name the module or the service</td><td class="off">no</td></tr>
+        <tr><td class="term">contribution standard</td><td class="n">1</td><td>Invented. GitHub names the file.</td><td class="fix">goes in <code>CONTRIBUTING.md</code></td><td class="off">no</td></tr>
+        <tr><td class="term">structural difference</td><td class="n">2</td><td>Names no structure.</td><td class="fix">say which call is missing</td><td class="off">no</td></tr>
+        <tr><td class="term">the property that makes X usable</td><td class="n">1</td><td>Abstract subject.</td><td class="fix">evalkit-core declares no dependencies</td><td class="off">no</td></tr>
+        <tr><td class="term">is the point</td><td class="n">1</td><td>Ends an argument without making it.</td><td class="fix">state the behaviour</td><td class="off">no</td></tr>
+        <tr><td class="term">known gaps</td><td class="n">0</td><td>Fixed. GitHub says issue.</td><td class="fix">open issues</td><td class="on">yes</td></tr>
+        <tr><td class="term">ticket</td><td class="n">0</td><td>Jira, not GitHub.</td><td class="fix">issue</td><td class="on">yes</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Register that no engineer speaks</h2>
+    <p class="answer">Every term in this group survives silent proofreading and fails when read aloud in a design review.</p>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>Term</th><th class="n">Uses</th><th>Reads as</th><th>Replacement</th><th>Enforced</th></tr></thead>
+      <tbody>
+        <tr><td class="term">by construction</td><td class="n">1</td><td>A mathematics proof.</td><td class="fix">a red-team corpus is made of them</td><td class="off">no</td></tr>
+        <tr><td class="term">carries the reasoning</td><td class="n">1</td><td>A document does not carry.</td><td class="fix">the Javadoc explains the design</td><td class="off">no</td></tr>
+        <tr><td class="term">carrying the limits</td><td class="n">0</td><td>Fixed earlier.</td><td class="fix">prints a report of the result</td><td class="off">no</td></tr>
+        <tr><td class="term">holds the session</td><td class="n">1</td><td>Physical verb for a reference.</td><td class="fix">keeps the session id</td><td class="on">yes</td></tr>
+        <tr><td class="term">reaches a pass rate</td><td class="n">0</td><td>Fixed earlier.</td><td class="fix">is counted in the pass total</td><td class="off">no</td></tr>
+        <tr><td class="term">the register of</td><td class="n">0</td><td>Literary criticism.</td><td class="fix">name the audience</td><td class="off">no</td></tr>
+        <tr><td class="term">terminal-width plain text</td><td class="n">2</td><td>Precise. No change.</td><td class="fix">keep</td><td class="off">n/a</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Table cells written as fragments</h2>
+    <p class="answer">Nineteen cells in the DeepEval comparison tables read as fragments: "Same position.", "Field for field.", "Split in two.", "New work.", "Mechanical.", "Opposite." A cell quoted on its own by a search result carries no subject.</p>
+    <p>The auditor never saw them. Its element list held <code>p</code>, <code>h1</code> to <code>h4</code>, <code>figcaption</code>, <code>blockquote</code>, <code>li</code>, <code>dd</code> and <code>caption</code>, and no HTML table cell had been checked since the tool was written. Adding <code>td</code> and <code>th</code> on 8 August 2026 surfaced 88 violations across these documents and 235 across the collateral. Giving each cell a subject and a verb costs four words per row.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Cell today</th><th>Cell with a subject</th></tr></thead>
+      <tbody>
+        <tr><td class="term">Same position.</td><td class="fix">Both sit at the same point in the run.</td></tr>
+        <tr><td class="term">Field for field.</td><td class="fix">The fields map one to one.</td></tr>
+        <tr><td class="term">Split in two.</td><td class="fix">evalkit splits the type in two.</td></tr>
+        <tr><td class="term">New work.</td><td class="fix">The user writes this from scratch.</td></tr>
+        <tr><td class="term">Mechanical.</td><td class="fix">A rename and a return type change.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>What to do with this list</h2>
+    <p>Nine entries name methods, fields or types. Renaming <code>isTrustworthy()</code> and <code>isEvidence()</code> belongs with the breaking changes listed for 0.1.0, because both appear in the published API surface.</p>
+    <p>Sixteen entries are prose only and cost one edit each.</p>
+    <p>Six entries are already rejected by <code>tools/audit-prose.py</code>. The rest need either a pattern or a reading pass, and the terms with an existing type name behind them, such as <code>Lanes</code> and <code>wave</code>, stay as they are so the prose matches the code.</p>
+  </section>
+
+  <footer>
+    <p>Counts from a grep over <code>docs/specs/</code>, <code>docs/site/</code> and <code>AGENTS.md</code>. Rules live in <code>conventions/prose.md</code> and run from <code>tools/audit-prose.py</code>. 8 August 2026.</p>
+  </footer>
+
+</div>
+</body>
+</html>

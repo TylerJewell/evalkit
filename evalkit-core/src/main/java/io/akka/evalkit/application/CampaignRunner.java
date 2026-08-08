@@ -66,7 +66,24 @@ public final class CampaignRunner {
         }
     }
 
+    /** A campaign settled by one rubric judge, with node comparison where a node is named. */
     public static Result run(CampaignPlan plan, SystemUnderTest target, Judge judge) {
+        return execute(plan, scenario -> runOne(scenario, target, judge, plan.rubric()));
+    }
+
+    /**
+     * A campaign settled by three scorer families.
+     *
+     * <p>The router decides per scenario. Node comparison happens here, where the reported
+     * node and the transcript are both in hand.
+     */
+    public static Result run(CampaignPlan plan, SystemUnderTest target,
+                             io.akka.evalkit.domain.ScorerRouter router) {
+        return execute(plan, scenario -> runOne(scenario, target, router));
+    }
+
+    private static Result execute(CampaignPlan plan,
+                                  java.util.function.Function<Scenario, RunOutcome> runOne) {
         var completed = Collections.synchronizedList(new ArrayList<Completed>());
         var busy = new AtomicLong();
 
@@ -76,8 +93,7 @@ public final class CampaignRunner {
                 .map(scenario -> (Callable<Void>) () -> {
                     long start = System.nanoTime();
                     try {
-                        completed.add(new Completed(
-                            runOne(scenario, target, judge, plan.rubric()), scenario));
+                        completed.add(new Completed(runOne.apply(scenario), scenario));
                     } catch (Throwable t) {
                         // Every scenario must produce a row. invokeAll parks a thrown
                         // exception in a Future nobody reads, so an uncaught throw would
@@ -123,7 +139,7 @@ public final class CampaignRunner {
         // The routing this harness exists for. A scenario naming a decision is settled by
         // comparison — no model call, no variance, no cost. Only the ones that genuinely
         // reach a model boundary are judged.
-        if (!scenario.needsJudge()) {
+        if (scenario.specNode().isPresent()) {
             return io.akka.evalkit.domain.SpecNodeMatch
                 .assertReached(scenario.specNode().orElseThrow(), produced.node());
         }
@@ -135,6 +151,30 @@ public final class CampaignRunner {
             // A judge that refuses — a content filter, a timeout, an unreadable reply —
             // is absent evidence, never a verdict. This already happened once against a
             // real provider, so it is handled rather than anticipated.
+            return new RunOutcome.Unscoreable(rootMessage(e));
+        }
+    }
+
+    private static RunOutcome runOne(Scenario scenario, SystemUnderTest target,
+                                     io.akka.evalkit.domain.ScorerRouter router) {
+        var execution = ScenarioRunner.execute(scenario, target);
+        if (execution instanceof ScenarioRunner.Execution.NotReached notReached) {
+            return new RunOutcome.NotReached(notReached.cause(), notReached.reason(),
+                scenario.precursor());
+        }
+        var produced = (ScenarioRunner.Execution.Produced) execution;
+
+        var scorer = router.scorerFor(scenario);
+        if (scorer.isEmpty()) {
+            return io.akka.evalkit.domain.SpecNodeMatch
+                .assertReached(scenario.specNode().orElseThrow(), produced.node());
+        }
+
+        try {
+            return scorer.orElseThrow().score(produced.recording());
+        } catch (RuntimeException e) {
+            // Every scorer family reaches here. A metric that threw computed nothing, and
+            // a run with no computed result is no more a finding than a refused judge.
             return new RunOutcome.Unscoreable(rootMessage(e));
         }
     }

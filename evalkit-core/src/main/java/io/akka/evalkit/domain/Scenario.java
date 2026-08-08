@@ -15,9 +15,16 @@ import java.util.Optional;
  */
 public record Scenario(String id,
                        Optional<String> specNode,
+                       Optional<io.akka.evalkit.metric.MetricRef> metric,
                        Precursor precursor,
                        String gradedTurn,
                        String expectedOutcome) {
+
+    /** A scenario naming no metric, which is most of them. */
+    public Scenario(String id, Optional<String> specNode, Precursor precursor,
+                    String gradedTurn, String expectedOutcome) {
+        this(id, specNode, Optional.empty(), precursor, gradedTurn, expectedOutcome);
+    }
 
     public Scenario {
         if (id == null || id.isBlank()) throw new IllegalArgumentException("scenario id required");
@@ -28,6 +35,13 @@ public record Scenario(String id,
             throw new IllegalArgumentException("scenario " + id + " expects nothing");
         }
         specNode = specNode == null ? Optional.empty() : specNode;
+        metric = metric == null ? Optional.empty() : metric;
+        if (specNode.isPresent() && metric.isPresent()) {
+            // Two expectations settle the same run two ways, and the report has one row
+            // per scenario. Split it into two scenarios and each gets its own row.
+            throw new IllegalArgumentException(
+                "scenario " + id + " names both a specification node and a metric");
+        }
         if (precursor == null) precursor = new Precursor.None();
     }
 
@@ -39,11 +53,17 @@ public record Scenario(String id,
      * outcome or it did not.
      */
     public boolean needsJudge() {
-        return specNode.isEmpty();
+        return specNode.isEmpty() && metric.isEmpty();
     }
 
     /** The same scenario, reached a different way. */
     public Scenario via(Precursor other) {
-        return new Scenario(id, specNode, other, gradedTurn, expectedOutcome);
+        return new Scenario(id, specNode, metric, other, gradedTurn, expectedOutcome);
+    }
+
+    /** The same scenario, settled by a metric rather than by a judge. */
+    public Scenario measuredBy(io.akka.evalkit.metric.MetricRef ref) {
+        return new Scenario(id, Optional.empty(), Optional.of(ref), precursor,
+            gradedTurn, expectedOutcome);
     }
 }

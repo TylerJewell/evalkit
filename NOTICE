@@ -1,0 +1,47 @@
+evalkit
+Copyright 2026 Lightbend, Inc. dba Akka
+
+This product includes software developed at Akka (https://akka.io/).
+
+Licensed under the Apache License, Version 2.0. See LICENSE.
+
+
+--------------------------------------------------------------------------------
+Derived work
+--------------------------------------------------------------------------------
+
+Parts of this product are derived from DeepEval, developed by Confident AI and
+licensed under the Apache License, Version 2.0.
+
+  https://github.com/confident-ai/deepeval
+
+The following types port behaviour observed in that project at commit
+bd10fa61c1727996607593d26631f9b22bb41d14, read on 8 August 2026. Each names the
+upstream class and the file the expected values were taken from, and each is
+pinned by a test under io.akka.evalkit.conformance.
+
+  io.akka.evalkit.metric.ToolPermission
+      from ToolPermissionMetric
+      tests/test_metrics/test_tool_permission_metric.py
+
+  io.akka.evalkit.metric.TurnRelevancy
+      from TurnRelevancyMetric
+      tests/test_metrics/test_turn_relevancy_aggregation.py
+
+  io.akka.evalkit.metric.TurnFaithfulness
+      from TurnFaithfulnessMetric
+      tests/test_metrics/test_turn_faithfulness_metric_empty_verdicts.py
+
+  io.akka.evalkit.metric.CitationFaithfulness
+      from CitationFaithfulnessMetric
+      tests/test_metrics/test_citation_faithfulness_metric.py
+
+  io.akka.evalkit.metric.dag.Dag
+  io.akka.evalkit.metric.dag.DagNode
+  io.akka.evalkit.metric.dag.DagJudge
+      from DAGMetric and its node types
+      tests/test_metrics/test_dag.py
+
+io.akka.evalkit.conformance.PortedMetrics carries the same record in code, and
+ConformanceCoverageTest fails the build when a ported metric appears without an
+entry or an entry appears without a test.

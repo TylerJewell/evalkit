@@ -23,6 +23,35 @@
     <name>evalkit-akka</name>
     <description>Durable campaigns and a model judge, for services built on the Akka SDK.</description>
 
+    <url>https://github.com/akka/evalkit</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Akka</name>
+            <organization>Lightbend, Inc. dba Akka</organization>
+            <organizationUrl>https://akka.io</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/akka/evalkit</url>
+        <connection>scm:git:https://github.com/akka/evalkit.git</connection>
+        <developerConnection>scm:git:git@github.com:akka/evalkit.git</developerConnection>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/akka/evalkit/issues</url>
+    </issueManagement>
+
     <dependencies>
         <dependency>
             <groupId>io.akka.evalkit</groupId>

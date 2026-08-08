@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Build and test
+        run: mvn -B install
+
+  dependency-free-core:
+    # evalkit-core compiling with no Akka on the classpath is the property that
+    # makes the library usable outside Akka, so it is checked on its own rather
+    # than inferred from the reactor build.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Core alone
+        run: mvn -B -pl evalkit-core test
+
+      - name: Assert the compile classpath carries nothing
+        run: |
+          mvn -B -q -pl evalkit-core dependency:list -DincludeScope=compile \
+            -DoutputFile=compile-deps.txt
+          if grep -qE '^ {3}[a-z]' evalkit-core/compile-deps.txt; then
+            echo "evalkit-core has gained a compile dependency:"
+            cat evalkit-core/compile-deps.txt
+            exit 1
+          fi
+
+  prose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Audit prose
+        # conventions/prose.md quotes every construction it bans and opts itself
+        # out with a marker, so passing it here would report its own examples.
+        run: |
+          python tools/audit-prose.py \
+            docs/specs/*.html docs/site/evalkit/*.html.md README.md AGENTS.md \
+            CONTRIBUTING.md SECURITY.md CHANGELOG.md
+
+      - name: Compare the rule bank against the rules file
+        run: python tools/audit-prose.py --check-drift

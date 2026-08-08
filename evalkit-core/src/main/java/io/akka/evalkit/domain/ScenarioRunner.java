@@ -22,8 +22,16 @@ public final class ScenarioRunner {
     /** What execution produced, which is not always a transcript. */
     public sealed interface Execution {
 
-        record Produced(Transcript transcript, java.util.Optional<String> node)
-            implements Execution {}
+        record Produced(Recording recording) implements Execution {
+
+            public Transcript transcript() {
+                return recording.transcript();
+            }
+
+            public java.util.Optional<String> node() {
+                return recording.evidence().node();
+            }
+        }
 
         record NotReached(RunOutcome.Cause cause, String reason) implements Execution {}
     }
@@ -60,9 +68,13 @@ public final class ScenarioRunner {
         }
 
         var graded = "User: " + scenario.gradedTurn() + "\n\nAgent: " + answer;
-        return new Execution.Produced(new Transcript(
-            scenario.id(), ready.historySoFar(), graded, answer, scenario.expectedOutcome()),
-            reply.node());
+        var transcript = new Transcript(
+            scenario.id(), ready.historySoFar(), graded, answer, scenario.expectedOutcome());
+        // Everything the run observed beyond the four rubric fields travels alongside the
+        // transcript, so a metric reads it and a judge's input stays byte-identical.
+        var evidence = new Evidence(reply.node(), reply.latency(), reply.toolsCalled(),
+            Tokens.NONE);
+        return new Execution.Produced(new Recording(transcript, evidence));
     }
 
     /**

@@ -45,7 +45,7 @@ class RunSummaryTest {
 
     /** 470 passed, 12 failed, 8 undecided, 64 with no result split 41/16/7. */
     private static CampaignReport report() {
-        return new CampaignReport(470, 8, 12, 57, 7, 0, 510, 462, 41, 16);
+        return new CampaignReport(470, 8, 12, 57, 7, 0, 510, 462, 0, 0, 41, 16);
     }
 
     private static final RunSummary.Estimate ESTIMATE =
@@ -209,7 +209,7 @@ class RunSummaryTest {
     @Test
     @DisplayName("a clean run says so rather than printing an empty breakdown")
     void cleanRun() {
-        var clean = new CampaignReport(554, 0, 0, 0, 0, 0, 510, 510, 0, 0);
+        var clean = new CampaignReport(554, 0, 0, 0, 0, 0, 510, 510, 0, 0, 0, 0);
         var text = flat(RunSummary.results(clean, COVERAGE, List.of(), 90, "x.csv", SPEND));
 
         assertThat(text).contains("Every test produced a result.");

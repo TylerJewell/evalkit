@@ -200,17 +200,20 @@ public final class RunSummary {
         blank(out);
 
         // Split by how each result was decided, not merely how it came out. Comparison
-        // against a named decision cannot produce an undecided, so a figure in that
-        // column's undecided row would be a defect in this kit rather than a finding
-        // about the system -- which is only checkable if the two are printed apart.
-        line(out, "  " + pad("", 27) + rightText("checked by rules", 18)
-            + rightText("judged", 10) + rightText("total", 8));
-        split(out, "as specified", report.assertedPassed(), report.scoredPassed());
-        split(out, "did not", report.assertedFailed(), report.scoredFailed());
-        line(out, "  " + pad("undecided", 27) + rightText("-", 18)
-            + right(report.review(), 10) + right(report.review(), 8));
-        line(out, "  " + pad("no result", 27) + rightText("", 18) + rightText("", 10)
-            + right(report.notReachedOrUnscoreable(), 8));
+        // against a named decision cannot produce an undecided, and neither can a number
+        // against a threshold, so a figure in either column's undecided row would be a
+        // defect in this kit rather than a finding about the system -- which is only
+        // checkable if the three are printed apart.
+        line(out, "  " + pad("", 27) + rightText("checked by rules", 17)
+            + rightText("measured", 9) + rightText("judged", 9) + rightText("total", 7));
+        split(out, "as specified", report.assertedPassed(), report.measuredPassed(),
+            report.scoredPassed());
+        split(out, "did not", report.assertedFailed(), report.measuredFailed(),
+            report.scoredFailed());
+        line(out, "  " + pad("undecided", 27) + rightText("-", 17) + rightText("-", 9)
+            + right(report.review(), 9) + right(report.review(), 7));
+        line(out, "  " + pad("no result", 27) + rightText("", 17) + rightText("", 9)
+            + rightText("", 9) + right(report.notReachedOrUnscoreable(), 7));
         sub(out, "never reached the question", report.setupFailed(), total);
         sub(out, "no reply within " + replyTimeoutSeconds + " seconds", report.noReply(), total);
         sub(out, "answer not assessed", report.unscoreable(), total);
@@ -296,9 +299,16 @@ public final class RunSummary {
     }
 
     /** One row of the decision-method table, with its own total. */
-    private static void split(StringBuilder out, String label, int byRules, int byModel) {
-        line(out, "  " + pad(label, 27) + right(byRules, 18)
-            + right(byModel, 10) + right(byRules + byModel, 8));
+    /**
+      * One row across the three families, with their total.
+      *
+      * <p>A campaign that ran no metrics prints a zero in the measured column rather than
+      * dropping it, so the column a reader looks for is in the same place on every report.
+      */
+    private static void split(StringBuilder out, String label,
+                              int byRules, int measured, int byModel) {
+        line(out, "  " + pad(label, 27) + right(byRules, 17) + right(measured, 9)
+            + right(byModel, 9) + right(byRules + measured + byModel, 7));
     }
 
     private static void bar(StringBuilder out, String label, int count, int total) {

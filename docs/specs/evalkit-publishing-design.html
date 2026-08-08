@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>evalkit publishing design and API surface</title>
+<style>
+  :root {
+    --black:      #000000;
+    --black-med:  #141414;
+    --white:      #F1F1F1;
+    --yellow:     #FFCE4A;
+    --blue:       #00DBDD;
+    --red:        #FF5400;
+    --green:      #72D35B;
+    --grey-soft:  #A6A6A6;
+    --grey-med:   #4E4E4E;
+    --rule:       #4E4E4E;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--black); color: var(--white); font-family: var(--sans);
+         font-size: 16.5px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .shell { max-width: 1180px; margin: 0 auto; padding: 0 24px 88px; }
+
+  .masthead { padding: 56px 0 30px; border-bottom: 1px solid var(--rule);
+              display: flex; flex-direction: column; gap: 16px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.17em;
+             text-transform: uppercase; color: var(--yellow); }
+  .masthead h1 { margin: 0; font-size: clamp(31px, 4.6vw, 47px); font-weight: 620;
+                 letter-spacing: -0.022em; line-height: 1.08; text-wrap: balance; }
+  .hero { margin: 0; max-width: 62ch; font-size: 20px; line-height: 1.5; color: var(--yellow); }
+  .hero b { color: var(--white); font-weight: 620; }
+  .capsule { margin: 0; max-width: 68ch; color: var(--grey-soft); font-size: 16px; }
+  .byline { font-size: 12.5px; color: var(--grey-med); display: flex; flex-wrap: wrap; gap: 6px 22px; }
+
+  .body-grid { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 1060px) {
+    .body-grid { grid-template-columns: 200px minmax(0, 1fr); gap: 56px; align-items: start; }
+  }
+  nav.index { padding: 32px 0 0; font-size: 13px; }
+  @media (min-width: 1060px) { nav.index { position: sticky; top: 24px; } }
+  nav.index h2 { margin: 0 0 13px; font-size: 10.5px; font-weight: 600;
+                 letter-spacing: 0.17em; text-transform: uppercase; color: var(--grey-med); }
+  nav.index ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  nav.index a { color: var(--grey-soft); text-decoration: none; display: block; line-height: 1.35;
+                border-left: 1px solid var(--rule); padding-left: 12px; }
+  nav.index a:hover, nav.index a:focus-visible { color: var(--blue); border-left-color: var(--blue); }
+
+  main { min-width: 0; padding-top: 14px; }
+  section { padding: 42px 0 10px; }
+  section + section { border-top: 1px solid var(--rule); }
+  h2.sec { margin: 0 0 14px; font-size: clamp(21px, 2.5vw, 27px); font-weight: 620;
+           letter-spacing: -0.014em; line-height: 1.22; text-wrap: balance; }
+  .answer { margin: 0 0 26px; max-width: 68ch; color: var(--yellow); font-size: 16.5px; }
+  h3 { margin: 34px 0 10px; font-size: 16px; font-weight: 620; letter-spacing: -0.004em; }
+  h4 { margin: 26px 0 9px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.15em;
+       text-transform: uppercase; color: var(--grey-med); }
+
+  p { margin: 0 0 15px; max-width: 70ch; }
+  main ul, main ol { max-width: 70ch; margin: 0 0 15px; padding-left: 21px; }
+  main li { margin-bottom: 8px; }
+  main li::marker { color: var(--grey-med); }
+  a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  strong { font-weight: 620; color: var(--yellow); }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--black-med);
+         color: var(--white); padding: 1.5px 5px; border-radius: 2px; }
+  pre { font-family: var(--mono); font-size: 12.6px; line-height: 1.6; background: var(--black-med);
+        color: var(--white); border: 1px solid var(--rule); padding: 17px 19px;
+        overflow-x: auto; margin: 0 0 19px; tab-size: 2; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .c { color: var(--grey-med); }
+  pre .k { color: var(--yellow); }
+  pre .n { color: var(--blue); }
+
+  .table-wrap { overflow-x: auto; margin: 0 0 22px; background: var(--black-med); border: 1px solid var(--rule); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.5; }
+  th { text-align: left; font-weight: 600; font-size: 10.5px; letter-spacing: 0.12em;
+       text-transform: uppercase; color: var(--grey-soft); padding: 12px 15px;
+       border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  td { padding: 12px 15px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.lbl { color: var(--grey-soft); font-size: 10.5px; font-weight: 600;
+           letter-spacing: 0.11em; text-transform: uppercase; white-space: nowrap; }
+  td.miss { color: var(--red); }
+  td.have { color: var(--green); }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.api { font-family: var(--mono); font-size: 12.3px; white-space: nowrap; color: var(--yellow); }
+
+  .note { background: var(--black-med); border: 1px solid var(--rule);
+          padding: 18px 20px; margin: 0 0 22px; max-width: 72ch; }
+  .note h4 { margin: 0 0 8px; color: var(--yellow); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .tree { font-family: var(--mono); font-size: 12.5px; line-height: 1.75;
+          background: var(--black-med); border: 1px solid var(--rule); padding: 19px 21px;
+          overflow-x: auto; margin: 0 0 19px; white-space: pre; }
+  .tree b { color: var(--yellow); font-weight: 500; }
+  .tree i { color: var(--grey-med); font-style: normal; }
+
+  footer { margin-top: 54px; padding-top: 22px; border-top: 1px solid var(--rule);
+           font-size: 12.5px; color: var(--grey-med); max-width: 72ch; }
+  footer a { color: var(--blue); }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="masthead">
+    <span class="eyebrow">Akka evalkit &middot; publishing design</span>
+    <h1>evalkit as a published library</h1>
+    <p class="hero"><b>A Maven Central release needs eleven additions to the repository.</b> The Java code does not change.</p>
+    <p class="capsule">Release requirements, the module and package layout, and the proposed API surface in full. Sample documentation in the doc.akka.io format is written to <code>docs/site/evalkit/</code>.</p>
+    <div class="byline">
+      <span>evalkit at commit 9a0260c</span>
+      <span>Target version 0.1.0</span>
+      <span>8 August 2026</span>
+    </div>
+  </header>
+
+  <div class="body-grid">
+
+    <nav class="index">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#ready">Publishing readiness</a></li>
+        <li><a href="#category">What the project is</a></li>
+        <li><a href="#modules">Module design</a></li>
+        <li><a href="#packages">Package design</a></li>
+        <li><a href="#api-dataset">API: dataset</a></li>
+        <li><a href="#api-runner">API: runner</a></li>
+        <li><a href="#api-scorer">API: scorer</a></li>
+        <li><a href="#api-reports">API: reports</a></li>
+        <li><a href="#api-modules">API: other modules</a></li>
+        <li><a href="#sdk">Akka SDK components</a></li>
+        <li><a href="#shapes">Test-scope and deployed</a></li>
+        <li><a href="#deepeval">Distance from DeepEval</a></li>
+        <li><a href="#conformance">Conformance suite</a></li>
+        <li><a href="#breaking">Breaking changes</a></li>
+        <li><a href="#readme">Sample README</a></li>
+        <li><a href="#docs">Documentation set</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <!-- ============ 1 ============ -->
+      <section id="ready">
+        <h2 class="sec">Publishing readiness</h2>
+        <p class="answer">evalkit builds, runs its tests, and keeps <code>evalkit-core</code> free of dependencies. A Maven Central release additionally requires a licence file, POM metadata, four plugins, and a <code>groupId</code> whose namespace can be verified. The table lists each item and the action it needs.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Requirement</th><th>State</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td class="lbl">LICENSE</td><td class="miss">Absent</td><td>Use Apache 2.0. The licence permits redistributing ported DeepEval metric definitions and reaches the widest set of users.</td></tr>
+            <tr><td class="lbl">NOTICE</td><td class="miss">Absent</td><td>Required once any DeepEval definition ships. Records the derived files and the source revision.</td></tr>
+            <tr><td class="lbl">CONTRIBUTING</td><td class="miss">Absent</td><td>Include the rule that every audit needs a case it is known to catch. That rule belongs in CONTRIBUTING.md.</td></tr>
+            <tr><td class="lbl">CODE_OF_CONDUCT</td><td class="miss">Absent</td><td>Contributor Covenant, matching the Akka SDK repository.</td></tr>
+            <tr><td class="lbl">SECURITY</td><td class="miss">Absent</td><td>Disclosure address. A campaign holds recorded customer conversations.</td></tr>
+            <tr><td class="lbl">CHANGELOG</td><td class="miss">Absent</td><td>Rubric and metric version changes belong here, because both change what a recorded score means.</td></tr>
+            <tr><td class="lbl">CI</td><td class="miss">Absent</td><td>Build and test on JDK 21. Add a job asserting that <code>evalkit-core</code> compiles with no Akka on the classpath.</td></tr>
+            <tr><td class="lbl">POM metadata</td><td class="miss">Absent</td><td><code>&lt;licenses&gt;</code>, <code>&lt;scm&gt;</code>, <code>&lt;url&gt;</code>, <code>&lt;developers&gt;</code> are all required by Maven Central.</td></tr>
+            <tr><td class="lbl">Release plugins</td><td class="miss">Absent</td><td>Add <code>maven-source-plugin</code>, <code>maven-javadoc-plugin</code>, <code>maven-gpg-plugin</code> and <code>central-publishing-maven-plugin</code>.</td></tr>
+            <tr><td class="lbl">groupId</td><td class="miss"><code>io.akka.evalkit</code></td><td>Central verifies namespace ownership. Use <code>io.akka</code> with artifact ids <code>evalkit-core</code> and siblings, matching the SDK's coordinates.</td></tr>
+            <tr><td class="lbl">Surefire</td><td class="miss">2.22.2</td><td>Pinned to an offline cache. Raise to a current release once the build reaches a real repository.</td></tr>
+            <tr><td class="lbl">Module boundary</td><td class="have">Holds</td><td>Keep. A dependency-free core is the property that makes the library usable outside Akka.</td></tr>
+            <tr><td class="lbl">Javadoc</td><td class="have">Written</td><td>The domain types are documented already. Publish the Javadoc.</td></tr>
+            <tr><td class="lbl">Test coverage of the rules</td><td class="have">Present</td><td>Seven core test classes cover the report arithmetic, the rubric split and the outcome routing.</td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="note">
+          <h4>The aggregator cannot carry the release configuration</h4>
+          <p><code>evalkit-core</code> has no parent. <code>evalkit-akka</code> inherits <code>akka-javasdk-parent</code>, which supplies the build its TestKit requires. Making the aggregator the parent broke that configuration once already.</p>
+          <p>Add an <code>evalkit-parent</code> POM holding the release plugins, and have <code>evalkit-core</code>, <code>evalkit-formats</code> and <code>evalkit-junit</code> inherit it. Declare the same plugins a second time inside <code>evalkit-akka</code>.</p>
+        </div>
+      </section>
+
+      <!-- ============ 2 ============ -->
+      <section id="category">
+        <h2 class="sec">README contents</h2>
+        <p class="answer">The README opens with one sentence naming the behaviour. evalkit runs recorded scenarios against a conversational service and prints a report of the result.</p>
+
+        <p>Four behaviours follow, each stated as a mechanism:</p>
+        <ul>
+          <li><code>RunOutcome</code> separates a wrong answer from a run that produced no result, across four variants.</li>
+          <li><code>CampaignPlan.check</code> refuses an unsatisfiable campaign before the first model call.</li>
+          <li><code>Scoring.compare</code> throws when two verdict sets carry different rubric versions.</li>
+          <li><code>CampaignReport</code> exposes counts and no combined pass rate.</li>
+        </ul>
+
+        <p>Two further statements appear in the README. <code>evalkit-core</code> compiles against the JDK alone, so a service in any language behind a port is evaluated by implementing <code>SystemUnderTest</code>. <code>docs/design-history.md</code> records the incident that produced each design rule, including a campaign that reported 53 outcomes for 80 scenarios and an audit that passed for nine development stages while its regex matched nothing.</p>
+
+        <p>The README is the one document in the repository that states rationale. Every page under <code>docs/site/</code> states behaviour, inputs, outputs and failure modes.</p>
+      </section>
+
+      <!-- ============ 3 ============ -->
+      <section id="modules">
+        <h2 class="sec">Module design</h2>
+        <p class="answer">The library splits into four Maven modules. <code>evalkit-core</code> requires nothing beyond the JDK. <code>evalkit-formats</code>, <code>evalkit-junit</code> and <code>evalkit-akka</code> each add one dependency and the capability that needs it, so a team evaluating a service outside Akka depends on <code>evalkit-core</code> alone.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Module</th><th>Contents</th><th>Depends on</th></tr></thead>
+          <tbody>
+            <tr><td class="lbl">evalkit-core</td><td>Scenarios, precursors, the runner, the deterministic, heuristic and agentic scorers, outcomes and reports.</td><td class="have">The JDK</td></tr>
+            <tr><td class="lbl">evalkit-formats</td><td>Corpus loaders for JSONL and CSV, the DeepEval golden importer, JSON report output.</td><td>A JSON library</td></tr>
+            <tr><td class="lbl">evalkit-junit</td><td>The <code>@Eval</code> annotation and the JUnit 5 extension, for a Java target outside Akka.</td><td>JUnit 5</td></tr>
+            <tr><td class="lbl">evalkit-akka</td><td><code>CampaignWorkflow</code>, agent judges, <code>EvalKitSupport</code>, built-in evaluator adapters, the PromptTemplate rubric source.</td><td>Akka SDK</td></tr>
+          </tbody>
+        </table></div>
+
+        <p>A type belongs in <code>evalkit-core</code> when it decides which numbers the report prints. Scoring, outcome classification, the plan check and reporting each decide that, so <code>evalkit-core</code> holds them. Reading a file, driving a test lifecycle and hosting an agent decide nothing about the report, so those types live in the module that supplies the dependency they need.</p>
+
+        <p><code>evalkit-formats</code> holds the corpus readers, which keeps a JSON library off the classpath of a team that builds its scenarios in code. <code>evalkit-formats</code> also holds a reader for DeepEval goldens, so a team already running DeepEval can point a campaign at its existing corpus without rewriting the file.</p>
+      </section>
+
+      <!-- ============ 4 ============ -->
+      <section id="packages">
+        <h2 class="sec">Package design</h2>
+        <p class="answer"><code>evalkit-core</code> replaces its <code>domain</code> and <code>application</code> packages with <code>dataset</code>, <code>runner</code>, <code>scorer</code> and <code>reports</code>. The domain and application names describe the layers of a service, and this library has no service layers.</p>
+
+        <div class="tree"><b>io.akka.evalkit</b>
+├── <b>dataset</b>      <i>Scenario, Precursor, ScenarioSource, Corpus</i>
+├── <b>runner</b>       <i>SystemUnderTest, ScenarioRunner, Recording, CampaignPlan, CampaignRunner, Lanes</i>
+├── <b>scorer</b>       <i>Scorer, ScorerRouter, RunOutcome, Verdict, Band, Scoring</i>
+│   ├── <b>deterministic</b>  <i>NodeMatch, ExactMatch, ContainsAll, JsonSchemaMatch, ToolCallMatch</i>
+│   ├── <b>heuristic</b>      <i>Metric, MetricRef, LatencyBudget, TokenBudget, JsonValidity, Similarity</i>
+│   └── <b>agentic</b>        <i>Judge, Rubric, RubricSource, Panel, Quorum, Calibration</i>
+└── <b>reports</b>      <i>CampaignReport, RunSummary, Tokens</i></div>
+
+        <p>The consuming project's <code>src/eval/java</code> tree repeats these package names for its own scorers, target adapters and corpus loaders.</p>
+      </section>
+
+      <!-- ============ 5 ============ -->
+      <section id="api-dataset">
+        <h2 class="sec">API surface: dataset</h2>
+        <p class="answer">A <code>Scenario</code> holds its setup as a <code>Precursor</code> value. Extracting setup from a scenario title by pattern instead produced scores of 23, 17 and 19 out of 40 across three passes at the pattern, on a service that never changed.</p>
+
+        <pre><code><span class="k">package</span> io.akka.evalkit.dataset;
+
+<span class="c">/** Reaches a state, says the graded turn, and expects a stated outcome. */</span>
+<span class="k">public record</span> <span class="n">Scenario</span>(String id,
+                       Optional&lt;String&gt; specNode,
+                       Optional&lt;MetricRef&gt; metric,
+                       Precursor precursor,
+                       String gradedTurn,
+                       String expectedOutcome) {
+
+    <span class="k">public static</span> Builder named(String id);
+    <span class="k">public</span> boolean needsJudge();          <span class="c">// no node and no metric</span>
+    <span class="k">public</span> Scenario via(Precursor other);
+
+    <span class="k">public static final class</span> <span class="n">Builder</span> {
+        <span class="k">public</span> Builder  from(Precursor precursor);
+        <span class="k">public</span> Builder  say(String gradedTurn);
+        <span class="k">public</span> Scenario expect(String expectedOutcome);   <span class="c">// judged</span>
+        <span class="k">public</span> Scenario reaches(String specNode);         <span class="c">// deterministic</span>
+        <span class="k">public</span> Scenario within(MetricRef metric);         <span class="c">// heuristic</span>
+    }
+}
+
+<span class="c">/** How the service is put into the state a scenario assumes. */</span>
+<span class="k">public sealed interface</span> <span class="n">Precursor</span> {
+    <span class="k">record</span> None() <span class="k">implements</span> Precursor {}
+    <span class="k">record</span> Replay(List&lt;String&gt; userTurns) <span class="k">implements</span> Precursor {}
+    <span class="k">record</span> Fixture(String name, Map&lt;String, String&gt; parameters) <span class="k">implements</span> Precursor {
+        <span class="k">public static</span> Fixture named(String name);
+    }
+    <span class="k">static</span> Precursor replay(String... userTurns);
+    <span class="k">default</span> boolean provesReachability();   <span class="c">// true only for Replay</span>
+    <span class="k">default</span> String  describe();
+}
+
+<span class="c">/** Where a campaign's scenarios come from. Paged, so a restart reads a cursor. */</span>
+<span class="k">public interface</span> <span class="n">ScenarioSource</span> {
+    int size(String campaignId);
+    List&lt;Scenario&gt; page(String campaignId, int offset, int limit);
+}
+
+<span class="c">/** An in-memory source, for a campaign small enough to hold. */</span>
+<span class="k">public final class</span> <span class="n">Corpus</span> <span class="k">implements</span> ScenarioSource {
+    <span class="k">public static</span> Corpus of(Scenario... scenarios);
+    <span class="k">public static</span> Corpus of(List&lt;Scenario&gt; scenarios);
+}</code></pre>
+
+        <h3>Usage</h3>
+        <pre><code><span class="c">// A corpus written in code. Each scenario declares the state it assumes.</span>
+<span class="k">var</span> corpus = Corpus.of(
+
+    <span class="c">// Judged: the expected outcome is prose, so a rubric settles it.</span>
+    Scenario.named(<span class="n">"refund-30d"</span>)
+        .from(Precursor.Fixture.named(<span class="n">"authenticated-claim-open"</span>))
+        .say(<span class="n">"What if these shoes don't fit?"</span>)
+        .expect(<span class="n">"a 30-day full refund at no extra cost"</span>),
+
+    <span class="c">// Deterministic: the expectation names a node, so comparison settles it.</span>
+    Scenario.named(<span class="n">"GenUC-16a.3"</span>)
+        .from(Precursor.replay(<span class="n">"I lost my bag"</span>, <span class="n">"it arrived yesterday"</span>))
+        .say(<span class="n">"so what happens now?"</span>)
+        .reaches(<span class="n">"GenUC-16a.3"</span>),
+
+    <span class="c">// Heuristic: the expectation names a metric and its version.</span>
+    Scenario.named(<span class="n">"faq-latency"</span>)
+        .from(<span class="k">new</span> Precursor.None())
+        .say(<span class="n">"how long do refunds take?"</span>)
+        .within(<span class="k">new</span> MetricRef(<span class="n">"latency-budget"</span>, 1)));
+
+<span class="c">// A fixture with parameters. The target reads them when it builds the state.</span>
+<span class="k">var</span> inFrance = <span class="k">new</span> Precursor.Fixture(<span class="n">"authenticated-claim-open"</span>,
+    Map.of(<span class="n">"country"</span>, <span class="n">"FR"</span>, <span class="n">"wallet"</span>, <span class="n">"none"</span>));
+
+<span class="c">// The same scenario reached a different way. Walking proves the path exists.</span>
+Scenario walked = corpus.page(<span class="n">"refund-policy"</span>, 0, 1).get(0)
+    .via(Precursor.replay(<span class="n">"hello"</span>, <span class="n">"I bought shoes last week"</span>));</code></pre>
+
+        <div class="note">
+          <h4>A source must be stable across pages</h4>
+          <p><code>page</code> returns the same scenarios for the same offset on every call. A source that reorders between waves causes a restart to skip some scenarios and repeat others. The skipped and repeated scenarios cancel out in the totals, so the campaign reports a count that matches the corpus size while covering less of it.</p>
+        </div>
+      </section>
+
+      <!-- ============ 6 ============ -->
+      <section id="api-runner">
+        <h2 class="sec">API surface: runner</h2>
+        <p class="answer"><code>ScenarioRunner</code> produces a <code>Recording</code> and assigns no score. Scoring reads the <code>Recording</code> afterwards. A rubric can therefore be applied to stored recordings without running the conversations again, and one rubric version can score a recording this library produced alongside a recording made elsewhere.</p>
+
+        <pre><code><span class="k">package</span> io.akka.evalkit.runner;
+
+<span class="k">public interface</span> <span class="n">SystemUnderTest</span> {
+
+    <span class="k">sealed interface</span> Prepared {
+        <span class="k">record</span> Ready(String sessionId, String historySoFar) <span class="k">implements</span> Prepared {}
+        <span class="k">record</span> Failed(String reason) <span class="k">implements</span> Prepared {}
+    }
+
+    Prepared prepare(Precursor precursor);
+
+    <span class="k">record</span> Reply(String text,
+                 Optional&lt;String&gt; node,
+                 Optional&lt;Duration&gt; latency,
+                 List&lt;ToolCall&gt; toolsCalled) {
+        <span class="k">public static</span> Reply of(String text);
+        <span class="k">public static</span> Reply from(String text, String node);
+    }
+
+    Reply submit(String sessionId, String userText);
+
+    Map&lt;String, String&gt; fixtures();                       <span class="c">// declared, not discovered</span>
+    <span class="k">default</span> Set&lt;String&gt; emittableNodes() { <span class="k">return</span> Set.of(); }   <span class="c">// empty means unknown</span>
+    <span class="k">default</span> Accounting spend() { <span class="k">return new</span> Accounting(Tokens.NONE, 1); }
+
+    <span class="k">record</span> Accounting(Tokens tokens, int callsMissingUsage) {}
+}
+
+<span class="k">public record</span> <span class="n">ToolCall</span>(String name, Map&lt;String, String&gt; arguments) {}
+
+<span class="c">/** The four fields a rubric interpolates. Nothing else belongs here. */</span>
+<span class="k">public record</span> <span class="n">Transcript</span>(String scenarioName, String replayHistory,
+                         String simulationHistory, String systemOutput,
+                         String expectedOutcome) {
+    <span class="k">public</span> boolean hasSetup();
+}
+
+<span class="c">/** What execution observed beyond the text a rubric reads. */</span>
+<span class="k">public record</span> <span class="n">Evidence</span>(Optional&lt;String&gt; node, Optional&lt;Duration&gt; latency,
+                       List&lt;ToolCall&gt; toolsCalled, Tokens tokens) {}
+
+<span class="c">/** What a scorer receives. */</span>
+<span class="k">public record</span> <span class="n">Recording</span>(Transcript transcript, Evidence evidence) {}
+
+<span class="k">public final class</span> <span class="n">ScenarioRunner</span> {
+    <span class="k">public sealed interface</span> Execution {
+        <span class="k">record</span> Produced(Recording recording) <span class="k">implements</span> Execution {}
+        <span class="k">record</span> NotReached(RunOutcome.Cause cause, String reason) <span class="k">implements</span> Execution {}
+    }
+    <span class="k">public static</span> Execution    execute(Scenario scenario, SystemUnderTest target);
+    <span class="k">public static</span> List&lt;String&gt; unsupported(List&lt;Scenario&gt; scenarios, SystemUnderTest target);
+}
+
+<span class="k">public record</span> <span class="n">Lanes</span>(int configured) {
+    <span class="k">public static</span> Lanes of(int configured);
+    <span class="k">public</span> Utilisation over(Duration busy, Duration wallClock, int completed);
+
+    <span class="k">public record</span> Utilisation(int configured, double achieved,
+                              double wallClockSeconds, int completed) {
+        <span class="k">public</span> double  ratio();
+        <span class="k">public</span> double  throughput();
+        <span class="k">public</span> boolean saturated();      <span class="c">// lanes were the constraint</span>
+        <span class="k">public</span> String  summary();
+    }
+}
+
+<span class="k">public record</span> <span class="n">CampaignPlan</span>(String id, List&lt;Scenario&gt; scenarios,
+                           Lanes lanes, ScorerRouter router) {
+
+    <span class="k">public sealed interface</span> Check {
+        <span class="k">record</span> Ready(CampaignPlan plan) <span class="k">implements</span> Check {}
+        <span class="k">record</span> Refused(List&lt;String&gt; reasons) <span class="k">implements</span> Check {}
+    }
+
+    <span class="k">public</span> Check  check(SystemUnderTest target);   <span class="c">// fixtures, nodes, judge calibration</span>
+    <span class="k">public</span> int    judged();
+    <span class="k">public</span> int    asserted();
+    <span class="k">public</span> int    measured();
+    <span class="k">public</span> int    walked();
+    <span class="k">public</span> String summary();
+}
+
+<span class="k">public final class</span> <span class="n">CampaignRunner</span> {
+
+    <span class="k">public record</span> Completed(RunOutcome outcome, Scenario scenario) {
+        <span class="k">public</span> Precursor precursor();
+    }
+
+    <span class="k">public record</span> Result(CampaignReport report, Lanes.Utilisation utilisation,
+                         List&lt;Completed&gt; completed, List&lt;String&gt; notes) {
+        <span class="k">public</span> List&lt;RunOutcome&gt; outcomes();
+    }
+
+    <span class="k">public static</span> Result run(CampaignPlan plan, SystemUnderTest target, ScorerRouter router);
+}</code></pre>
+
+        <h3>Usage: a target outside Akka</h3>
+        <pre><code><span class="c">// A chat service behind HTTP. java.net.http ships with the JDK, so this</span>
+<span class="c">// adapter adds no dependency to evalkit-core.</span>
+<span class="k">public final class</span> <span class="n">HttpChatTarget</span> <span class="k">implements</span> SystemUnderTest {
+
+    <span class="k">private final</span> HttpClient http = HttpClient.newHttpClient();
+    <span class="k">private final</span> URI base;
+    <span class="k">private final</span> Function&lt;String, String&gt; readReply;   <span class="c">// caller supplies JSON parsing</span>
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> Prepared prepare(Precursor precursor) {
+        <span class="k">return switch</span> (precursor) {
+            <span class="k">case</span> Precursor.None ignored -&gt; <span class="k">new</span> Prepared.Ready(newSession(), <span class="n">""</span>);
+
+            <span class="k">case</span> Precursor.Fixture fixture -&gt; {
+                <span class="k">var</span> response = post(<span class="n">"/test/fixtures/"</span> + fixture.name(), fixture.parameters());
+                <span class="k">yield</span> response.statusCode() == 200
+                    ? <span class="k">new</span> Prepared.Ready(readReply.apply(response.body()), <span class="n">""</span>)
+                    <span class="c">// Never throw for an expected failure. A precursor that cannot</span>
+                    <span class="c">// land becomes NotReached, which is a fact about the campaign.</span>
+                    : <span class="k">new</span> Prepared.Failed(<span class="n">"fixture returned "</span> + response.statusCode());
+            }
+
+            <span class="k">case</span> Precursor.Replay replay -&gt; {
+                String session = newSession();
+                StringBuilder history = <span class="k">new</span> StringBuilder();
+                <span class="k">for</span> (String turn : replay.userTurns()) {
+                    <span class="k">var</span> reply = submit(session, turn);
+                    history.append(<span class="n">"User: "</span>).append(turn)
+                           .append(<span class="n">"\nAgent: "</span>).append(reply.text()).append(<span class="n">"\n\n"</span>);
+                }
+                <span class="k">yield new</span> Prepared.Ready(session, history.toString());
+            }
+        };
+    }
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> Reply submit(String sessionId, String userText) {
+        <span class="k">var</span> started = Instant.now();
+        <span class="k">var</span> body = post(<span class="n">"/chat/"</span> + sessionId, Map.of(<span class="n">"message"</span>, userText)).body();
+        <span class="k">return new</span> Reply(readReply.apply(body), Optional.empty(),
+                         Optional.of(Duration.between(started, Instant.now())), List.of());
+    }
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> Map&lt;String, String&gt; fixtures() {
+        <span class="c">// The target declares the states it can build. A campaign naming a fixture</span>
+        <span class="c">// missing from this map is refused before the first call.</span>
+        <span class="k">return</span> Map.of(<span class="n">"authenticated-claim-open"</span>,
+                      <span class="n">"a signed-in customer with one claim open and no wallet"</span>);
+    }
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> Accounting spend() {
+        <span class="c">// This service reports no usage. Returning the default makes the</span>
+        <span class="c">// report print the total as a floor and name the unaccounted calls.</span>
+        <span class="k">return new</span> Accounting(Tokens.NONE, 1);
+    }
+}</code></pre>
+
+        <h3>Usage: planning and running a campaign</h3>
+        <pre><code><span class="k">var</span> target = <span class="k">new</span> HttpChatTarget(URI.create(<span class="n">"http://localhost:8080"</span>), Json::readReply);
+<span class="k">var</span> judge  = <span class="k">new</span> AnthropicJudge(Rubric.load(<span class="n">"scenario-judge"</span>, 2));
+<span class="k">var</span> router = ScorerRouter.byExpectation(judge,
+    Map.of(<span class="k">new</span> MetricRef(<span class="n">"latency-budget"</span>, 1), LatencyBudget.under(Duration.ofSeconds(4))));
+
+<span class="k">var</span> plan = <span class="k">new</span> CampaignPlan(<span class="n">"refund-policy"</span>,
+    corpus.page(<span class="n">"refund-policy"</span>, 0, 500), Lanes.of(8), router);
+
+<span class="c">// The plan check runs first and refuses before any spend.</span>
+<span class="k">switch</span> (plan.check(target)) {
+    <span class="k">case</span> CampaignPlan.Check.Refused refused -&gt; {
+        refused.reasons().forEach(System.err::println);
+        <span class="k">return</span>;
+    }
+    <span class="k">case</span> CampaignPlan.Check.Ready ready -&gt; System.out.println(RunSummary.scope(ready.plan()));
+}
+
+CampaignRunner.Result result = CampaignRunner.run(plan, target, router);
+
+<span class="c">// Every outcome travels with the scenario that produced it.</span>
+<span class="k">for</span> (CampaignRunner.Completed completed : result.completed()) {
+    System.out.printf(<span class="n">"%-24s %s%n"</span>,
+        completed.scenario().id(), completed.outcome().describe());
+}
+
+System.out.println(result.utilisation().summary());
+<span class="c">// 7.4 of 8 lanes (92%), 1.9/s over 271s — lane-bound; more lanes would help</span></code></pre>
+
+        <div class="note">
+          <h4><code>Completed</code> carries the scenario that produced the outcome</h4>
+          <p>Outcomes and scenarios were once returned as parallel lists appended by concurrent workers. Under six lanes, submission order and completion order differ, and a per-scenario report attributed results to the wrong requirement. A bare <code>List&lt;RunOutcome&gt;</code> return type puts the same pairing problem in the caller, so <code>Completed</code> is public and holds both values.</p>
+        </div>
+      </section>
+
+      <!-- ============ 7 ============ -->
+      <section id="api-scorer">
+        <h2 class="sec">API surface: scorer</h2>
+        <p class="answer"><code>Scorer.score</code> returns <code>RunOutcome</code>. A <code>double</code> return type has no value meaning "not scored", so a scorer that failed would have to return a number, and the report would count that number as a score.</p>
+
+        <pre><code><span class="k">package</span> io.akka.evalkit.scorer;
+
+<span class="k">public interface</span> <span class="n">Scorer</span> {
+    RunOutcome score(Recording recording);
+    String id();                <span class="c">// rubric label or metric label, for the report</span>
+}
+
+<span class="c">/** Chooses how each scenario is settled, before any call goes out. */</span>
+<span class="k">public interface</span> <span class="n">ScorerRouter</span> {
+    Scorer scorerFor(Scenario scenario);
+    <span class="k">default</span> Optional&lt;Calibration&gt; calibration() { <span class="k">return</span> Optional.empty(); }
+
+    <span class="c">/** Node to NodeMatch, declared metric to that metric, everything else to the judge. */</span>
+    <span class="k">static</span> ScorerRouter byExpectation(Judge judge, Map&lt;MetricRef, Scorer&gt; metrics);
+}
+
+<span class="k">public sealed interface</span> <span class="n">RunOutcome</span> {
+
+    <span class="k">record</span> Scored(Verdict verdict) <span class="k">implements</span> RunOutcome {}
+    <span class="k">record</span> Asserted(boolean passed, String expected, String actual) <span class="k">implements</span> RunOutcome {}
+    <span class="k">record</span> Measured(String metricId, int metricVersion, double value,
+                  double threshold, boolean withinThreshold) <span class="k">implements</span> RunOutcome {}
+    <span class="k">record</span> Disputed(List&lt;Verdict&gt; verdicts) <span class="k">implements</span> RunOutcome {}
+
+    <span class="k">enum</span> Cause { SETUP_FAILED, NO_REPLY }
+    <span class="k">record</span> NotReached(Cause cause, String reason, Precursor precursor) <span class="k">implements</span> RunOutcome {}
+    <span class="k">record</span> Unscoreable(String reason) <span class="k">implements</span> RunOutcome {}
+
+    <span class="k">default</span> boolean isEvidence();    <span class="c">// Scored, Asserted, Measured</span>
+    <span class="k">default</span> boolean passed();
+    <span class="k">default</span> boolean needsReview();   <span class="c">// middle band, or Disputed</span>
+    <span class="k">default</span> String  describe();
+}
+
+<span class="k">public enum</span> <span class="n">Band</span> {
+    <span class="c">/* … */</span>
+    <span class="k">public static</span> Band of(int score);
+    <span class="k">public</span> boolean passed();
+    <span class="k">public</span> boolean needsReview();
+}
+
+<span class="k">public record</span> <span class="n">Verdict</span>(String scenarioName, String rubricId, int rubricVersion,
+                      int score, Band band, String rationale) {
+    <span class="k">public static</span> Verdict of(String scenarioName, Rubric rubric, int score, String rationale);
+    <span class="k">public</span> boolean passed();
+    <span class="k">public static</span> Optional&lt;Integer&gt; parseScore(String reply);   <span class="c">// empty, never a default</span>
+}
+
+<span class="k">public final class</span> <span class="n">Scoring</span> {
+    <span class="k">public record</span> Distribution(Map&lt;Band, Integer&gt; counts, int total) { <span class="c">/* … */</span> }
+    <span class="k">public record</span> Comparison(List&lt;String&gt; improved, List&lt;String&gt; regressed,
+                             List&lt;String&gt; unchanged, List&lt;String&gt; onlyIn) {
+        <span class="k">public</span> boolean isRegression();
+    }
+    <span class="k">public static</span> Distribution distribution(List&lt;Verdict&gt; verdicts);
+
+    <span class="c">/** Throws when the two sides carry different rubric or metric versions. */</span>
+    <span class="k">public static</span> Comparison compare(List&lt;Verdict&gt; baseline, List&lt;Verdict&gt; candidate);
+}</code></pre>
+
+        <h3>Usage: reading an outcome</h3>
+        <pre><code><span class="c">// The switch is exhaustive and carries no default, so a sixth variant fails to compile.</span>
+String row = <span class="k">switch</span> (outcome) {
+    <span class="k">case</span> RunOutcome.Scored s -&gt;
+        <span class="n">"%s %d/10 under %s"</span>.formatted(s.verdict().band(), s.verdict().score(),
+                                    s.verdict().rubricId());
+    <span class="k">case</span> RunOutcome.Asserted a -&gt; a.passed()
+        ? <span class="n">"reached "</span> + a.expected()
+        : <span class="n">"expected %s, reached %s"</span>.formatted(a.expected(), a.actual());
+    <span class="k">case</span> RunOutcome.Measured m -&gt;
+        <span class="n">"%s %.2f against %.2f"</span>.formatted(m.metricId(), m.value(), m.threshold());
+    <span class="k">case</span> RunOutcome.Disputed d -&gt;
+        <span class="n">"%d judges disagreed"</span>.formatted(d.verdicts().size());
+    <span class="k">case</span> RunOutcome.NotReached n -&gt; <span class="k">switch</span> (n.cause()) {
+        <span class="k">case</span> SETUP_FAILED -&gt; <span class="n">"never reached the question — "</span> + n.reason();
+        <span class="k">case</span> NO_REPLY     -&gt; <span class="n">"no reply — "</span> + n.reason();
+    };
+    <span class="k">case</span> RunOutcome.Unscoreable u -&gt; <span class="n">"unscoreable — "</span> + u.reason();
+};
+
+<span class="c">// Scored, Asserted and Measured return true. NotReached, Unscoreable and</span>
+<span class="c">// Disputed return false and stay out of the pass-rate denominator.</span>
+<span class="k">long</span> evidence = outcomes.stream().filter(RunOutcome::isEvidence).count();</code></pre>
+
+        <h3>Usage: a custom scorer</h3>
+        <p>Inside an Akka service a judge is an <code>Agent</code>, covered in the Akka SDK components section. The scorer below calls a provider directly, which is the shape for a campaign running against a service outside Akka with no runtime present.</p>
+        <pre><code><span class="c">// A judge that calls a provider directly. No Akka runtime is involved.</span>
+<span class="k">public final class</span> <span class="n">AnthropicJudge</span> <span class="k">implements</span> Judge {
+
+    <span class="k">private final</span> Rubric rubric;
+    <span class="k">private final</span> AnthropicClient client;
+
+    <span class="k">@Override public</span> Rubric rubric() { <span class="k">return</span> rubric; }
+    <span class="k">@Override public</span> String id()      { <span class="k">return</span> rubric.label(); }
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> RunOutcome score(Recording recording) {
+        Transcript transcript = recording.transcript();
+        String reply;
+        <span class="k">try</span> {
+            reply = client.complete(rubric.instructions(), rubric.data(transcript));
+        } <span class="k">catch</span> (RuntimeException e) {
+            <span class="c">// A refusal, a filter or a timeout tells us nothing about the service.</span>
+            <span class="k">return new</span> RunOutcome.Unscoreable(e.getMessage());
+        }
+
+        <span class="k">return</span> Verdict.parseScore(reply)
+            .&lt;RunOutcome&gt;map(score -&gt; <span class="k">new</span> RunOutcome.Scored(
+                Verdict.of(transcript.scenarioName(), rubric, score, <span class="n">""</span>)))
+            <span class="c">// An unreadable reply is never defaulted. A fabricated score moves</span>
+            <span class="c">// the band distribution and nothing in the report would show it.</span>
+            .orElseGet(() -&gt; <span class="k">new</span> RunOutcome.Unscoreable(<span class="n">"no score in: "</span> + reply));
+    }
+}</code></pre>
+
+        <h3>Deterministic scorers</h3>
+        <pre><code><span class="k">package</span> io.akka.evalkit.scorer.deterministic;
+
+<span class="c">/** Each returns RunOutcome.Asserted. A pass or a fail, never undecided. */</span>
+<span class="k">public final class</span> <span class="n">NodeMatch</span>       { <span class="k">public static</span> NodeMatch expecting(String node); }
+<span class="k">public final class</span> <span class="n">ExactMatch</span>      { <span class="k">public static</span> ExactMatch of(String expected);
+                                     <span class="k">public static</span> ExactMatch ignoringCase(String expected); }
+<span class="k">public final class</span> <span class="n">ContainsAll</span>     { <span class="k">public static</span> ContainsAll of(String... phrases); }
+<span class="k">public final class</span> <span class="n">JsonSchemaMatch</span> { <span class="k">public static</span> JsonSchemaMatch of(Predicate&lt;String&gt; valid, String id); }
+<span class="k">public final class</span> <span class="n">ToolCallMatch</span>   { <span class="k">public static</span> ToolCallMatch of(String tool);
+                                     <span class="k">public</span> ToolCallMatch withArguments(Map&lt;String, String&gt; args); }</code></pre>
+        <p><code>JsonSchemaMatch</code> takes a predicate so that core adds no JSON dependency. <code>evalkit-formats</code> supplies one built on its JSON library.</p>
+
+        <pre><code><span class="c">// The node the target answered from, against the node the scenario names.</span>
+Scorer node = NodeMatch.expecting(<span class="n">"GenUC-16a.3"</span>);
+
+<span class="c">// A tool call, asserted without a model.</span>
+Scorer refundTool = ToolCallMatch.of(<span class="n">"RefundService_issueRefund"</span>)
+    .withArguments(Map.of(<span class="n">"currency"</span>, <span class="n">"EUR"</span>));
+
+<span class="c">// Checks that every phrase appears, ignoring case.</span>
+Scorer phrasing = ContainsAll.of(<span class="n">"30 days"</span>, <span class="n">"full refund"</span>, <span class="n">"no extra cost"</span>);
+
+<span class="c">// Structured output. The predicate comes from evalkit-formats or from you.</span>
+Scorer shape = JsonSchemaMatch.of(JsonSchemas.conformingTo(REFUND_SCHEMA), <span class="n">"refund-v1"</span>);
+
+RunOutcome outcome = node.score(recording);
+<span class="c">// Asserted[passed=false, expected=GenUC-16a.3, actual=GenUC-17a]</span></code></pre>
+
+        <h3>Heuristic scorers</h3>
+        <pre><code><span class="k">package</span> io.akka.evalkit.scorer.heuristic;
+
+<span class="k">public record</span> <span class="n">MetricRef</span>(String metricId, int version) {}
+
+<span class="k">public interface</span> <span class="n">Metric</span> <span class="k">extends</span> Scorer {
+    MetricRef ref();
+    double measure(Recording recording);
+    double threshold();
+}
+
+<span class="k">public final class</span> <span class="n">LatencyBudget</span> <span class="k">implements</span> Metric { <span class="k">public static</span> LatencyBudget under(Duration limit); }
+<span class="k">public final class</span> <span class="n">TokenBudget</span>   <span class="k">implements</span> Metric { <span class="k">public static</span> TokenBudget under(long tokens); }
+<span class="k">public final class</span> <span class="n">JsonValidity</span>  <span class="k">implements</span> Metric { <span class="k">public static</span> JsonValidity required(); }
+<span class="k">public final class</span> <span class="n">Similarity</span>    <span class="k">implements</span> Metric {
+    <span class="k">public static</span> Similarity cosine(Embedder embedder, double threshold);
+}
+
+<span class="c">/** Supplied by the caller, so core carries no model client. */</span>
+<span class="k">public interface</span> <span class="n">Embedder</span> { float[] embed(String text); }</code></pre>
+
+        <pre><code><span class="c">// Two metrics that read a property of the service and carry no interpretation.</span>
+Metric latency = LatencyBudget.under(Duration.ofSeconds(4));
+Metric tokens  = TokenBudget.under(2_000);
+
+<span class="c">// A metric of your own. The version changes whenever the threshold or the</span>
+<span class="c">// formula changes, and Scoring.compare throws across versions.</span>
+<span class="k">public final class</span> <span class="n">AnswerLength</span> <span class="k">implements</span> Metric {
+
+    <span class="k">@Override public</span> MetricRef ref()      { <span class="k">return new</span> MetricRef(<span class="n">"answer-length"</span>, 2); }
+    <span class="k">@Override public</span> String    id()       { <span class="k">return</span> <span class="n">"answer-length v2"</span>; }
+    <span class="k">@Override public</span> double    threshold() { <span class="k">return</span> 400; }
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> double measure(Recording recording) {
+        <span class="k">return</span> recording.transcript().systemOutput().length();
+    }
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> RunOutcome score(Recording recording) {
+        <span class="k">double</span> value = measure(recording);
+        <span class="k">return new</span> RunOutcome.Measured(ref().metricId(), ref().version(),
+                                       value, threshold(), value &lt;= threshold());
+    }
+}</code></pre>
+
+        <div class="note">
+          <h4>A threshold change alters every result recorded under the old threshold</h4>
+          <p>Raising a similarity threshold from 0.75 to 0.80 turns some passing runs into failing ones with no change to the service. <code>MetricRef</code> stamps each <code>Measured</code> outcome with the metric id and version, and <code>Scoring.compare</code> throws when the two sides carry different metric versions. Bump the version whenever a threshold or a formula changes.</p>
+        </div>
+
+        <h3>Agentic scorers</h3>
+        <pre><code><span class="k">package</span> io.akka.evalkit.scorer.agentic;
+
+<span class="k">public record</span> <span class="n">Rubric</span>(String id, int version, String promptTemplate) {
+    <span class="k">public static</span> Rubric load(String id, int version);        <span class="c">// classpath</span>
+    <span class="k">public static</span> Rubric of(String id, int version, String template);
+    <span class="k">public</span> String render(Transcript transcript);
+    <span class="k">public</span> String instructions();                             <span class="c">// system message</span>
+    <span class="k">public</span> String data(Transcript transcript);                 <span class="c">// user message</span>
+    <span class="k">public</span> String label();                                    <span class="c">// "scenario-judge v2"</span>
+}
+
+<span class="k">public interface</span> <span class="n">RubricSource</span> { Rubric load(String id, int version); }
+
+<span class="k">public interface</span> <span class="n">Judge</span> <span class="k">extends</span> Scorer { Rubric rubric(); }
+
+<span class="k">public final class</span> <span class="n">Panel</span> <span class="k">implements</span> Scorer {
+    <span class="k">public static</span> Panel of(Judge... judges);
+    <span class="k">public</span> Panel requiring(Quorum quorum);
+    <span class="c">// Judges that agree produce Scored. Judges that disagree produce Disputed.</span>
+    <span class="c">// A panel that cannot reach quorum produces Unscoreable.</span>
+}
+
+<span class="c">// In evalkit-akka the judges run as delegated workers of an AutonomousAgent,</span>
+<span class="c">// so each worker scores without reading another worker's verdict.</span>
+<span class="k">public final class</span> <span class="n">DelegatedPanel</span> <span class="k">implements</span> Scorer {
+    <span class="k">public static</span> DelegatedPanel of(ComponentClient client, Class&lt;? <span class="k">extends</span> AutonomousAgent&gt; panel);
+}
+
+<span class="k">public sealed interface</span> <span class="n">Quorum</span> {
+    <span class="k">static</span> Quorum unanimous();
+    <span class="k">static</span> Quorum majority();
+    <span class="k">static</span> Quorum atLeast(int agreeing);
+}
+
+<span class="k">public record</span> <span class="n">Calibration</span>(String rubricId, int rubricVersion, int samples,
+                          double clearCutAgreement, double borderlineAgreement,
+                          Instant measuredAt) {
+
+    <span class="k">public record</span> Requirement(double minClearCut, double minBorderline, Duration maxAge) {}
+    <span class="k">public</span> boolean meets(Requirement requirement, Instant now);
+}</code></pre>
+        <h3>Usage: panels and calibration</h3>
+        <pre><code><span class="c">// Three judges score the same transcript under different rubrics.</span>
+Panel panel = Panel.of(
+        <span class="k">new</span> AnthropicJudge(Rubric.load(<span class="n">"scenario-judge"</span>, 2)),
+        <span class="k">new</span> GeminiJudge(Rubric.load(<span class="n">"scenario-judge"</span>, 2)),
+        <span class="k">new</span> AnthropicJudge(Rubric.load(<span class="n">"scenario-judge-strict"</span>, 1)))
+    .requiring(Quorum.unanimous());
+
+<span class="k">switch</span> (panel.score(recording)) {
+    <span class="k">case</span> RunOutcome.Scored s      -&gt; record(s.verdict());
+    <span class="k">case</span> RunOutcome.Disputed d    -&gt; queueForReview(d.verdicts());
+    <span class="k">case</span> RunOutcome.Unscoreable u -&gt; log.warn(<span class="n">"panel did not form: {}"</span>, u.reason());
+    <span class="k">default</span> -&gt; <span class="k">throw new</span> IllegalStateException(<span class="n">"a panel returns no other outcome"</span>);
+}
+
+<span class="c">// Agreement measured against a set a person labelled, stored with the date.</span>
+<span class="k">var</span> calibration = <span class="k">new</span> Calibration(<span class="n">"scenario-judge"</span>, 2, 240,
+                                    0.90, 0.53, Instant.parse(<span class="n">"2026-08-01T00:00:00Z"</span>));
+
+<span class="k">var</span> required = <span class="k">new</span> Calibration.Requirement(0.85, 0.40, Duration.ofDays(30));
+
+<span class="c">// CampaignPlan.check calls this. A judge below the figure fails the plan.</span>
+<span class="k">if</span> (!calibration.meets(required, Instant.now())) {
+    <span class="k">throw new</span> IllegalStateException(<span class="n">"judge calibration is stale or below threshold"</span>);
+}</code></pre>
+
+      </section>
+
+      <!-- ============ 8 ============ -->
+      <section id="api-reports">
+        <h2 class="sec">API surface: reports</h2>
+        <p class="answer"><code>CampaignReport</code> exposes counts per outcome and per precursor, and no combined percentage. A campaign produces asserted runs alongside judged runs, measured runs, and runs that returned no evidence. A single percentage over that mixture would count a judged borderline verdict and a deterministic comparison as results of the same kind.</p>
+
+        <pre><code><span class="k">package</span> io.akka.evalkit.reports;
+
+<span class="k">public record</span> <span class="n">CampaignReport</span>(<span class="c">/* counts by outcome and by precursor */</span>) {
+
+    <span class="k">public static</span> CampaignReport of(List&lt;RunOutcome&gt; outcomes, List&lt;Precursor&gt; precursors);
+    <span class="k">public static</span> CampaignReport empty();
+    <span class="k">public</span> CampaignReport plus(CampaignReport other);       <span class="c">// wave accumulation</span>
+
+    <span class="k">public</span> int total();
+    <span class="k">public</span> int judged();        <span class="k">public</span> int asserted();
+    <span class="k">public</span> int measured();      <span class="k">public</span> int disputed();
+    <span class="k">public</span> int review();        <span class="k">public</span> int passed();
+    <span class="k">public</span> int notReached();    <span class="k">public</span> int unscoreable();
+    <span class="k">public</span> int walked();
+
+    <span class="k">public</span> boolean isTrustworthy();          <span class="c">// whether a pass rate may be quoted</span>
+    <span class="k">public</span> boolean provesAnyReachability();  <span class="c">// whether any run walked its path</span>
+}
+
+<span class="k">public final class</span> <span class="n">RunSummary</span> {
+    <span class="k">public static</span> RunSummary of(CampaignRunner.Result result);
+    <span class="k">public static</span> String scope(CampaignPlan plan);   <span class="c">// printed before the run</span>
+    <span class="k">public</span> String render();                          <span class="c">// printed after</span>
+}
+
+<span class="k">public record</span> <span class="n">Tokens</span>(long input, long output) {
+    <span class="k">public static final</span> Tokens NONE;
+    <span class="k">public</span> Tokens plus(Tokens other);
+    <span class="k">public</span> long   total();
+}</code></pre>
+
+        <h3>Usage</h3>
+        <pre><code>CampaignReport report = result.report();
+
+<span class="c">// Counts, one per outcome kind. No method returns a combined percentage.</span>
+System.out.printf(<span class="n">"%d scenarios: %d asserted, %d judged, %d measured%n"</span>,
+    report.total(), report.asserted(), report.judged(), report.measured());
+System.out.printf(<span class="n">"%d produced no evidence: %d never reached, %d unscoreable%n"</span>,
+    report.notReached() + report.unscoreable(), report.notReached(), report.unscoreable());
+
+<span class="c">// Whether a pass rate may be quoted at all.</span>
+<span class="k">if</span> (!report.isTrustworthy()) {
+    System.out.println(<span class="n">"pass rate is not quotable for this run"</span>);
+}
+
+<span class="c">// A campaign that seeded every state proves nothing about reachability.</span>
+<span class="k">if</span> (!report.provesAnyReachability()) {
+    System.out.println(<span class="n">"entirely seeded; an unreachable state would not show here"</span>);
+}
+
+<span class="c">// Waves accumulate. CampaignWorkflow folds each wave into state this way.</span>
+CampaignReport running = CampaignReport.empty()
+    .plus(waveOne)
+    .plus(waveTwo);
+
+<span class="c">// Compares band by band against a stored baseline, and throws across versions.</span>
+Scoring.Comparison moved = Scoring.compare(baselineVerdicts, candidateVerdicts);
+<span class="k">if</span> (moved.isRegression()) {
+    System.out.println(<span class="n">"regressed: "</span> + moved.regressed());
+}
+
+System.out.println(RunSummary.of(result).render());</code></pre>
+
+        <p><code>RunSummary.scope</code> prints the scenario count, the split between judged and asserted, the walked count and the lane setting. Callers print it before starting the campaign, which puts the scope on the record before any result exists. <code>render</code> prints the counts, the judge's bands with its measured agreement, the file the scenarios came from, and a closing paragraph stating that the campaign shows correct answers from a stated starting point and shows nothing about whether a user reaches that point unaided.</p>
+      </section>
+
+      <!-- ============ 9 ============ -->
+      <section id="api-modules">
+        <h2 class="sec">API surface: formats, junit, akka</h2>
+        <p class="answer">These three modules hold the types that need a dependency. <code>evalkit-formats</code> reads corpora from disk. <code>evalkit-junit</code> supplies the annotations and the test extension. <code>evalkit-akka</code> supplies every type that needs a running Akka service.</p>
+
+        <pre><code><span class="k">package</span> io.akka.evalkit.formats;
+
+<span class="k">public final class</span> <span class="n">JsonlScenarios</span>  { <span class="k">public static</span> ScenarioSource from(Path file); }
+<span class="k">public final class</span> <span class="n">CsvScenarios</span>    { <span class="k">public static</span> ScenarioSource from(Path file, CsvLayout layout); }
+<span class="k">public final class</span> <span class="n">DeepEvalGoldens</span> { <span class="k">public static</span> List&lt;Scenario&gt; read(Path file); }
+<span class="k">public final class</span> <span class="n">JsonReport</span>      { <span class="k">public static</span> void write(Path out, CampaignRunner.Result result); }
+<span class="k">public final class</span> <span class="n">JsonSchemas</span>     { <span class="k">public static</span> Predicate&lt;String&gt; conformingTo(String schema); }
+
+
+<span class="k">package</span> io.akka.evalkit.junit;
+
+<span class="k">@Retention</span>(RUNTIME) <span class="k">@Target</span>(METHOD) <span class="k">public @interface</span> <span class="n">Eval</span> { String value(); }
+<span class="k">@Retention</span>(RUNTIME) <span class="k">@Target</span>(TYPE)   <span class="k">public @interface</span> <span class="n">EvalCampaign</span> {
+    String rubric();  int version();  int lanes() <span class="k">default</span> 4;
+}
+
+<span class="c">/** Collects @Eval methods during discovery and runs one planned campaign. */</span>
+<span class="k">public final class</span> <span class="n">EvalExtension</span> <span class="k">implements</span> TestInstancePostProcessor, AfterAllCallback {}
+
+<span class="k">public abstract class</span> <span class="n">EvalTestBase</span> {
+    <span class="k">protected abstract</span> SystemUnderTest target();
+    <span class="k">protected</span> ScorerRouter router();     <span class="c">// defaults to byExpectation</span>
+    <span class="k">protected</span> Lanes lanes();
+}
+
+
+<span class="k">package</span> io.akka.evalkit.akka;
+
+<span class="k">public class</span> <span class="n">CampaignWorkflow</span> <span class="k">extends</span> Workflow&lt;CampaignWorkflow.State&gt; {
+    <span class="k">public record</span> Start(String campaignId, String rubricId, int rubricVersion,
+                        int lanes, int wave) {}
+    <span class="k">public enum</span> Status { CHECKING, RUNNING, REFUSED, COMPLETE }
+    <span class="k">public record</span> State(<span class="c">/* … */</span>) { <span class="k">public</span> boolean hasMore(); <span class="k">public</span> int progressPercent(); }
+    <span class="k">public</span> Effect&lt;Done&gt;        start(Start command);
+    <span class="k">public</span> ReadOnlyEffect&lt;State&gt; get();
+}
+
+<span class="k">public class</span> <span class="n">ScenarioJudge</span> <span class="k">extends</span> Agent {
+    <span class="k">public record</span> JudgeRequest(Transcript transcript, Rubric rubric) {}
+    <span class="k">public record</span> Result(String explanation, boolean passed, int score, Band band)
+        <span class="k">implements</span> EvaluationResult {}
+    <span class="k">public</span> Effect&lt;Result&gt; judge(JudgeRequest request);
+    <span class="k">public static</span> Judge asJudge(BiFunction&lt;Transcript, Rubric, Result&gt; invoke);
+}
+
+<span class="c">/** Extends TestKitSupport. Adds scenario collection and one planned campaign. */</span>
+<span class="k">public abstract class</span> <span class="n">EvalKitSupport</span> <span class="k">extends</span> TestKitSupport {
+    <span class="k">protected abstract</span> CampaignPlan plan();
+    <span class="k">protected</span> SystemUnderTest target();          <span class="c">// defaults to ComponentClientTarget</span>
+    <span class="k">protected</span> CampaignRunner.Result result();
+}
+
+<span class="c">/** Wraps a built-in SDK evaluator as a Scorer. */</span>
+<span class="k">public final class</span> <span class="n">AkkaEvaluator</span> <span class="k">implements</span> Scorer {
+    <span class="k">public static</span> Scorer of(ComponentClient client, Class&lt;? <span class="k">extends</span> Agent&gt; evaluator);
+}
+
+<span class="k">public final class</span> <span class="n">PromptTemplateRubrics</span> <span class="k">implements</span> RubricSource {}
+<span class="k">public final class</span> <span class="n">ComponentClientTarget</span> <span class="k">implements</span> SystemUnderTest {}</code></pre>
+
+        <h3>Usage: a campaign written as a JUnit test</h3>
+        <pre><code><span class="c">// Targets a Java service outside Akka, using evalkit-junit and evalkit-core.</span>
+<span class="k">@EvalCampaign</span>(rubric = <span class="n">"scenario-judge"</span>, version = 2, lanes = 8)
+<span class="k">class</span> <span class="n">RefundPolicyEval</span> <span class="k">extends</span> EvalTestBase {
+
+    <span class="k">@Override</span>
+    <span class="k">protected</span> SystemUnderTest target() {
+        <span class="k">return new</span> HttpChatTarget(URI.create(<span class="n">"http://localhost:8080"</span>), Json::readReply);
+    }
+
+    <span class="k">@Eval</span>(<span class="n">"an authenticated customer is told the 30-day window"</span>)
+    Scenario refundWindowStated() {
+        <span class="k">return</span> Scenario.named(<span class="n">"refund-30d"</span>)
+            .from(Precursor.Fixture.named(<span class="n">"authenticated-claim-open"</span>))
+            .say(<span class="n">"What if these shoes don't fit?"</span>)
+            .expect(<span class="n">"a 30-day full refund at no extra cost"</span>);
+    }
+
+    <span class="k">@Eval</span>(<span class="n">"a delivered bag is not assessed as lost"</span>)
+    Scenario deliveredBagRoutes() {
+        <span class="k">return</span> Scenario.named(<span class="n">"GenUC-16a.3"</span>)
+            .from(Precursor.replay(<span class="n">"I lost my bag"</span>, <span class="n">"it arrived yesterday"</span>))
+            .say(<span class="n">"so what happens now?"</span>)
+            .reaches(<span class="n">"GenUC-16a.3"</span>);
+    }
+}</code></pre>
+
+        <h3>Usage: a campaign against an Akka agent</h3>
+        <pre><code><span class="c">// EvalKitSupport extends TestKitSupport, so componentClient and the</span>
+<span class="c">// DependencyProvider wiring are already present.</span>
+<span class="k">class</span> <span class="n">ClaimsAgentEval</span> <span class="k">extends</span> EvalKitSupport {
+
+    <span class="k">private final</span> TestModelProvider claimsModel = <span class="k">new</span> TestModelProvider();
+
+    <span class="k">@Override</span>
+    <span class="k">protected</span> TestKit.Settings testKitSettings() {
+        <span class="c">// Mocked provider: the campaign is repeatable and spends nothing.</span>
+        <span class="k">return</span> TestKit.Settings.DEFAULT.withModelProvider(ClaimsAgent.class, claimsModel);
+    }
+
+    <span class="k">@Override</span>
+    <span class="k">protected</span> CampaignPlan plan() {
+        <span class="k">var</span> judge = AkkaEvaluator.of(componentClient, ScenarioJudge.class);
+        <span class="k">return new</span> CampaignPlan(<span class="n">"refund-policy"</span>,
+            JsonlScenarios.from(Path.of(<span class="n">"src/eval/resources/datasets/refunds.jsonl"</span>))
+                          .page(<span class="n">"refund-policy"</span>, 0, 200),
+            Lanes.of(4), ScorerRouter.byExpectation(judge, Map.of()));
+    }
+
+    <span class="k">@Eval</span>(<span class="n">"the agent states the refund window"</span>)
+    Scenario refundWindowStated() {
+        claimsModel.whenMessage(m -&gt; m.contains(<span class="n">"fit"</span>))
+                   .reply(<span class="n">"You have 30 days to get a full refund at no extra cost."</span>);
+
+        <span class="k">return</span> Scenario.named(<span class="n">"refund-30d"</span>)
+            .from(Precursor.Fixture.named(<span class="n">"authenticated-claim-open"</span>))
+            .say(<span class="n">"What if these shoes don't fit?"</span>)
+            .expect(<span class="n">"a 30-day full refund at no extra cost"</span>);
+    }
+}</code></pre>
+
+        <h3>Usage: reading a DeepEval corpus</h3>
+        <pre><code><span class="c">// A DeepEval goldens file, read without rewriting it. Each golden's input</span>
+<span class="c">// becomes the graded turn and its expected_output becomes the expectation.</span>
+List&lt;Scenario&gt; imported = DeepEvalGoldens.read(Path.of(<span class="n">"goldens.jsonl"</span>));
+
+<span class="c">// A golden carries no setup, so every imported scenario starts from nothing.</span>
+<span class="c">// Add a precursor per scenario to test anything past the first turn.</span>
+List&lt;Scenario&gt; seeded = imported.stream()
+    .map(s -&gt; s.via(Precursor.Fixture.named(<span class="n">"authenticated-claim-open"</span>)))
+    .toList();
+
+<span class="k">var</span> plan = <span class="k">new</span> CampaignPlan(<span class="n">"imported"</span>, seeded, Lanes.of(8), router);</code></pre>
+
+        <div class="note">
+          <h4><code>CampaignRunner.run</code> stays reachable without a runtime</h4>
+          <p><code>TestKitSupport</code> boots an Akka runtime. A campaign against a service outside Akka has no other use for that runtime, so requiring <code>EvalKitSupport</code> would add a boot with no other effect. <code>CampaignRunner.run(plan, target, router)</code> in <code>evalkit-core</code> takes the router as an interface, and runs the same campaign with no runtime present.</p>
+        </div>
+      </section>
+
+      <!-- ============ 9a ============ -->
+      <section id="sdk">
+        <h2 class="sec">Akka SDK components</h2>
+        <p class="answer">Every judge is an Agent. A panel measuring agreement is an Autonomous Agent declaring <code>Delegation</code>, whose workers run with partitioned context. A panel where one judge answers another is an Autonomous Agent declaring <code>Moderation</code>, whose participants share a conversation.</p>
+
+        <h3>Component selection</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>evalkit part</th><th>Component</th><th>Selection criterion from the SDK documentation</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="lbl">Single judge</td>
+              <td class="api">Agent</td>
+              <td>Request-response with one model round-trip per transcript. The model decides nothing about what runs next.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Independent panel</td>
+              <td class="api">AutonomousAgent + Delegation</td>
+              <td>Delegation partitions context. Each worker sees only its assigned task and stays isolated from the other workers.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Adversarial review</td>
+              <td class="api">AutonomousAgent + Moderation</td>
+              <td>Moderation drives structured turn-taking. Participants see new entries in the conversation since their last turn.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Campaign</td>
+              <td class="api">Workflow</td>
+              <td>The step sequence is fixed and each step makes at most one model round-trip.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Rubric storage</td>
+              <td class="api">PromptTemplate entity</td>
+              <td>An Event Sourced Entity holding prompts, with change history, updated without a redeploy.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Judge input protection</td>
+              <td class="api">Guardrail on model-request</td>
+              <td>Runtime-enforced on every interaction, recorded in logs, metrics and traces.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Live-traffic scoring</td>
+              <td class="api">Consumer on TaskEntity</td>
+              <td>Consumes the runtime's task events and calls an evaluator off the request path.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Band distribution over time</td>
+              <td class="api">View</td>
+              <td>A read model built from the events a campaign emits.</td>
+            </tr>
+            <tr>
+              <td class="lbl">Scheduled campaign</td>
+              <td class="api">Timer</td>
+              <td>A scheduled action bound to a component.</td>
+            </tr>
+          </tbody>
+        </table></div>
+
+        <div class="note">
+          <h4>Moderation shares the conversation, so it cannot measure agreement</h4>
+          <p>Inter-rater agreement requires each judge to score without seeing another judge's verdict. Under <code>Moderation</code> a participant receives the conversation entries added since its last turn, so the second judge answers the first. The resulting figure measures the conversation.</p>
+          <p><code>Delegation</code> isolates workers from each other, which is the property a measured agreement figure needs. Use <code>Moderation</code> for a refutation pass, where the second judge reads the first judge's verdict and argues against it.</p>
+        </div>
+
+        <h3>Judges</h3>
+        <pre><code><span class="c">// Scores a single transcript in one model round-trip, with memory off.</span>
+<span class="c">// A judge holding session memory drifts toward its own recent scores, and</span>
+<span class="c">// two campaigns run in a different order then disagree.</span>
+<span class="k">@Component</span>(id = <span class="n">"scenario-judge"</span>, name = <span class="n">"Scenario Judge"</span>,
+    description = <span class="n">"Scores a recorded conversation against its expected outcome."</span>)
+<span class="k">@AgentRole</span>(<span class="n">"evaluator"</span>)
+<span class="k">public class</span> <span class="n">ScenarioJudge</span> <span class="k">extends</span> Agent {
+
+    <span class="k">public record</span> Result(String explanation, <span class="k">boolean</span> passed, <span class="k">int</span> score, Band band)
+        <span class="k">implements</span> EvaluationResult {}
+
+    <span class="k">public</span> Effect&lt;Result&gt; judge(JudgeRequest request) {
+        <span class="k">return</span> effects()
+            <span class="c">// The rubric arrives from PromptTemplate, so the wording carries a</span>
+            <span class="c">// revision and changes without a redeploy.</span>
+            .systemMessageFromTemplate(request.rubric().templateKey())
+            .memory(MemoryProvider.none())
+            .userMessage(request.rubric().data(request.transcript()))
+            .map(reply -&gt; toResult(reply, request))
+            .thenReply();
+    }
+}</code></pre>
+        <p>The return type implements <code>EvaluationResult</code>, so the runtime records every verdict in metrics and traces without further instrumentation.</p>
+
+        <h3>Independent panel</h3>
+        <pre><code><span class="c">// Three judges score one transcript. Delegation partitions context, so no</span>
+<span class="c">// judge reads another judge's verdict and the agreement figure holds.</span>
+<span class="k">@Component</span>(id = <span class="n">"judge-panel"</span>,
+    description = <span class="n">"Produces independent verdicts on one transcript and reports disagreement."</span>)
+<span class="k">public class</span> <span class="n">JudgePanel</span> <span class="k">extends</span> AutonomousAgent {
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> AgentDefinition definition() {
+        <span class="k">return</span> define()
+            .capability(TaskAcceptance.of(JudgeTasks.SCORE).maxIterationsPerTask(3))
+            .capability(Delegation
+                .to(FaithfulnessJudge.class, GroundingJudge.class, ToneJudge.class)
+                .maxParallelWorkers(3));
+    }
+}</code></pre>
+        <p>The task result schema carries the verdicts. <code>Panel</code> in <code>evalkit-core</code> maps a unanimous result to <code>Scored</code>, a split result to <code>Disputed</code>, and a task the runtime failed to complete to <code>Unscoreable</code>.</p>
+
+        <h3>Adversarial review</h3>
+        <pre><code><span class="c">// A refutation pass over a verdict already recorded. The refuting judge reads</span>
+<span class="c">// what the scoring judge said, which is the property Moderation supplies.</span>
+<span class="k">@Component</span>(id = <span class="n">"verdict-review"</span>,
+    description = <span class="n">"Runs a refutation pass over a recorded verdict."</span>)
+<span class="k">public class</span> <span class="n">VerdictReview</span> <span class="k">extends</span> AutonomousAgent {
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> AgentDefinition definition() {
+        <span class="k">return</span> define()
+            .capability(TaskAcceptance.of(JudgeTasks.REVIEW))
+            .capability(Moderation.of(ScoringJudge.class, RefutingJudge.class)
+                .maxRounds(2)
+                .maxConcurrentConversations(8));
+    }
+}</code></pre>
+
+        <h3>Guardrail on the judge</h3>
+        <p>A judge reads user text captured from a conversation. A red-team corpus is made of prompt-injection payloads, and those payloads reach the judge inside the transcript. A guardrail on <code>model-request</code> is enforced by the runtime on every interaction and recorded in logs, metrics and traces.</p>
+        <pre><code><span class="c"># src/main/resources/application.conf</span>
+akka.javasdk.agent.guardrails {
+  <span class="n">"judge injection guard"</span> {
+    class = <span class="n">"akka.javasdk.agent.SimilarityGuard"</span>
+    agents = [<span class="n">"scenario-judge"</span>, <span class="n">"faithfulness-judge"</span>, <span class="n">"grounding-judge"</span>]
+    category = JAILBREAK
+    use-for = [<span class="n">"model-request"</span>]
+    threshold = 0.75
+    bad-examples-resource-dir = <span class="n">"guardrail/jailbreak"</span>
+  }
+}</code></pre>
+        <p>A blocked request raises, and <code>CampaignRunner</code> records <code>Unscoreable</code> with the guardrail's explanation. A blocked judge call says nothing about the service under test.</p>
+
+        <h3>Rubrics in the PromptTemplate entity</h3>
+        <pre><code><span class="c">// PromptTemplate is an Event Sourced Entity registered automatically when a</span>
+<span class="c">// service declares any Agent. The journal holds the revision history that a</span>
+<span class="c">// Verdict needs to stay interpretable.</span>
+<span class="k">public final class</span> <span class="n">PromptTemplateRubrics</span> <span class="k">implements</span> RubricSource {
+
+    <span class="k">private final</span> ComponentClient client;
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> Rubric load(String id, <span class="k">int</span> version) {
+        <span class="k">var</span> key = id + <span class="n">"-v"</span> + version;
+        String template = client.forEventSourcedEntity(key)
+            .method(PromptTemplate::get).invoke();
+        <span class="c">// The version stays an explicit part of the key, so a Verdict recorded</span>
+        <span class="c">// six weeks ago names a template a reader can still fetch.</span>
+        <span class="k">return new</span> Rubric(id, version, template);
+    }
+}</code></pre>
+
+        <div class="note">
+          <h4>Autonomous Agents are not replicated across regions</h4>
+          <p>The SDK documentation states that Autonomous Agent instances stay in the region where they were created and that tasks replicate like any other entity. A campaign that has to survive the loss of a region runs its judges as request-based Agents under <code>CampaignWorkflow</code>, whose state replicates.</p>
+        </div>
+      </section>
+
+      <!-- ============ 9a2 ============ -->
+      <section id="shapes">
+        <h2 class="sec">Test-scope campaigns and deployed evaluation</h2>
+        <p class="answer">A campaign inside an Akka project boots the whole service and calls its agents through the <code>ComponentClient</code>. The test-scope shape runs that service in the test JVM and deploys nothing. The deployed shape registers the campaign and its judges alongside the service and scores live traffic.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Shape</th><th>Source root</th><th>What deploys</th><th>Scores live traffic</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="lbl">Test-scope</td>
+              <td class="api">src/eval/java</td>
+              <td class="have">Nothing. The <code>eval</code> profile compiles it and <code>mvn -Peval verify</code> runs it.</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td class="lbl">Deployed</td>
+              <td class="api">src/main/java</td>
+              <td><code>CampaignWorkflow</code>, the judge agents, the sampling Consumer, the band View and the guardrail configuration.</td>
+              <td class="have">Yes</td>
+            </tr>
+          </tbody>
+        </table></div>
+
+        <h3>Both shapes run the whole service</h3>
+        <p><code>EvalKitSupport</code> extends <code>TestKitSupport</code>, which starts the runtime with every component the service declares. Entities hold real state and workflows take real steps. Tools execute, guardrails apply, and session memory behaves as it does in production.</p>
+        <p>Replacing the model provider leaves the agent intact. <code>TestModelProvider</code> answers with a <code>ToolInvocationRequest</code> and the runtime invokes the actual tool method, then feeds the result back into the model loop. A campaign in deterministic mode therefore exercises tool selection, entity writes and workflow transitions, and the model's decisions come from the script.</p>
+
+        <div class="note">
+          <h4>The eval source root reaches the service's own components</h4>
+          <p><code>src/eval/java</code> is added as a test source, so it compiles against <code>src/main/java</code> and every component class is visible. A fixture calls the entity that owns the state by name and type, and a scenario references the agent method it grades.</p>
+        </div>
+
+        <h3>Test-scope shape</h3>
+        <pre><code><span class="k">class</span> <span class="n">ClaimsAgentEval</span> <span class="k">extends</span> EvalKitSupport {
+
+    <span class="k">private final</span> TestModelProvider claimsModel = <span class="k">new</span> TestModelProvider();
+
+    <span class="k">@Override</span>
+    <span class="k">protected</span> TestKit.Settings testKitSettings() {
+        <span class="k">return</span> TestKit.Settings.DEFAULT.withModelProvider(ClaimsAgent.class, claimsModel);
+    }
+
+    <span class="k">@Override</span>
+    <span class="k">protected</span> SystemUnderTest target() {
+        <span class="k">return</span> AgentTarget.of(componentClient, ClaimsAgent::query)
+
+            <span class="c">// The state a scenario assumes, written as a typed call into the</span>
+            <span class="c">// entity that owns it. No fixture endpoint and no replayed turns.</span>
+            .fixture(<span class="n">"authenticated-claim-open"</span>,
+                     <span class="n">"a signed-in customer with one claim open and no wallet"</span>,
+                     ctx -&gt; ctx.client().forEventSourcedEntity(ctx.sessionId())
+                               .method(ClaimEntity::open)
+                               .invoke(<span class="k">new</span> OpenClaim(<span class="n">"FR"</span>, <span class="n">"none"</span>)))
+
+            <span class="c">// Spend read from the runtime, so the report prints a measurement</span>
+            <span class="c">// in place of a floor.</span>
+            .readingSpendFrom(telemetry());
+    }
+
+    <span class="k">@Eval</span>(<span class="n">"a signed-in customer is told the 30-day window"</span>)
+    Scenario refundWindowStated() {
+        claimsModel.whenMessage(m -&gt; m.contains(<span class="n">"fit"</span>))
+                   .reply(<span class="n">"You have 30 days to get a full refund at no extra cost."</span>);
+
+        <span class="k">return</span> Scenario.named(<span class="n">"refund-30d"</span>)
+            .from(Precursor.Fixture.named(<span class="n">"authenticated-claim-open"</span>))
+            .say(<span class="n">"What if these shoes don't fit?"</span>)
+            .expect(ContainsAll.of(<span class="n">"30 days"</span>, <span class="n">"full refund"</span>));
+    }
+}</code></pre>
+
+        <h3>The AgentTarget API</h3>
+        <pre><code><span class="k">package</span> io.akka.evalkit.akka;
+
+<span class="c">/** A SystemUnderTest that calls an Akka agent through the ComponentClient. */</span>
+<span class="k">public final class</span> <span class="n">AgentTarget</span> <span class="k">implements</span> SystemUnderTest {
+
+    <span class="c">/** The agent method a scenario grades. Session id is supplied per run. */</span>
+    <span class="k">public static</span> Builder of(ComponentClient client,
+                              ComponentMethodRef1&lt;String, String&gt; agentMethod);
+
+    <span class="k">public static final class</span> Builder {
+
+        <span class="c">/** Names a state, describes it for the report, and builds it. */</span>
+        <span class="k">public</span> Builder fixture(String name, String description, Consumer&lt;FixtureContext&gt; build);
+
+        <span class="c">/** Declares the specification nodes the agent can emit. */</span>
+        <span class="k">public</span> Builder emitting(Set&lt;String&gt; nodes);
+
+        <span class="c">/** Reads token spend from the runtime instead of reporting a floor. */</span>
+        <span class="k">public</span> Builder readingSpendFrom(TelemetryReader telemetry);
+
+        <span class="k">public</span> AgentTarget build();
+    }
+
+    <span class="c">/** What a fixture callback receives. */</span>
+    <span class="k">public record</span> FixtureContext(ComponentClient client, String sessionId,
+                                  Map&lt;String, String&gt; parameters) {}
+}</code></pre>
+        <p>A fixture callback that throws returns <code>Prepared.Failed</code>, which becomes <code>NotReached</code> with the exception message. The campaign records that the state was never built and keeps the run out of the pass total.</p>
+
+        <h3>Deployed shape</h3>
+        <p>The deployed shape registers four components in <code>src/main/java</code>. The Consumer samples finished tasks, the judge scores them, the View projects the band distribution, and a Timer starts a scheduled campaign.</p>
+
+        <pre><code><span class="c">// Samples finished agent tasks and scores them off the request path.</span>
+<span class="k">@Component</span>(id = <span class="n">"eval-sampler"</span>)
+<span class="k">@Consume</span>.FromEventSourcedEntity(TaskEntity.class)
+<span class="k">public class</span> <span class="n">LiveTrafficSampler</span> <span class="k">extends</span> Consumer {
+
+    <span class="k">public</span> Effect onEvent(TaskEvent event) {
+        <span class="k">if</span> (!(event <span class="k">instanceof</span> TaskEvent.TaskCompleted completed)) <span class="k">return</span> effects().done();
+        <span class="k">if</span> (!sampler.selects(completed.taskId())) <span class="k">return</span> effects().ignore();
+
+        <span class="k">var</span> snapshot = componentClient.forTask(completed.taskId()).get(ActivityTasks.SUGGEST);
+        <span class="k">var</span> recording = Recording.fromTask(snapshot);
+
+        <span class="k">var</span> outcome = componentClient.forAgent().inSession(completed.taskId())
+            .method(ScenarioJudge::judge)
+            .invoke(<span class="k">new</span> JudgeRequest(recording.transcript(), rubrics.load(<span class="n">"live-judge"</span>, 1)));
+
+        <span class="k">return</span> effects().done();
+    }
+}</code></pre>
+
+        <pre><code><span class="c">// Band distribution over time, for a dashboard or a regression alert.</span>
+<span class="k">@Component</span>(id = <span class="n">"eval-bands"</span>)
+<span class="k">public class</span> <span class="n">BandDistributionView</span> <span class="k">extends</span> View {
+
+    <span class="k">@Query</span>(<span class="n">"SELECT rubricId, band, count(*) AS runs FROM verdicts "</span>
+         + <span class="n">"WHERE scoredAt &gt; :since GROUP BY rubricId, band"</span>)
+    <span class="k">public</span> QueryEffect&lt;BandCounts&gt; since(Instant since);
+}</code></pre>
+
+        <h3>Turning the deployed shape off</h3>
+        <p>Judge agents call a model on live traffic, so a service ships with the sampling components disabled outside the environments that need them. <code>ServiceSetup.disabledComponents()</code> returns the classes the runtime skips.</p>
+
+        <pre><code><span class="k">@Setup</span>
+<span class="k">public class</span> <span class="n">Bootstrap</span> <span class="k">implements</span> ServiceSetup {
+
+    <span class="k">private final</span> Config config;
+
+    <span class="k">@Override</span>
+    <span class="k">public</span> Set&lt;Class&lt;?&gt;&gt; disabledComponents() {
+        <span class="c">// Sampling live traffic costs a judge call per sampled task. The</span>
+        <span class="c">// campaign workflow stays registered so a campaign can be started</span>
+        <span class="c">// on demand against a corpus.</span>
+        <span class="k">return</span> config.getBoolean(<span class="n">"acme.eval.sample-live-traffic"</span>)
+            ? Set.of()
+            : Set.of(LiveTrafficSampler.class);
+    }
+}</code></pre>
+
+        <div class="note">
+          <h4>A judge on live traffic reads adversarial text</h4>
+          <p>The sampler feeds real customer messages to a judge agent. A guardrail on <code>model-request</code> applies to the judge for the same reason it applies to a corpus campaign. A blocked call records <code>Unscoreable</code> and no score.</p>
+        </div>
+
+        <h3>Work each shape needs</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Item</th><th>Test-scope</th><th>Deployed</th></tr></thead>
+          <tbody>
+            <tr><td class="lbl">AgentTarget and fixtures</td><td class="have">Required</td><td class="have">Required</td></tr>
+            <tr><td class="lbl">TelemetryReader spend</td><td class="have">Required</td><td class="have">Required</td></tr>
+            <tr><td class="lbl">EvalKitSupport</td><td class="have">Required</td><td>Not used</td></tr>
+            <tr><td class="lbl">Sampling Consumer</td><td>Not used</td><td class="have">Required</td></tr>
+            <tr><td class="lbl">Band View</td><td>Not used</td><td class="have">Required</td></tr>
+            <tr><td class="lbl">Scheduled campaign Timer</td><td>Not used</td><td class="have">Required</td></tr>
+            <tr><td class="lbl">Component disable switch</td><td>Not used</td><td class="have">Required</td></tr>
+            <tr><td class="lbl">Recording.fromTask</td><td>Not used</td><td class="have">Required</td></tr>
+          </tbody>
+        </table></div>
+        <p>The test-scope shape sits on interfaces already in the design. The deployed shape adds four components and a sampling policy, and it is the larger piece of work.</p>
+      </section>
+
+      <!-- ============ 9b ============ -->
+      <section id="deepeval">
+        <h2 class="sec">Distance from DeepEval</h2>
+        <p class="answer">evalkit has a counterpart for 10 of DeepEval's 13 core types, and DeepEval has a counterpart for 8 of evalkit's. The remaining types on both sides follow from the same fact: DeepEval never calls the service under test.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>DeepEval</th><th>evalkit</th><th>Distance</th></tr></thead>
+          <tbody>
+            <tr><td class="api">Golden, EvaluationDataset</td><td class="api">Scenario, Corpus</td><td class="have">The fields map one to one. A goldens file imports without a rewrite.</td></tr>
+            <tr><td class="api">dataset.evals_iterator()</td><td class="api">ScenarioSource.page()</td><td class="have">Both stream a corpus a page at a time.</td></tr>
+            <tr><td class="api">evaluate(cases, metrics)</td><td class="api">CampaignRunner.run(plan, target, router)</td><td class="have">Both sit at the same point in the run. evalkit adds a plan check before it.</td></tr>
+            <tr><td class="api">assert_test(case, [metrics])</td><td class="api">@Eval on a method</td><td class="have">Same ergonomics. Execution moves to the end of discovery.</td></tr>
+            <tr><td class="api">AsyncConfig.max_concurrent</td><td class="api">Lanes</td><td class="have">Both take the same input. evalkit also reports the concurrency achieved.</td></tr>
+            <tr><td class="api">BaseMetric.measure()</td><td class="api">Scorer.score()</td><td>Both sit at the same point. The return type changes from a float to <code>RunOutcome</code>.</td></tr>
+            <tr><td class="api">threshold, default 0.5</td><td class="api">Metric.threshold(), Band</td><td>Kept for heuristics. Judged results move to bands.</td></tr>
+            <tr><td class="api">LLMTestCase</td><td class="api">Scenario plus Recording</td><td>Split in two. DeepEval holds the input and the output together.</td></tr>
+            <tr><td class="api">DAGMetric node types</td><td class="api">ScorerRouter, deterministic scorers</td><td>Overlapping. Both reach a fixed score without a model at the leaf.</td></tr>
+            <tr><td class="api">GEval(criteria="…")</td><td class="api">Rubric, Judge</td><td class="miss">A string literal against a versioned file on the classpath.</td></tr>
+            <tr><td class="api">CacheConfig(use_cache)</td><td class="api">CampaignWorkflow waves</td><td class="miss">A result cache against a durable cursor.</td></tr>
+            <tr><td class="api">ErrorConfig(ignore_errors)</td><td class="api">RunOutcome.Unscoreable</td><td class="miss">The two behave in opposite ways. DeepEval drops the run and evalkit keeps and labels it.</td></tr>
+            <tr><td class="api">@observe() tracing</td><td class="api">EvaluationResult, Akka telemetry</td><td class="miss">The mechanisms differ and the recorded data matches.</td></tr>
+            <tr><td class="api">—</td><td class="api">SystemUnderTest</td><td class="miss">DeepEval never calls the service.</td></tr>
+            <tr><td class="api">—</td><td class="api">Precursor</td><td class="miss">No place for setup exists when the service is never driven.</td></tr>
+            <tr><td class="api">—</td><td class="api">CampaignPlan.check</td><td class="miss">DeepEval has no counterpart.</td></tr>
+            <tr><td class="api">—</td><td class="api">Scoring.compare version guard</td><td class="miss">DeepEval has no counterpart.</td></tr>
+            <tr><td class="api">—</td><td class="api">CampaignReport.isTrustworthy</td><td class="miss">DeepEval has no counterpart.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>DeepEval never calls the service</h3>
+        <p>A DeepEval user runs their own service, captures the reply, and hands it to <code>LLMTestCase</code> as <code>actual_output</code>. DeepEval scores a pair of strings. evalkit calls <code>SystemUnderTest.prepare</code> and <code>SystemUnderTest.submit</code>, so it keeps the session id and can put the service into a state before the graded turn.</p>
+        <p>Every evalkit type with no DeepEval counterpart follows from that. <code>Precursor</code> describes a state to reach. <code>CampaignPlan.check</code> asks the target which states it can build. <code>CampaignReport.walked()</code> counts the runs that reached their state through the service's own path.</p>
+
+        <h3>What a DeepEval user changes</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Task</th><th>Effort</th></tr></thead>
+          <tbody>
+            <tr><td class="lbl">Corpus</td><td class="have">Nothing changes. <code>DeepEvalGoldens.read</code> takes the file.</td></tr>
+            <tr><td class="lbl">Custom metric</td><td>A rename and a return type change. <code>measure()</code> becomes <code>score()</code> and returns <code>RunOutcome</code> in place of setting three fields.</td></tr>
+            <tr><td class="lbl">Test entry point</td><td>A rename and a signature change. <code>assert_test</code> becomes an <code>@Eval</code> method returning a scenario.</td></tr>
+            <tr><td class="lbl">G-Eval criteria</td><td>Hand editing. The criteria string moves into a file under <code>rubrics/</code> and takes a version number.</td></tr>
+            <tr><td class="lbl">Target adapter</td><td class="miss">The user writes this from scratch. <code>SystemUnderTest</code> has no DeepEval counterpart, and a campaign cannot run without one.</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <!-- ============ 9c ============ -->
+      <section id="conformance">
+        <h2 class="sec">Conformance suite</h2>
+        <p class="answer">DeepEval's metric tests were read at commit depth 1 on 8 August 2026. Of the 54 metric test files, 7 assert a score value and 47 assert that a score is not null. The seven files that assert a value run without an API key, script the model's verdicts, and check the arithmetic that follows.</p>
+
+        <h3>What the repository holds</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Measure</th><th class="num">Count</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td class="lbl">Files under tests/</td><td class="num">660</td><td>Across test_core, test_metrics, test_benchmarks, test_confident, test_docs, test_integrations, test_templates.</td></tr>
+            <tr><td class="lbl">Metric test files</td><td class="num">54</td><td>One per metric, plus variants for empty output and aggregation.</td></tr>
+            <tr><td class="lbl">assert score is not None</td><td class="num">142</td><td>Checks that the metric returned something.</td></tr>
+            <tr><td class="lbl">assert reason is not None</td><td class="num">148</td><td>The same shape covers the reason string.</td></tr>
+            <tr><td class="lbl">assert score == value</td><td class="num">18</td><td>The whole oracle in the suite.</td></tr>
+            <tr><td class="lbl">Files carrying an oracle</td><td class="num have">7</td><td>citation_faithfulness, dag, conversational_dag, knowledge_retention, tool_permission, turn_faithfulness_empty_verdicts, turn_relevancy_aggregation.</td></tr>
+            <tr><td class="lbl">Files needing no API key</td><td class="num have">7</td><td>The oracle files and the key-free files are the same set.</td></tr>
+            <tr><td class="lbl">LLMTestCase constructions</td><td class="num">176</td><td>Across the 54 files.</td></tr>
+            <tr><td class="lbl">Distinct input strings</td><td class="num miss">7</td><td>Across 73 occurrences. "What if these shoes don't fit?" carries most of the suite.</td></tr>
+            <tr><td class="lbl">Dataset records</td><td class="num">34</td><td>goldens.json holds 15 and test_confident holds 4. convo_goldens.json holds 15 carrying scenario, turns and expected_outcome.</td></tr>
+            <tr><td class="lbl">Licence</td><td class="num have">Apache 2.0</td><td>LICENSE.md at the repository root.</td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="note">
+          <h4>The inputs repeat too much to serve as a corpus</h4>
+          <p>Harvesting DeepEval's tests for scenario inputs yields "What if these shoes don't fit?", "Can you help me plan a trip to New York this weekend?", "List some places from Paris", "do the task", "hi", "input" and "plan a trip". Corpus volume comes from the OpenAI Evals registry and the promptfoo examples instead.</p>
+        </div>
+
+        <h3>The pattern worth taking</h3>
+        <p>The seven files that assert a value all separate the model's verdicts from the arithmetic applied to them. <code>ScriptedJudge</code> in <code>test_turn_relevancy_aggregation.py</code> extends <code>DeepEvalBaseLLM</code>, returns a list of prepared verdicts in order, and the test asserts the exact score.</p>
+
+        <pre><code><span class="c"># tests/test_metrics/test_turn_relevancy_aggregation.py</span>
+<span class="k">@pytest</span>.mark.parametrize(
+    <span class="n">"n_exchanges, n_irrelevant, expected_score"</span>,
+    [(10, 1, 0.9), (10, 2, 0.8), (20, 1, 0.95), (4, 4, 0.0), (4, 0, 1.0)])
+<span class="k">def</span> test_score_is_fraction_of_relevant_exchanges(...):
+    scripted = [<span class="n">"no"</span>] * n_irrelevant + [<span class="n">"yes"</span>] * (n_exchanges - n_irrelevant)
+    score, metric, _ = _measure(_conversation(n_exchanges), scripted)
+    <span class="k">assert</span> score == pytest.approx(expected_score)</code></pre>
+
+        <p>The model half of a metric samples and cannot be pinned. The arithmetic half is a pure function of the verdicts, and a port gets that half wrong silently. Splitting the interface makes the testable half testable.</p>
+
+        <pre><code><span class="k">package</span> io.akka.evalkit.scorer.heuristic;
+
+<span class="c">/** A model verdict about a single claim, exchange or tool call. */</span>
+<span class="k">public record</span> <span class="n">Judgement</span>(String subject, <span class="k">boolean</span> affirmed, String reason) {}
+
+<span class="c">/** A metric whose score is computed from model verdicts. */</span>
+<span class="k">public interface</span> <span class="n">JudgedMetric</span> <span class="k">extends</span> Scorer {
+
+    MetricRef ref();
+
+    <span class="c">/** Asks the model. Samples, needs a provider, cannot be pinned. */</span>
+    List&lt;Judgement&gt; collect(Recording recording);
+
+    <span class="c">/** A pure function of the verdicts. Runs with no model and no key. */</span>
+    RunOutcome aggregate(List&lt;Judgement&gt; judgements);
+
+    <span class="k">@Override default</span> RunOutcome score(Recording recording) {
+        <span class="k">return</span> aggregate(collect(recording));
+    }
+}</code></pre>
+
+        <p>The ported test is the same table of values with no Python.</p>
+
+        <pre><code><span class="k">@ParameterizedTest</span>
+<span class="k">@CsvSource</span>({<span class="n">"10, 1, 0.9"</span>, <span class="n">"10, 2, 0.8"</span>, <span class="n">"20, 1, 0.95"</span>, <span class="n">"4, 4, 0.0"</span>, <span class="n">"4, 0, 1.0"</span>})
+<span class="k">void</span> scoreIsTheFractionOfRelevantExchanges(<span class="k">int</span> exchanges, <span class="k">int</span> irrelevant, <span class="k">double</span> expected) {
+    <span class="k">var</span> metric = <span class="k">new</span> TurnRelevancy(<span class="k">new</span> MetricRef(<span class="n">"turn-relevancy"</span>, 1));
+    <span class="k">var</span> judgements = scripted(irrelevant, exchanges - irrelevant);
+
+    <span class="k">var</span> outcome = (RunOutcome.Measured) metric.aggregate(judgements);
+
+    assertThat(outcome.value()).isEqualTo(expected);
+}
+
+<span class="k">@Test</span>
+<span class="k">void</span> noValidVerdictsScoresOne() {
+    <span class="c">// DeepEval documents this fallback in the same file. Porting the</span>
+    <span class="c">// metric without porting the fallback changes what an empty result means.</span>
+    <span class="k">var</span> outcome = (RunOutcome.Measured) metric.aggregate(List.of());
+
+    assertThat(outcome.value()).isEqualTo(1.0);
+}</code></pre>
+
+        <h3>What each source verifies</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Source</th><th>Verifies</th><th>Cost</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="lbl">The 7 oracle files</td>
+              <td class="have">That ported aggregation arithmetic matches DeepEval exactly, including the empty-verdict fallbacks.</td>
+              <td class="have">Literal values ported by hand. No provider, no Python, no recorded run.</td>
+            </tr>
+            <tr>
+              <td class="lbl">convo_goldens.json</td>
+              <td class="have">That the importer reads scenario, turns and expected_outcome into a <code>Scenario</code> carrying a <code>Precursor.Replay</code>.</td>
+              <td class="have">15 records, copied with the NOTICE entry.</td>
+            </tr>
+            <tr>
+              <td class="lbl">The 47 smoke files</td>
+              <td>That a metric returns something on a well-formed input.</td>
+              <td>Recording our own output makes a snapshot, and a snapshot verifies nothing about correctness.</td>
+            </tr>
+            <tr>
+              <td class="lbl">promptfoo examples, Evals registry</td>
+              <td class="have">The three scorer families, the router, and the runner under volume.</td>
+              <td>Each format needs one converter.</td>
+            </tr>
+            <tr>
+              <td class="lbl">SummEval, Topical-Chat</td>
+              <td class="have">Judge agreement with human labels, comparable with G-Eval's published 0.514 and 0.588.</td>
+              <td>The licences are unchecked, and each run costs provider spend.</td>
+            </tr>
+          </tbody>
+        </table></div>
+
+        <h3>Completeness check</h3>
+        <p>A test reads the list of metrics declared as ported and fails when any of them has no conformance fixture, and reads the outcome variants produced by the converted corpora and fails when a variant goes unreached. Adding a metric with no evidence breaks the build, and so does adding an outcome variant nothing exercises.</p>
+
+        <div class="note">
+          <h4>Matching DeepEval measures the port</h4>
+          <p>A ported metric that agrees with DeepEval on every fixture reproduces DeepEval's judgements, including the wrong ones. Agreement with human labels is measured separately against SummEval, and the two figures answer different questions.</p>
+        </div>
+      </section>
+
+      <!-- ============ 10 ============ -->
+      <section id="breaking">
+        <h2 class="sec">Breaking changes to make before 1.0</h2>
+        <p class="answer">Each change below alters a signature that a caller would compile against. Making them before 0.1.0 keeps them out of a later major version bump.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Change</th><th>Reason</th></tr></thead>
+          <tbody>
+            <tr><td class="api">domain, application → dataset, runner, scorer, reports</td><td>Package names describe an evaluation library instead of a service's layers.</td></tr>
+            <tr><td class="api">Asserted.expectedNode → expected</td><td>The variant serves every deterministic scorer, and only one of them compares nodes.</td></tr>
+            <tr><td class="api">Scorer.score(Recording)</td><td>Replaces <code>Judge.score(Transcript, Rubric)</code>. A judge closes over its rubric, and a deterministic scorer never had one.</td></tr>
+            <tr><td class="api">CampaignPlan takes a ScorerRouter</td><td>Replaces the single <code>Rubric</code> field. Routing across three families is a plan-time decision.</td></tr>
+            <tr><td class="api">+ RunOutcome.Measured</td><td>A heuristic result belongs to neither existing variant. Adding it is a compile error at every exhaustive switch.</td></tr>
+            <tr><td class="api">+ RunOutcome.Disputed</td><td>Panel disagreement is conflicting evidence and stays out of the pass-rate denominator.</td></tr>
+            <tr><td class="api">Reply gains latency and toolsCalled</td><td>Required by <code>LatencyBudget</code> and <code>ToolCallMatch</code>.</td></tr>
+            <tr><td class="api">groupId io.akka.evalkit → io.akka</td><td>Maven Central verifies namespace ownership against a domain.</td></tr>
+          </tbody>
+        </table></div>
+
+        <p>Each new outcome variant adds a column to <code>CampaignReport</code> and needs a test that fails when that column is wrong. <code>docs/design-history.md</code> records two checks that passed while matching nothing, one of them for nine development stages.</p>
+      </section>
+
+      <!-- ============ 10b ============ -->
+      <section id="readme">
+        <h2 class="sec">Sample README</h2>
+        <p class="answer">The README is the one file in the repository that states rationale. The draft covers what evalkit does, one working example, the outcome table, a sample report, what a report will not show, the module split, and the build.</p>
+
+        <pre><code><span class="k"># evalkit</span>
+
+Runs recorded scenarios against a conversational service and prints a report of
+the result.
+
+```java
+var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(8), router);
+
+switch (plan.check(target)) {
+    case CampaignPlan.Check.Refused r -&gt; { r.reasons().forEach(System.err::println); return; }
+    case CampaignPlan.Check.Ready ready -&gt; System.out.println(RunSummary.scope(ready.plan()));
+}
+
+var result = CampaignRunner.run(plan, target, router);
+System.out.println(RunSummary.of(result).render());
+```
+
+<span class="k">## What a run can produce</span>
+
+A campaign returns one outcome per scenario.
+
+| Outcome | What happened | Counted |
+|---|---|---|
+| `Scored` | A judge read the reply and gave it a score. | Yes |
+| `Asserted` | The reply was compared against a stated answer. No model was involved. | Yes |
+| `NotReached` | The setup failed, or the service sent nothing back. | No |
+| `Unscoreable` | The judge timed out, refused, or returned something unreadable. | No |
+
+Counted means the run is included when the report works out how many scenarios
+passed. A run that is not counted gets its own line with its own reason.
+
+`RunOutcome` is a sealed interface. Switches over it are exhaustive and carry
+no `default`, so a new outcome is a compile error at every site handling one.
+
+<span class="k">## Why the outcomes are split this way</span>
+
+Say you run 80 scenarios and 64 come back with a low score. You want to know
+whether the service is broken. The score on its own cannot tell you, because
+three different things produce a low number and they look identical in a report.
+
+The first is the one you were testing for: the service answered, and the answer
+was wrong.
+
+The second is a setup failure. Most scenarios do not test a first message. A
+scenario might need a signed-in customer with a claim already open, and getting
+there means either replaying earlier turns or seeding the state directly. If
+that step fails, the graded question is never asked and the service never
+answers. Score the empty reply and you get a low number that reads as a broken
+service.
+
+The third is a judge failure. A judge is a model reading a transcript, and
+models decline. While calibrating this kit, a content filter refused to score a
+transcript about a failed identity check. Turn that refusal into a zero and the
+service takes the blame for the filter.
+
+`RunOutcome` therefore has four cases instead of one number. `Scored` and
+`Asserted` mean the service answered and the answer was assessed. `NotReached`
+and `Unscoreable` mean nothing was assessed. The report counts them separately
+and leaves the last two out of the pass total.
+
+The same problem turns up in two more places.
+
+Judges disagree. On this corpus, a judge and a human reviewer agree 89 to 91
+percent of the time on clear-cut replies, and 53 percent of the time on
+borderline ones. At 53 percent a judge is close to a coin toss, so the middle
+band counts as undecided instead of as a pass.
+
+Small changes to the harness move the score. One corpus stated its expected
+answers but not the inputs those answers depend on, so the inputs were pulled
+out of the scenario titles by pattern. Three attempts at that pattern scored
+23, 17 and 19 out of 40. The service never changed. A number that moves six
+points when you edit a regex is a number about the regex, so a scenario now
+states its own setup as data.
+
+`docs/design-history.md` records the incident behind each rule.
+
+<span class="k">## What a report will not show you</span>
+
+A report will not show you:
+
+- one pass-rate percentage for the whole campaign
+- an undecided result for a check settled by comparison
+- a zero for a run the judge would not score
+- a token total the service could not measure, printed as a measurement
+- any result at all when the service cannot satisfy the scenarios
+
+Each of those is a number someone would quote. The report prints counts by
+category instead, so you can add up the ones that belong together.
+
+A campaign mixes checks settled by string comparison with replies scored by a
+model. Averaging the two gives a borderline model verdict the same weight as an
+exact match. `CampaignReport` keeps them in separate columns.
+
+A comparison either matched or it did not, so the undecided column shows a dash
+for that half of the run. A number in that cell means this kit has a bug.
+
+A judge that times out, hits a content filter, or returns something unreadable
+tells you nothing about the service. Those runs are `Unscoreable` and stay out
+of the pass total.
+
+Some services report their own model usage and some do not. `Accounting` counts
+the calls whose usage was invisible, and the report labels the total a floor.
+
+`CampaignPlan.check` asks the service which states it can build and which
+answers it can produce, then compares that against what the scenarios need. A
+mismatch stops the run in the first second.
+
+<span class="k">## A report</span>
+
+```
+Refund policy evaluation    run 2026-08-08T09:14Z    system claims-svc 4.2.0
+
+This run tests 80 requirements: refund window, delivery status, identity
+checks and payment routing.
+
+62 of the 80 are checked against fixed rules and cannot vary from one run to
+the next. The other 18 produce free text for a customer and are judged by a
+second model.
+
+The second model reads the exchange and scores how closely the reply matches
+the expected answer:
+
+  8-10   matches faithfully          counted as specified
+  4-7    matches in part             counted undecided
+  1-3    does not match              counted as did not
+
+It agrees with an independent reviewer 89-91% of the time on clear-cut replies
+and 53% on borderline ones. The middle band is therefore counted undecided,
+never as a pass.
+
+Rubric scenario-judge v2, unchanged since 2026-06-12. Full text in
+src/eval/resources/rubrics/scenario-judge-v2.txt.
+
+This evaluation kit can show that the system answered correctly from a stated
+starting point, but it doesn't prove that a user can reach that point unaided.
+
+--------------------------------------------------------------------------
+
+63 of 80 requirements behaved as specified, 9 did not, 4 were too borderline
+to call and 4 produced no result.
+
+                               checked by rules    judged     total
+  as specified                               52        11        63
+  did not                                     6         3         9
+  undecided                                   -         4         4
+  no result                                                       4
+    never reached the question                                    3
+    no reply within 45 seconds                                    1
+    answer not assessed                                           0
+
+Model usage: 412,880 tokens, 388,140 in and 24,740 out.
+  the system under test        351,200 in       21,900 out
+  the judge                     36,940 in        2,840 out
+
+The 3 that never reached the question stopped before the system was asked
+anything: each test must first put it into the situation being examined, and
+that preparation failed. The 1 was asked and did not answer within 45 seconds.
+
+None of the 4 tell us anything about the product. This run therefore reports
+no overall pass rate. The 9 findings below stand.
+
+  GenUC-16a.3   expected GenUC-16a.3, reached GenUC-17a
+  GenUC-20b.1   expected GenUC-20b.1, reached GenUC-20a
+  refund-30d    NO_MATCH (3/10) under scenario-judge v2
+  ...           6 more in target/evalkit/findings.csv
+```
+
+<span class="k">## Modules</span>
+
+```
+evalkit-core      scenarios, runner, scorers, reports      no dependencies
+evalkit-formats   corpus readers and importers             a JSON library
+evalkit-junit     the JUnit 5 extension                    JUnit 5
+evalkit-akka      durable campaigns, agent judges          Akka SDK
+```
+
+`evalkit-core` compiles against the JDK alone. A service in any language behind
+a port is evaluated by implementing `SystemUnderTest`.
+
+<span class="k">## Build</span>
+
+Java 21 and Maven.
+
+```shell
+mvn install                  # all modules
+mvn -pl evalkit-core test    # core alone, no runtime needed
+```
+
+```xml
+&lt;dependency&gt;
+  &lt;groupId&gt;io.akka&lt;/groupId&gt;
+  &lt;artifactId&gt;evalkit-core&lt;/artifactId&gt;
+  &lt;version&gt;0.1.0&lt;/version&gt;
+&lt;/dependency&gt;
+```
+</code></pre>
+
+        <div class="note">
+          <h4>The rationale section is bounded</h4>
+          <p>The heading "Why the outcomes are split this way" is the only place in the repository that argues for a design choice. Every page under <code>docs/site/</code> states behaviour, inputs, outputs and failure modes. <code>conventions/prose.md</code> carries that split and <code>tools/audit-prose.py</code> enforces the part a regex can reach.</p>
+        </div>
+      </section>
+
+      <!-- ============ 11 ============ -->
+      <section id="docs">
+        <h2 class="sec">Documentation set</h2>
+        <p class="answer">Three pages are written at <code>docs/site/evalkit/</code>. The doc.akka.io conventions they follow are a nav breadcrumb list, headings carrying an anchor element, a source link above each code block, <code>// (1)</code> annotations resolved in a table beneath the block, and admonitions written as a table row with an empty first cell.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Page</th><th>State</th><th>Covers</th></tr></thead>
+          <tbody>
+            <tr><td class="api">index.html.md</td><td class="have">Written</td><td>Overview, when to use, when not to use, <code>SystemUnderTest</code>, the outcome table, modules, a first campaign.</td></tr>
+            <tr><td class="api">scoring.html.md</td><td class="have">Written</td><td>The three families, rubric versioning, bands, panels, calibration, the built-in SDK evaluators.</td></tr>
+            <tr><td class="api">testing.html.md</td><td class="have">Written</td><td>The three run modes, the eval source root, the plan check, targets outside Akka.</td></tr>
+            <tr><td class="api">scenarios.html.md</td><td class="miss">Outline</td><td>Precursors, replay against fixture, corpus formats, the DeepEval importer, one corpus per surface.</td></tr>
+            <tr><td class="api">running.html.md</td><td class="miss">Outline</td><td>Lanes and utilisation, waves and the cursor, refusal reasons, recovery.</td></tr>
+            <tr><td class="api">reports.html.md</td><td class="miss">Outline</td><td>Scope before the run, findings after, what the report declines to print.</td></tr>
+          </tbody>
+        </table></div>
+
+        <p>The three pages and this document pass <code>tools/auditors/voice/audit.py</code> with no context filter and <code>tools/auditors/marketing-brand/audit.py</code> with no violations. Neither auditor reads diction, so both are a backstop behind a reading pass.</p>
+      </section>
+
+      <footer>
+        <p>Sources: the <code>evalkit</code> repository at 9a0260c, <code>docs/design-history.md</code>, the Akka SDK documentation for <a href="https://doc.akka.io/java/agent-testing.html">agent testing</a> and <a href="https://doc.akka.io/java/llm-eval.html">LLM evaluation</a>, and the <code>akka-javasdk-testkit</code> 3.6.1 artifact. 8 August 2026.</p>
+      </footer>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

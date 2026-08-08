@@ -2,3 +2,7 @@ target/
 .idea/
 *.iml
 .DS_Store
+
+# Rendered reports and recorded transcripts. A corpus is production data.
+evalkit-*/target/
+**/target/evalkit/

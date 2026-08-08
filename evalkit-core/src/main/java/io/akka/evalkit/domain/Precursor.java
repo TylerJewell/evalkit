@@ -56,6 +56,11 @@ public sealed interface Precursor {
         }
     }
 
+    /** The turns to send before the graded one, in order. */
+    static Precursor replay(String... userTurns) {
+        return new Replay(List.of(userTurns));
+    }
+
     /** Whether reaching this state exercises the target's own path to it. */
     default boolean provesReachability() {
         return this instanceof Replay;
