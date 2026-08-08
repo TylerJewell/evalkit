@@ -113,7 +113,7 @@
   <header class="masthead">
     <span class="eyebrow">Akka evalkit &middot; publishing design</span>
     <h1>evalkit as a published library</h1>
-    <p class="hero"><b>A Maven Central release needs eleven additions to the repository.</b> The Java code does not change.</p>
+    <p class="hero"><b>A Maven Central release needs ten additions to the repository.</b> The Java code does not change.</p>
     <p class="capsule">Release requirements, the module and package layout, and the proposed API surface in full. Sample documentation in the doc.akka.io format is written to <code>docs/site/evalkit/</code>.</p>
     <div class="byline">
       <span>evalkit at commit 9a0260c</span>
@@ -151,7 +151,7 @@
       <!-- ============ 1 ============ -->
       <section id="ready">
         <h2 class="sec">Publishing readiness</h2>
-        <p class="answer">evalkit builds, runs its tests, and keeps <code>evalkit-core</code> free of dependencies. A Maven Central release additionally requires a licence file, POM metadata, four plugins, and a <code>groupId</code> whose namespace can be verified. The table lists each item and the action it needs.</p>
+        <p class="answer">evalkit builds, runs its tests, and keeps <code>evalkit-core</code> free of dependencies. A Maven Central release additionally requires a licence file, POM metadata and four plugins. The table lists each item and the action it needs.</p>
 
         <div class="table-wrap"><table>
           <thead><tr><th>Requirement</th><th>State</th><th>Action</th></tr></thead>
@@ -165,7 +165,7 @@
             <tr><td class="lbl">CI</td><td class="miss">Absent</td><td>Build and test on JDK 21. Add a job asserting that <code>evalkit-core</code> compiles with no Akka on the classpath.</td></tr>
             <tr><td class="lbl">POM metadata</td><td class="miss">Absent</td><td><code>&lt;licenses&gt;</code>, <code>&lt;scm&gt;</code>, <code>&lt;url&gt;</code>, <code>&lt;developers&gt;</code> are all required by Maven Central.</td></tr>
             <tr><td class="lbl">Release plugins</td><td class="miss">Absent</td><td>Add <code>maven-source-plugin</code>, <code>maven-javadoc-plugin</code>, <code>maven-gpg-plugin</code> and <code>central-publishing-maven-plugin</code>.</td></tr>
-            <tr><td class="lbl">groupId</td><td class="miss"><code>io.akka.evalkit</code></td><td>Central verifies namespace ownership. Use <code>io.akka</code> with artifact ids <code>evalkit-core</code> and siblings, matching the SDK's coordinates.</td></tr>
+            <tr><td class="lbl">groupId</td><td class="have">Settled</td><td><code>io.akka.evalkit</code> with artifact ids <code>evalkit-core</code> and siblings. Central verifies namespace ownership against the domain.</td></tr>
             <tr><td class="lbl">Surefire</td><td class="miss">2.22.2</td><td>Pinned to an offline cache. Raise to a current release once the build reaches a real repository.</td></tr>
             <tr><td class="lbl">Module boundary</td><td class="have">Holds</td><td>Keep. A dependency-free core is the property that makes the library usable outside Akka.</td></tr>
             <tr><td class="lbl">Javadoc</td><td class="have">Written</td><td>The domain types are documented already. Publish the Javadoc.</td></tr>
@@ -1529,7 +1529,6 @@ akka.javasdk.agent.guardrails {
             <tr><td class="api">+ RunOutcome.Measured</td><td>A heuristic result belongs to neither existing variant. Adding it is a compile error at every exhaustive switch.</td></tr>
             <tr><td class="api">+ RunOutcome.Disputed</td><td>Panel disagreement is conflicting evidence and stays out of the pass-rate denominator.</td></tr>
             <tr><td class="api">Reply gains latency and toolsCalled</td><td>Required by <code>LatencyBudget</code> and <code>ToolCallMatch</code>.</td></tr>
-            <tr><td class="api">groupId io.akka.evalkit → io.akka</td><td>Maven Central verifies namespace ownership against a domain.</td></tr>
           </tbody>
         </table></div>
 
@@ -1731,7 +1730,7 @@ mvn -pl evalkit-core test    # core alone, no runtime needed
 
 ```xml
 &lt;dependency&gt;
-  &lt;groupId&gt;io.akka&lt;/groupId&gt;
+  &lt;groupId&gt;io.akka.evalkit&lt;/groupId&gt;
   &lt;artifactId&gt;evalkit-core&lt;/artifactId&gt;
   &lt;version&gt;0.1.0&lt;/version&gt;
 &lt;/dependency&gt;

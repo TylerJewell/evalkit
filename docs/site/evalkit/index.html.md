@@ -105,7 +105,7 @@ reachable over a port, is evaluated by implementing one interface. Adding a depe
 
 ```xml
 <dependency>
-  <groupId>io.akka</groupId>
+  <groupId>io.akka.evalkit</groupId>
   <artifactId>evalkit-core</artifactId>
   <version>0.1.0</version>
 </dependency>

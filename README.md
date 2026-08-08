@@ -212,7 +212,7 @@ mvn -pl evalkit-core test    # core alone, no runtime needed
 
 ```xml
 <dependency>
-  <groupId>io.akka</groupId>
+  <groupId>io.akka.evalkit</groupId>
   <artifactId>evalkit-core</artifactId>
   <version>0.1.0-SNAPSHOT</version>
 </dependency>
