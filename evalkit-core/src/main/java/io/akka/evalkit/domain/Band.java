@@ -58,15 +58,15 @@ public enum Band {
     /**
      * Whether a human has to look at this one.
      *
-     * <p>Measured, not assumed. Re-scoring 493 recorded Reference transcripts on their own
-     * rubric agreed with their judge 91% of the time on {@code NO_MATCH} and 89% on
-     * {@code FAITHFUL} &mdash; and <b>53% on {@code PARTIAL}</b>. Two judges barely
-     * out-perform a coin here, which is what the rubric's own wording invites: 4&ndash;7 is
-     * a four-point range with nothing distinguishing a 4 from a 7.
+     * <p>Re-scoring 493 recorded transcripts from the reference corpus on their own
+     * rubric agreed with the reference judge 91% of the time on {@code NO_MATCH}, 89% on
+     * {@code FAITHFUL}, and <b>53% on {@code PARTIAL}</b>. Agreement at 53% is close to
+     * chance, which the rubric's own wording invites: 4&ndash;7 is a four-point range with
+     * nothing distinguishing a 4 from a 7.
      *
-     * <p>So a {@code PARTIAL} is not a weak result, it is an <em>undecided</em> one.
-     * Reporting it as a score lends four points of precision to a judgement that does not
-     * reproduce. Counting how many land here is a better signal than where they sit.
+     * <p>A {@code PARTIAL} is an <em>undecided</em> result. Reporting it as a score lends
+     * four points of precision to a judgement that does not reproduce, so the report
+     * counts how many landed here instead of averaging where they sit.
      */
     public boolean needsReview() {
         return this == PARTIAL;

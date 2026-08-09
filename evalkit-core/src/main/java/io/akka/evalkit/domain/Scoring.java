@@ -104,8 +104,9 @@ public final class Scoring {
         var out = new java.util.LinkedHashMap<String, Verdict>();
         for (Verdict v : verdicts) {
             if (out.putIfAbsent(v.scenarioName(), v) != null) {
-                // Scenarios run many times — 1 to 61 in the Reference export. Which run wins
-                // must be a decision, not whichever the iterator reached last.
+                // A scenario can run many times; the reference export carries 1 to 61
+                // runs of a single scenario. The caller decides which run counts, because
+                // iteration order would otherwise decide it.
                 throw new IllegalArgumentException(
                     "more than one verdict for " + v.scenarioName()
                         + " — aggregate repeated runs before comparing");

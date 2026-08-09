@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RunSummaryTest {
 
     private static final RunSummary.Identity IDENTITY = new RunSummary.Identity(
-        "Claim conformance test", "AC-2026-08-05-001", "16f0085");
+        "Claim conformance test", "CH-2026-08-05-001", "16f0085");
 
     private static final RunSummary.Coverage COVERAGE = new RunSummary.Coverage(
         List.of(new RunSummary.Journey("flight disruption", 160),

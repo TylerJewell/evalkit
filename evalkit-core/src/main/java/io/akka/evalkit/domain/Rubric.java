@@ -8,15 +8,12 @@ import java.util.List;
 /**
  * A judge's prompt, as versioned data.
  *
- * <p><b>Rubrics are data, not classes.</b> Reference versions theirs &mdash; the export
- * carries {@code Empathy v4} beside {@code Brand Persona Alignment v6} &mdash; and that
- * versioning is only useful if an old version can still be loaded and applied. A rubric
- * compiled into a judge cannot be: changing the wording silently redefines every score
- * ever recorded under its name, and there is no way to re-score history on the old one or
- * to explain a movement as "the ruler changed" rather than "the system changed".
+ * <p>The prompt lives in {@code resources/rubrics/} and loads by id and version, so an
+ * old version can still be applied to stored recordings. A rubric compiled into a judge
+ * cannot be. Changing its wording redefines every score already recorded under its name,
+ * and the history cannot be re-scored on the wording that produced it.
  *
- * <p>So the prompt lives in {@code resources/rubrics/} and every {@link Verdict} carries
- * the id and version that produced it.
+ * <p>Every {@link Verdict} carries the id and version that produced it.
  */
 public record Rubric(String id, int version, String promptTemplate) {
 

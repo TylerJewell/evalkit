@@ -6,15 +6,13 @@ import java.util.Map;
 /**
  * How the system under test is put into the state a scenario assumes.
  *
- * <p>Most scenarios do not test a conversation's first turn. Of 2,365 Reference scenarios,
- * 502 carry recorded setup, and for the claim corpora the full conversation runs to a
- * median of 22 messages against a single graded exchange &mdash; every one of those setup
- * turns costing model calls, latency, and a chance to fail before the interesting part.
+ * <p>A scenario testing a conversation's first turn is the exception. Of the 2,365
+ * scenarios in the reference corpus, 502 carry recorded setup, and the claim corpora run
+ * to a median of 22 messages before the graded exchange. Every setup turn costs a model
+ * call, adds latency, and can fail before the graded turn is reached.
  *
- * <p><b>This is where an Akka-native harness stops being a Reference clone.</b> Reference is
- * outside the system and has to come through the front door. A harness that knows the
- * target is an Akka service does not: the state those 21 messages exist to produce is a
- * record in an entity, and it can be put there directly.
+ * <p>{@link Replay} sends those turns through the interface a user would use. {@link
+ * Fixture} asks the target to write the state directly, which costs no model calls.
  */
 public sealed interface Precursor {
 
@@ -24,10 +22,9 @@ public sealed interface Precursor {
     /**
      * Walk the recorded turns through the front door.
      *
-     * <p>Slow and able to fail, and still necessary. A suite that only ever seeds stops
-     * proving the states are <em>reachable</em> &mdash; the same blind spot that let two
-     * complete workflows sit in a prior service with no caller while their tests passed. Seeded runs
-     * verify the graded turn; only walked runs verify the path to it.
+     * <p>Walking the turns is slow and can fail, and it is the only evidence that the
+     * state is reachable. A suite that only seeds states verifies the graded turn and
+     * never verifies the path to it, which is how an unreachable state keeps passing.
      */
     record Replay(List<String> userTurns) implements Precursor {
         public Replay {
@@ -38,10 +35,9 @@ public sealed interface Precursor {
     /**
      * Ask the target for a state it knows how to build, by name.
      *
-     * <p>A named fixture rather than a list of events on purpose. Events would put the
-     * target's event types in evalkit's domain and make this harness specific to one
-     * service; a name keeps the seam at "the target knows how to reach the state it owns",
-     * which is the only side that could know.
+     * <p>The target is asked for a name, never for a list of events. Events would put
+     * the target's event types into evalkit's domain and tie this harness to one service.
+     * The target is the only side that knows how to reach the state it owns.
      */
     record Fixture(String name, Map<String, String> parameters) implements Precursor {
         public Fixture {

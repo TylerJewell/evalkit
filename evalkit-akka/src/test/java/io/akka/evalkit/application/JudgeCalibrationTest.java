@@ -22,49 +22,50 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Scores recorded Reference transcripts with our judge, and compares.
+ * Scores recorded reference transcripts with this judge and compares the two scores.
  *
- * <p>This is the experiment the whole comparison rests on. If our judge and theirs
- * disagree about the same transcripts, then no before/after number either of us produces
- * means anything, and that is worth knowing before any of it is built.
+ * <p>Every before-and-after number a campaign prints depends on this agreement. Two
+ * judges that disagree about the same transcripts produce two incomparable scales.
  *
- * <p><b>It measures two things at once and cannot separate them.</b> Reference scored with
- * "GPT 5.5 or equivalent"; this scores with Gemini. Agreement would say the rubric is
- * portable across models *and* that our implementation is faithful. Disagreement cannot
- * tell those apart without a second run on their model. Stated here rather than in the
- * write-up, because it is the first thing a reader should be told.
+ * <p><b>The run measures two things at once and cannot separate them.</b> The reference
+ * corpus was scored with "GPT 5.5 or equivalent" and this scores with Gemini, so
+ * agreement means the rubric carries across models and this implementation is faithful to
+ * it. Disagreement cannot tell those apart without a second run on the reference model.
+ *
+ * <p>Each line of the sample is a JSON object carrying {@code corpus},
+ * {@code scenario_name}, the transcript fields, and {@code reference_score}.
  *
  * <p>Opt-in, because it costs money and calls a live model:
  *
  * <pre>
  * cd evalkit
  * mvn test -Dtest=JudgeCalibrationTest -Dcalibration=true \
- *          -Dreference.sample=/path/to/sample.jsonl -Dcalibration.lanes=8
+ *          -Dcalibration.sample=/path/to/sample.jsonl -Dcalibration.lanes=8
  * </pre>
  */
-@DisplayName("Judge calibration · our scores against Reference's")
+@DisplayName("Judge calibration · this judge against the reference scores")
 @EnabledIfSystemProperty(named = "calibration", matches = "true")
 class JudgeCalibrationTest extends TestKitSupport {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Rubric RUBRIC = Rubric.load("scenario-judge", 2);
 
-    private record Sample(String corpus, String scenario, Transcript transcript, int theirs) {}
+    record Sample(String corpus, String scenario, Transcript transcript, int reference) {}
 
     private record Scored(Sample sample, int ours) {
         Band ourBand() {
             return Band.of(ours);
         }
 
-        Band theirBand() {
-            return Band.of(sample.theirs());
+        Band referenceBand() {
+            return Band.of(sample.reference());
         }
     }
 
     @Test
     @DisplayName("score the sample and report agreement")
     void calibrate() throws Exception {
-        var samples = load(Path.of(System.getProperty("reference.sample")));
+        var samples = load(Path.of(System.getProperty("calibration.sample")));
         int lanes = Integer.getInteger("calibration.lanes", 8);
         System.out.printf("judging %d transcripts across %d lanes%n", samples.size(), lanes);
 
@@ -126,13 +127,13 @@ class JudgeCalibrationTest extends TestKitSupport {
         var perCorpus = new java.util.TreeMap<String, int[]>();   // [agreed, n]
 
         for (Scored s : scored) {
-            int delta = Math.abs(s.ours() - s.sample().theirs());
+            int delta = Math.abs(s.ours() - s.sample().reference());
             if (delta == 0) exact++;
             if (delta <= 1) withinOne++;
             absError += delta;
-            boolean agree = s.ourBand() == s.theirBand();
+            boolean agree = s.ourBand() == s.referenceBand();
             if (agree) sameBand++;
-            matrix.computeIfAbsent(s.theirBand(), k -> new EnumMap<>(Band.class))
+            matrix.computeIfAbsent(s.referenceBand(), k -> new EnumMap<>(Band.class))
                 .merge(s.ourBand(), 1, Integer::sum);
             var c = perCorpus.computeIfAbsent(s.sample().corpus(), k -> new int[2]);
             c[0] += agree ? 1 : 0;
@@ -152,11 +153,11 @@ class JudgeCalibrationTest extends TestKitSupport {
         System.out.printf("within 1 point    %d/%d  %.1f%%%n", withinOne, n, 100.0 * withinOne / n);
         System.out.printf("mean abs error    %.2f points%n", (double) absError / n);
 
-        System.out.println("\nconfusion (rows = Reference, cols = ours)");
+        System.out.println("\nconfusion (rows = reference, cols = ours)");
         System.out.printf("%-12s%12s%12s%12s%n", "", "NO_MATCH", "PARTIAL", "FAITHFUL");
-        for (Band theirs : Band.values()) {
-            var row = matrix.getOrDefault(theirs, Map.of());
-            System.out.printf("%-12s%12d%12d%12d%n", theirs,
+        for (Band reference : Band.values()) {
+            var row = matrix.getOrDefault(reference, Map.of());
+            System.out.printf("%-12s%12d%12d%12d%n", reference,
                 row.getOrDefault(Band.NO_MATCH, 0),
                 row.getOrDefault(Band.PARTIAL, 0),
                 row.getOrDefault(Band.FAITHFUL, 0));
@@ -172,14 +173,15 @@ class JudgeCalibrationTest extends TestKitSupport {
             failures.stream().limit(5).forEach(f -> System.out.println("  " + f));
         }
 
-        var out = Path.of(System.getProperty("reference.sample")).resolveSibling("calibration.csv");
+        var out = Path.of(System.getProperty("calibration.sample"))
+            .resolveSibling("calibration.csv");
         var lines = new ArrayList<String>();
         lines.add("corpus,scenario,reference_score,our_score,reference_band,our_band,agree");
         for (Scored s : scored) {
             lines.add("%s,\"%s\",%d,%d,%s,%s,%s".formatted(
                 s.sample().corpus(), s.sample().scenario().replace("\"", "'"),
-                s.sample().theirs(), s.ours(), s.theirBand(), s.ourBand(),
-                s.ourBand() == s.theirBand()));
+                s.sample().reference(), s.ours(), s.referenceBand(), s.ourBand(),
+                s.ourBand() == s.referenceBand()));
         }
         Files.write(out, lines);
         System.out.println("\nper-transcript results: " + out);
@@ -187,9 +189,11 @@ class JudgeCalibrationTest extends TestKitSupport {
 
     // ---- input ----
 
-    private static List<Sample> load(Path path) throws Exception {
+    static List<Sample> load(Path path) throws Exception {
         var out = new ArrayList<Sample>();
-        for (String line : Files.readAllLines(path)) {
+        var lines = Files.readAllLines(path);
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
             if (line.isBlank()) continue;
             JsonNode node = MAPPER.readTree(line);
             var transcript = new Transcript(
@@ -198,9 +202,17 @@ class JudgeCalibrationTest extends TestKitSupport {
                 node.path("simulation_history").asText(""),
                 node.path("system_output").asText(""),
                 node.path("expected_outcome").asText(""));
+            // A missing reference_score reaches asDouble() as 0, which is a NO_MATCH the
+            // reference judge never gave. The agreement figure would move with nothing to
+            // show that a field was renamed or dropped.
+            JsonNode score = node.get("reference_score");
+            if (score == null || !score.isNumber()) {
+                throw new IllegalArgumentException(
+                    path + " line " + (i + 1) + ": reference_score is missing or not a number");
+            }
             out.add(new Sample(node.path("corpus").asText(),
                 node.path("scenario_name").asText(), transcript,
-                (int) Math.round(node.path("reference_score").asDouble())));
+                (int) Math.round(score.asDouble())));
         }
         return out;
     }

@@ -108,8 +108,8 @@ class CampaignReportTest {
     @Test
     @DisplayName("an entirely seeded campaign says so, because it proved no path")
     void seededCampaignDeclaresItself() {
-        // Seeding is the throughput win and it is also how a suite stops noticing a state
-        // has become unreachable — the blind spot in a new costume.
+        // Seeding is what makes a large corpus affordable, and it is also how a suite
+        // stops noticing that a state became unreachable.
         var r = report(List.of(scored(9), scored(9)));
 
         assertThat(r.provesAnyReachability()).isFalse();

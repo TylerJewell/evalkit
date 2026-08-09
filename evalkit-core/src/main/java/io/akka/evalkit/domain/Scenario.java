@@ -5,9 +5,9 @@ import java.util.Optional;
 /**
  * One thing to test: get the system into a state, say something, expect something.
  *
- * <p>The reusable part of a Reference row. A run of a scenario carries a transcript, a score
- * and a session id; the scenario itself is only the three fields below plus how to reach
- * the state &mdash; which is why a report of past runs can still yield a suite.
+ * <p>A run of a scenario carries a transcript, a score and a session id. The scenario
+ * itself holds the fields below and how to reach the state, so a report of past runs
+ * still yields a suite.
  *
  * @param specNode the requirement this exercises, when it names one. Present for 510 of
  *                 the 514 claim-flow scenarios and for none of the FAQ ones, which is the
