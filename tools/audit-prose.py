@@ -74,14 +74,27 @@ RULES = [
   'bare count standing for the named things', 'prose', ALL),
  # A count before an abstraction replaces a name. A count before a unit is a
  # measurement, and measurements are required, so the noun decides.
- (r"\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+(input|inputs|thing|things|step|steps|way|ways|reason|reasons|factor|factors|element|elements|point|points|mode|modes|path|paths|pillar|pillars|dimension|dimensions|option|options|stage|stages|layer|layers|outcome|outcomes|position|positions|choice|choices|category|categories|kind|kinds|type|types|aspect|aspects|area|areas|approach|approaches|consideration|considerations|consequence|consequences|advantage|advantages|benefit|benefits|difference|differences|property|properties|principle|principles|rule|rules|mistake|mistakes|failure|failures|trigger|triggers|signal|signals|theme|themes|lesson|lessons|move|moves|band|bands|claim|claims|measure|measures|criterion|criteria|shape|shapes|quality|qualities|virtue|virtues|takeaway|takeaways)\b", 'counting abstractions', 'both', ALL),
+ (r"\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+(input|inputs|thing|things|step|steps|way|ways|reason|reasons|factor|factors|element|elements|point|points|mode|modes|path|paths|pillar|pillars|dimension|dimensions|option|options|stage|stages|layer|layers|outcome|outcomes|position|positions|choice|choices|category|categories|kind|kinds|type|types|aspect|aspects|area|areas|approach|approaches|consideration|considerations|consequence|consequences|advantage|advantages|benefit|benefits|difference|differences|property|properties|principle|principles|rule|rules|mistake|mistakes|failure|failures|trigger|triggers|signal|signals|theme|themes|lesson|lessons|move|moves|band|bands|claim|claims|measure|measures|criterion|criteria|shape|shapes|quality|qualities|virtue|virtues|takeaway|takeaways|place|places|case|cases|cause|causes|source|sources)\b", 'counting abstractions', 'both', ALL),
+ # A placeholder noun carries no description of its own, so an adjective between
+ # it and the count still leaves the count doing the naming. "three different
+ # things" and "two more places" both passed while the shape was intact.
+ (r"\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:[a-z]+\s+){0,2}"
+  r"(thing|things|way|ways|reason|reasons|place|places|cause|causes|case|cases|"
+  r"aspect|aspects|area|areas|element|elements|factor|factors)\b",
+  'counting abstractions', 'both', ALL),
 
  # ── Hype and AI-tells ─────────────────────────────────────────
  (r"\b(unlock|supercharge|leverage|harness|empower|revolutionize|seamless|game-changer|delve)\b", 'hype verb', 'both', ALL),
  (r"\b(at its core|make no mistake|testament to|at the end of the day|worth noting|this is where)\b", 'AI-tell phrase', 'both', ALL),
  (r"\b(throughline|tapestry|journey)\b", 'AI-metaphor noun', 'both', ALL),
  (r"(?<!-)\b(shiny|elegant|beautiful|powerful|robust|modern|critical|vital|essential|amazing|incredible|remarkable)\b(?!-)", 'colour/emotion adjective', 'both', ALL),
- (r"\b(massive|blazing[- ]fast|comprehensive|sharpest|strongest|fastest|largest)\b", 'adjective-for-number', 'both', ALL),
+ (r"\b(massive|blazing[- ]fast|comprehensive|sharpest|strongest|fastest|largest|"
+  r"slight|minor|numerous|countless|significant|substantial)\b", 'adjective-for-number', 'both', ALL),
+ # A change is counted in files or in lines, and "small" reports neither.
+ (r"\b(small|large|tiny|big|huge)\s+(change|changes|edit|edits|difference|differences|"
+  r"number|numbers|share|shares|share of)\b", 'adjective-for-number', 'both', ALL),
+ # A quantity the reader is asked to carry from an earlier sentence.
+ (r"\b(that|this)\s+(far|much|many|big|large|small|often|fast|slow)\b", 'unstated quantity', 'both', ALL),
  (r"\b(load-bearing|the spine|north star|flywheel|substrate)\b", 'metaphor for plain word', 'both', ALL),
  # "the wedge" names a known sales motion internally and is a metaphor to a customer.
  (r"\bthe wedge\b", 'metaphor for plain word', 'both', CUSTOMER_FACING),
@@ -93,13 +106,22 @@ RULES = [
  # ── Reader framing ────────────────────────────────────────────
  (r"\b(Take a hard look|Ask yourself|Before you start|Let['’]s face it)\b", 'framework-lecture opener', 'both', ALL),
  (r"\b(the reason (you|the question)|why you asked|if you['’]re wondering|you have already hit)\b", 'telling the reader about themselves', 'prose', ALL),
+ # Documentation states what the software does. A second-person subject makes
+ # the reader the actor in a story and invents what they wanted: "Say you run 80
+ # scenarios" counts nothing, and "you want to know whether the service is
+ # broken" reports a motive nobody observed. A possessive is left alone, because
+ # "your Akka download token" names a real thing the reader owns.
+ (r"\byou\s+(run|ran|want|wanted|get|got|see|saw|find|found|know|knew|need|needed|"
+  r"edit|edited|write|wrote|score|scored|were|was|had|have|can|could|would|will)\b",
+  'reader as the subject', 'prose', ALL),
+ (r"(?:^|(?<=[.!?])\s)(Say|Suppose|Imagine)\s+(you|a|an|the)\b", 'hypothetical framing', 'prose', ALL),
  # A buyer's motive is not a fact we hold. State what the system does.
  (r"\b(the reason|why)\s+(enterprises|customers|companies|buyers|teams|organi[sz]ations|people|they)\s+"
   r"(choose|chooses|buy|buys|pick|picks|select|selects|prefer|prefers|come|came|switch)\b",
   'unfalsifiable claim about a buyer motive', 'both', ALL),
 
  # ── Hedging ───────────────────────────────────────────────────
- (r"\b(usually|generally|typically|mostly|often enough|broadly speaking|somewhat|fairly|arguably)\b", 'hedge', 'both', ALL),
+ (r"\b(usually|generally|typically|mostly|often enough|broadly speaking|somewhat|fairly|arguably|might)\b", 'hedge', 'both', ALL),
  # An adverb that softens a claim before anyone has challenged it. "cannot
  # easily match" concedes the claim in the act of making it: either the thing
  # can be matched or it cannot, and the adverb is there to avoid saying which.
@@ -140,8 +162,23 @@ RULES = [
   'announcement stub', 'prose', ALL),
  (r"\b(works|goes|reads|breaks\s+down)\s+like\s+this\b", 'announcement stub', 'both', ALL),
  (r"\bis\s+as\s+follows\b", 'announcement stub', 'both', ALL),
+ (r"(?:^|(?<=[.!?])\s)The same \w+\s+(turns? up|appears?|shows? up|happens?|occurs?|applies)\b",
+  'announcement stub', 'prose', ALL),
  # A pointer standing in for the thing it points at.
  (r"\bthe (former|latter)\b", 'back-reference to a thing never named', 'both', ALL),
+ # An ordinal answers "which one" and names nothing. "The second is a setup
+ # failure" is readable only while the sentence that opened the list is still in
+ # view, and an edit to that sentence strands every ordinal under it.
+ (r"(?:^|(?<=[.!?])\s)The\s+(first|second|third|fourth|fifth|last|next)\s+(is|are|was|were)\b",
+  'ordinal standing for a thing never named', 'prose', ALL),
+ (r"\bthe\s+(first|last|other)\s+(two|three|four|five|six|seven|eight|nine|ten)\b",
+  'ordinal standing for a thing never named', 'both', ALL),
+ # A quantifier where a count belongs. "Most scenarios do not test a first
+ # message" has a subject and a verb and reports no figure.
+ (r"(?:^|(?<=[.!?])\s)(Most|Many|Some|Few|Several|Almost all|Nearly all)\s+\w+\s+"
+  r"(is|are|do|does|have|has|need|needs|require|requires|use|uses|test|tests|carry|carries|"
+  r"come|comes|start|starts|produce|produces|cost|costs|fail|fails|run|runs)\b",
+  'uncounted quantifier as subject', 'prose', ALL),
 
  # ── Courtroom vocabulary ───────────────────────────────────────
  # An evaluation produces measurements. Describing them as testimony makes a
@@ -154,6 +191,21 @@ RULES = [
  (r"\b(not\s+)?quotable\b", 'courtroom vocabulary', 'both', ALL),
 
  # ── Metaphor replacing a name in the codebase ──────────────────
+ # A program has no share of the fault. "The service takes the blame for the
+ # filter" describes a run as a party at fault, where the report records which
+ # component produced the result.
+ (r"\b(takes?|took|taking|gets?|got)\s+the\s+blame\b|\bblames?\b|\bto\s+blame\b",
+  'blame assigned to a program', 'both', ALL),
+ (r"\b(number|score|figure|total|count|result|report|column|row)s?\s+(that\s+)?reads?\s+as\b",
+  'verb stretched past its meaning', 'both', ALL),
+ (r"\b(coin toss|coin flip|dice roll|apples to apples)\b", 'metaphor for plain word', 'both', ALL),
+ (r"\bthe\s+(incident|reasoning|story|thinking)\s+behind\b", 'metaphor for plain word', 'both', ALL),
+ (r"\bpulled?\s+out\s+of\b|\bby\s+pattern\b", 'vague verb for a named operation', 'both', ALL),
+ # "A number that moves that far is a number about the regex" repeats the noun
+ # and calls the repetition an explanation.
+ (r"\ba\s+(\w+)\s+that\b[^.]{0,80}\bis\s+a\s+\1\b", 'definitional epigram', 'both', ALL),
+ (r"\b(every|each)\s+\w+\s+in\s+the\s+(codebase|repository|repo|project|system|kit)\b",
+  'overstatement', 'both', ALL),
  (r"\b(the|one|a) ruler\b", 'metaphor for a named type', 'both', ALL),
  (r"\bband movement\b", 'metaphor for a named type', 'both', ALL),
  (r"\bpre-?flight\b", 'metaphor for a named type', 'both', ALL),
@@ -190,6 +242,7 @@ RULES = [
  (r"\bby design\b", 'argues for the choice', 'both', DOCUMENTATION),
  (r"\b(is|are|was|were)\s+designed\s+to\b", 'argues for the choice', 'both', DOCUMENTATION),
  (r"\bmakes? the case\b", 'argues for the choice', 'both', DOCUMENTATION),
+ (r"\btherefore\b", 'argues for the choice', 'both', DOCUMENTATION),
  # Narrating the document instead of writing it.
  (r"\bthis\s+(section|document|page|chapter|table)\s+"
   r"(covers|describes|explains|lists|shows|sets out|walks through)\b",
@@ -275,6 +328,30 @@ FRAGMENT_ANSWER = re.compile(r"^(Partly|Rarely|Yes|No|Maybe|Sometimes|Memory|Bot
 ELIDED_PREDICATE = re.compile(
     r"\b(do|does|did|is|are|was|were|has|have|had|can|could|will|would|should|must|may)"
     r"(\s+not|n't)?\s*[.!]$", re.I)
+
+# A verb whose complement carries the fact, closed without one. "Models decline."
+# names no request and "Judges disagree." names nothing they disagree about, so
+# the sentence parses and reports less than it appears to. Both shapes reach the
+# reader as a claim and neither survives being quoted on its own.
+ELIDED_COMPLEMENT = re.compile(
+    r"\b(declines?|refuses?|agrees?|disagrees?|differs?|varies|vary|objects?|"
+    r"concedes?|complies|comply|conflicts?)\s*[.!]$", re.I)
+
+# A participle opening a sentence attaches to the subject that follows it, so
+# "While calibrating this kit, a content filter refused to score" says the filter
+# was calibrating evalkit. Restricted to participles only a person performs,
+# because "While running, the campaign writes a cursor" is correct.
+AGENTIVE = frozenset("""
+calibrating building writing designing testing reviewing developing debugging
+drafting reading porting measuring auditing evaluating investigating planning
+""".split())
+OPENING_PARTICIPLE = re.compile(
+    r"^(?:While|When|After|Before|In|On)\s+(\w+ing)\b[^,]{0,60},\s+(?:a|an|the)\s+", re.I)
+
+
+def dangling_participle(sent):
+    m = OPENING_PARTICIPLE.match(sent)
+    return bool(m and m.group(1).lower() in AGENTIVE)
 
 # A demonstrative naming an abstraction the paragraph never introduced.
 # "…all pass that test" points at a test, and the paragraph named a criterion.
@@ -739,6 +816,10 @@ def structural(line, kind, s):
             rule, match = 'phrase punctuated as a sentence', sent[:110]
         elif ELIDED_PREDICATE.search(sent):
             rule, match = 'elided predicate', sent[:110]
+        elif ELIDED_COMPLEMENT.search(sent):
+            rule, match = 'elided complement', sent[:110]
+        elif dangling_participle(sent):
+            rule, match = 'dangling participle', sent[:110]
         elif is_comma_splice(sent):
             rule, match = 'comma-spliced clause chain', sent[:110]
         else:
@@ -826,6 +907,55 @@ def audit_file(path, context=None, standalone_zones=('answer', 'faq')):
     return out
 
 
+def audit_line(s):
+    """Rule names a single line of prose triggers, for the self-test."""
+    found = set()
+    for pat, rule, scope, _ in RULES:
+        if scope == 'heading':
+            continue
+        m = re.search(pat, s, re.I | re.MULTILINE)
+        if m and not _exempt(s, m):
+            found.add(rule.split(' (')[0])
+    for h in structural(0, 'prose', s):
+        found.add(h['rule'])
+    return found
+
+
+FIXTURE = re.compile(r"^-\s+\[([^\]]+)\]\s+(.+?)\s*$", re.M)
+PLAIN = re.compile(r"^-\s+(?!\[)(.+?)\s*$", re.M)
+
+
+def self_test():
+    """Assert every rule in tools/prose-fixtures.md still catches its line.
+
+    A rule bank is a set of checks that pass by finding nothing, so a pattern
+    that stops matching looks exactly like prose that improved. The fixtures
+    carry wording that shipped here, and the second section carries wording that
+    has to stay clean, so a rule widened past its shape fails too.
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prose-fixtures.md')
+    with open(path, encoding='utf-8') as f:
+        text = f.read()
+    caught, clean = text.split('## Not caught', 1)
+    caught = caught.split('## Caught', 1)[-1]
+    missed, spurious = [], []
+    for rule, line in FIXTURE.findall(caught):
+        if rule not in audit_line(line):
+            missed.append((rule, line))
+    for line in PLAIN.findall(clean):
+        hits = audit_line(line)
+        if hits:
+            spurious.append((sorted(hits), line))
+    for rule, line in missed:
+        print('NOT CAUGHT  [%s]  %s' % (rule, line))
+    for hits, line in spurious:
+        print('FALSE HIT   %s  %s' % (hits, line))
+    total = len(FIXTURE.findall(caught)) + len(PLAIN.findall(clean))
+    print('\n%d fixture(s), %d missed, %d false hit(s)'
+          % (total, len(missed), len(spurious)))
+    return 1 if missed or spurious else 0
+
+
 def check_drift():
     """The rule bank and conventions/prose.md drift apart silently. Compare their sizes."""
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -872,8 +1002,11 @@ def main():
     p.add_argument('--only-headings', action='store_true')
     p.add_argument('--format', choices=('text', 'json'), default='text')
     p.add_argument('--check-drift', action='store_true', help='compare the rule bank against conventions/prose.md')
+    p.add_argument('--self-test', action='store_true', help='assert every rule still catches its fixture')
     a = p.parse_args()
 
+    if a.self_test:
+        return self_test()
     if a.check_drift:
         return check_drift()
     if not a.files:

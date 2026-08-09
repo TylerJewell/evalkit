@@ -433,7 +433,7 @@ metric = DAGMetric(name="Correctness",
       <!-- ================= 5 ================= -->
       <section id="semantics">
         <h2 class="sec">A JUnit extension reproduces the authoring experience and defers execution</h2>
-        <p class="answer">DeepEval fires a metric call when its test case executes. Suite cost therefore grows linearly with case count. Continuous integration needs 10 to 15 minute timeouts, and no case can be refused before the suite starts. A JUnit extension that collects scenarios during discovery and runs one planned campaign keeps the authoring experience, spends once per campaign, and refuses an unsatisfiable class before the first call.</p>
+        <p class="answer">DeepEval fires a metric call when its test case executes. Suite cost grows linearly with case count. Continuous integration needs 10 to 15 minute timeouts, and no case can be refused before the suite starts. A JUnit extension that collects scenarios during discovery and runs one planned campaign keeps the authoring experience, spends once per campaign, and refuses an unsatisfiable class before the first call.</p>
 
         <pre><code><span class="k">@EvalCampaign</span>(rubric = "scenario-judge", version = 2, lanes = 8)
 class RefundPolicyEval {
@@ -515,7 +515,7 @@ class RefundPolicyEval {
           </tbody>
         </table></div>
 
-        <p>The token-probability normalisation is dropped for two measured reasons. The weighting requires a provider that exposes output token probabilities, and DeepEval falls back to plain scoring without them. A continuous 0 to 1 score also supports the mean that <code>Scoring</code> refuses to compute.</p>
+        <p>The token-probability normalisation is dropped after two measurements. The weighting requires a provider that exposes output token probabilities, and DeepEval falls back to plain scoring without them. A continuous 0 to 1 score also supports the mean that <code>Scoring</code> refuses to compute.</p>
 
         <div class="note">
           <h4>A ported metric without a calibration case is an audit that examines nothing</h4>

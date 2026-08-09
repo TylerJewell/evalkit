@@ -309,6 +309,55 @@ it's worth noting, testament to, at the end of the day, this is where.
 **Rhetorical devices.** Colon-drama ("This is the real story: …"), rhetorical questions,
 em-dash used as a punchline, sentence fragments for effect.
 
+**Reader as the subject.** "Say you run 80 scenarios and 64 come back with a low score."
+"You want to know whether the service is broken." "Score the empty reply and you get a low
+number." A second-person subject makes the reader the actor in a story, invents a motive
+nobody observed, and turns invented figures into evidence by putting them in a scenario.
+Documentation states what the software does: "A campaign of 80 scenarios can return 64 low
+scores for three unrelated reasons." A possessive is fine, because "your Akka download
+token" names a real thing the reader owns.
+
+**Ordinals standing for a thing never named.** "The first is the one you were testing for."
+"The second is a setup failure." "The report leaves the last two out of the pass total." An
+ordinal answers "which one" and names nothing, so the sentence is readable only while the
+sentence that opened the list is still in view. Name the thing: "A setup failure produces
+the same low score."
+
+**Uncounted quantifiers as subjects.** "Most scenarios do not test a first message." The
+sentence has a subject and a verb and reports no figure. Count it, or describe the class:
+"A scenario that tests a first message is the exception in this corpus."
+
+**Blame assigned to a program.** "The service takes the blame for the filter." "A number
+that reads as a broken service." A run has no share of the fault and a number does not
+read. Say which component produced the result: "Scoring that refusal as zero records a
+filter decision against the service."
+
+**Dangling participles.** "While calibrating this kit, a content filter refused to score a
+transcript." The participle attaches to the subject that follows it, so this says the
+filter was calibrating evalkit. Give the participle its own subject: "A content filter
+refused to score a transcript during calibration."
+
+**Elided complements.** "Models decline." "Judges disagree." The verb needs a complement to
+carry the fact, and the sentence parses without one while reporting less than it appears
+to. Say what: "A model returns a refusal instead of a score."
+
+**Definitional epigrams.** "A number that moves that far when you edit a regex is a number
+about the regex." Repeating the noun on both sides of the copula is a figure of speech, not
+an explanation. State the finding: "The score moved by 6 points across three versions of
+the regular expression, on a service that never changed."
+
+**Unstated quantities.** "that far", "this much", "that often". A demonstrative in front of
+a quantity asks the reader to carry a figure from an earlier sentence. Repeat the figure.
+
+**Adjectives in front of a countable change.** "Small changes to the evaluation code move
+the score." A change is counted in files or in lines. "Three versions of one regular
+expression" says the same thing and can be checked.
+
+**Overstatement about coverage.** "records the incident behind every design rule in the
+codebase." Claiming every member of a set is a claim someone can falsify with one
+counterexample. Say what the file holds: "records what went wrong before the rules were
+written."
+
 ## Required voice
 
 - **Declarative.** Subject–verb–fact. One idea per sentence.

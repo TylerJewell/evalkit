@@ -175,7 +175,7 @@ the report.
 | Token accounting | Read from telemetry | `spend()` reports a floor and names the calls it could not see. |
 
 `CampaignRunner.run(plan, target, scorer)` in `evalkit-core` takes a scorer as an interface.
-A campaign against a service outside Akka therefore runs with no Akka runtime at all.
+A campaign against a service outside Akka runs with no Akka runtime at all.
 
 ## <a href="about:blank#_see_also"></a> See also
 

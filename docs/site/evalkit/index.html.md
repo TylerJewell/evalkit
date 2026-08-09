@@ -21,7 +21,7 @@ design of this library treats each of those as a defect to be made visible.
 
 ### <a href="about:blank#_when_to_use_evalkit"></a> When to use evalkit
 
-Use evalkit when you need to:
+evalkit covers these tasks:
 
 - Score a conversational service against recorded scenarios and report the result to a
   compliance, risk, or engineering audience.

@@ -16,7 +16,8 @@ finds something.
 second test that fails when an entry outlives its cause. Wiring something up
 removes its entry in the same change.
 
-`docs/design-history.md` records the incident behind these and the other rules.
+`docs/design-history.md` records what went wrong before the rules in this file
+were written.
 Read it before changing anything the rules cover. The incident is more
 persuasive than the rule.
 
@@ -80,7 +81,14 @@ service, and a recorded score has to stay interpretable six weeks later.
 
 `conventions/prose.md` holds the rules for documentation, specifications,
 Javadoc and commit messages, and `tools/audit-prose.py` enforces the part a
-regex can reach. The auditor cannot hear diction, so read what you wrote aloud.
+regex can reach. The auditor cannot hear diction, so read every new sentence aloud.
+
+A new rule in the auditor arrives with a line in `tools/prose-fixtures.md` that it
+catches, under `## Caught`. A rule bank is a set of checks that pass by finding
+nothing, so a pattern that stops matching looks exactly like prose that improved.
+`python tools/audit-prose.py --self-test` asserts every fixture still fires, and the
+`## Not caught` section holds wording that has to stay clean, which fails a rule
+widened past its shape.
 
 Documentation states what a thing is and how it works. Rationale belongs in a
 limited part of `README.md` and nowhere else.

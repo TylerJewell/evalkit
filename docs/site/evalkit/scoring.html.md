@@ -11,8 +11,8 @@
 ## <a href="about:blank#_overview"></a> Overview
 
 A scorer reads a finished `Transcript` and returns a `RunOutcome`. Execution and scoring are
-separate steps. A rubric therefore applies to a recording without running the conversation
-again, and two services are compared under one rubric version.
+separate steps, so a rubric applies to a recording without running the conversation
+again and two services are compared under one rubric version.
 
 Three scorer families exist, and each is defined by what settles the result.
 
@@ -162,8 +162,8 @@ record Calibration(String rubricId, int rubricVersion, int samples,
 ```
 
 `CampaignPlan.check` refuses a campaign whose judge calibration is absent, older than a
-stated age, or below a stated agreement. The campaign that runs therefore states what its
-judge was worth on the day it ran.
+stated age, or below a stated agreement. A campaign that runs states what its judge was
+worth on the day it ran.
 
 ## <a href="about:blank#_built_in_evaluators"></a> Built-in Akka evaluators
 

@@ -140,5 +140,12 @@ jobs:
             docs/specs/*.html docs/site/evalkit/*.html.md README.md AGENTS.md \
             CONTRIBUTING.md SECURITY.md CHANGELOG.md
 
+      # Every rule in the bank passes by finding nothing, so a pattern that stops
+      # matching is indistinguishable from prose that improved. Each rule ships
+      # with a line it is known to catch, and tools/prose-fixtures.md also holds
+      # wording that has to stay clean, which fails a rule widened past its shape.
+      - name: Prove every rule still catches its fixture
+        run: python tools/audit-prose.py --self-test
+
       - name: Compare the rule bank against the rules file
         run: python tools/audit-prose.py --check-drift
