@@ -31,19 +31,42 @@ metric is most useful with the judgements that produced the score, because
 ## Before you open a pull request
 
 ```shell
-mvn -pl evalkit-core test                                # no credentials needed
-mvn install                                              # adds evalkit-akka
-python tools/audit-prose.py docs/specs/*.html docs/site/evalkit/*.html.md
+mvn -f evalkit-core/pom.xml test                         # no credentials needed
+python tools/audit-prose.py docs/specs/*.html docs/site/evalkit/*.html.md README.md
 ```
 
-`evalkit-akka` depends on the Akka SDK, which is not on Maven Central. Install
-the Akka Specify plugin in your AI coding assistant, following
-[the setup guide](https://doc.akka.io/getting-started/set-up-dev-env.html), then
-run `/akka:setup`. That configures the CLI, Java, Maven and your Akka download
-token, and writes the repository into `~/.m2/settings.xml`.
+Build `evalkit-core` from its own POM. Maven reads every module POM in the
+aggregator before it honours `-pl`, and `evalkit-akka` inherits an SDK parent
+that resolves only where the Akka repository is configured.
 
-A change confined to `evalkit-core` needs none of that, and continuous
-integration covers `evalkit-core` on every pull request.
+A change confined to `evalkit-core` needs nothing else, and continuous
+integration covers it on every pull request.
+
+### Building evalkit-akka
+
+`evalkit-akka` builds against an unreleased Akka SDK. The evaluation and ledger
+APIs it uses live on the `feature/governance` branch of `akka/akka-sdk`, and that
+branch publishes no artifacts, so the SDK is built locally until it ships.
+
+1. Install the Akka Specify plugin in your AI coding assistant, following
+   [the setup guide](https://doc.akka.io/getting-started/set-up-dev-env.html).
+2. Run `/akka:setup`, which configures the CLI, Java, Maven and your Akka
+   download token, and writes the repository into `~/.m2/settings.xml`.
+3. Add a second `repository` and a matching `pluginRepository` to
+   `~/.m2/settings.xml`, each with `/snapshots` appended to the URL step 2 wrote.
+   The runtime artifacts the SDK depends on are published there.
+4. Check out `akka/akka-sdk` at `feature/governance`, add both URLs as resolvers
+   in `project/plugins.sbt` and in `build.sbt`, then `publishM2` the
+   `akka-javasdk`, `akka-javasdk-parent`, `akka-javasdk-testkit`,
+   `akka-javasdk-validations`, `akka-javasdk-annotation-processor` and
+   `akka-javasdk-enforcer` projects.
+5. Run `mvn install`.
+
+Step 4 needs both resolver locations. sbt resolves a build's plugins before it
+reads any global resolver file, so a resolver declared anywhere else leaves the
+plugins unresolved.
+
+Continuous integration skips this module while the SDK is built by hand.
 
 The prose auditor reads documentation, specifications and the comments inside
 code samples. Never pass it `conventions/prose.md`. That file quotes every construction it
