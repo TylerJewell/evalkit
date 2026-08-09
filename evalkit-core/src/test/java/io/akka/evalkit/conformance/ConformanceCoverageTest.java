@@ -1,5 +1,6 @@
 package io.akka.evalkit.conformance;
 
+import io.akka.evalkit.metric.AlignmentMetric;
 import io.akka.evalkit.metric.Metric;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -90,6 +91,44 @@ class ConformanceCoverageTest {
     }
 
     @Test
+    @DisplayName("the scan covers a model-scored metric as well as an aggregating one")
+    void scanCoversBothMetricShapes() {
+        assertThat(isScorable(io.akka.evalkit.metric.ToolPermission.class)).isTrue();
+        assertThat(isScorable(io.akka.evalkit.metric.TaskCompletion.class)).isTrue();
+
+        // The base is abstract and carries no id of its own, and a supporting type is not
+        // a metric at all. Counting either would put a name in the comparison that no
+        // entry could ever match.
+        assertThat(isScorable(AlignmentMetric.class)).isFalse();
+        assertThat(isScorable(io.akka.evalkit.metric.Judgement.class)).isFalse();
+    }
+
+    @Test
+    @DisplayName("the check catches an unpinned entry that does not say why")
+    void catchesAnUnexplainedUnpinnedEntry() {
+        var silent = new PortedMetrics.Entry("quiet", PortedMetrics.Kind.METRIC,
+            PortedMetrics.Pinning.UNPINNED, "QuietMetric", "deepeval/metrics/quiet/quiet.py",
+            "0".repeat(40), "io.akka.evalkit.conformance.ConformanceCoverageTest", "");
+        var explained = new PortedMetrics.Entry("loud", PortedMetrics.Kind.METRIC,
+            PortedMetrics.Pinning.UNPINNED, "LoudMetric", "deepeval/metrics/loud/loud.py",
+            "0".repeat(40), "io.akka.evalkit.conformance.ConformanceCoverageTest",
+            "upstream ships no test for this metric");
+
+        assertThat(PortedMetrics.unexplained(List.of(silent, explained)))
+            .containsExactly("quiet");
+    }
+
+    @Test
+    @DisplayName("an entry claiming no upstream values says why not")
+    void everyUnpinnedEntryExplainsItself() {
+        // A metric ported without upstream values is a weaker claim than a pinned one, and
+        // an entry that does not say so reads exactly like one that was checked.
+        assertThat(PortedMetrics.unexplained(PortedMetrics.ENTRIES))
+            .as("unpinned entries with no note")
+            .isEmpty();
+    }
+
+    @Test
     @DisplayName("every entry records the upstream file and the commit it was read at")
     void everyEntryRecordsItsProvenance() {
         for (PortedMetrics.Entry entry : PortedMetrics.ENTRIES) {
@@ -116,9 +155,7 @@ class ConformanceCoverageTest {
                 .filter(name -> name.endsWith(".class") && !name.contains("$"))
                 .map(name -> "io.akka.evalkit.metric." + name.substring(0, name.length() - 6))
                 .map(ConformanceCoverageTest::load)
-                .filter(type -> Metric.class.isAssignableFrom(type)
-                    && !type.isInterface()
-                    && !Modifier.isAbstract(type.getModifiers()))
+                .filter(ConformanceCoverageTest::isScorable)
                 .map(ConformanceCoverageTest::metricIdOf)
                 .collect(java.util.stream.Collectors.toCollection(TreeSet::new));
         } catch (IOException e) {
@@ -126,6 +163,21 @@ class ConformanceCoverageTest {
         } catch (URISyntaxException e) {
             throw new IllegalStateException("could not read the metric package", e);
         }
+    }
+
+    /**
+     * Whether a type in the metric package is something that scores a run.
+     *
+     * <p>Two shapes qualify. A {@link Metric} turns judgements into a number, and an
+     * {@link AlignmentMetric} asks a model for the number directly. Checking only the first
+     * would leave every model-scored metric out of the coverage comparison, which is a
+     * coverage check that passes by not looking &mdash; the failure this repository has
+     * recorded twice.
+     */
+    static boolean isScorable(Class<?> type) {
+        return (Metric.class.isAssignableFrom(type) || AlignmentMetric.class.isAssignableFrom(type))
+            && !type.isInterface()
+            && !Modifier.isAbstract(type.getModifiers());
     }
 
     /**

@@ -23,11 +23,13 @@ import io.akka.evalkit.domain.Verdict;
  * campaigns run in a different order would disagree for no reason connected to the
  * systems being judged.
  *
- * <p><b>The rubric is used verbatim.</b> It asks for "a single value from 1 to 10" and
- * nothing else, so this asks for nothing else &mdash; no rationale field, no structured
- * schema. Adding either would change the model's task and break comparability with the
- * scores already recorded under this rubric. A rationale-producing judge is a legitimate
- * thing to want; it is a new rubric version, not a tweak to this one.
+ * <p><b>The rubric is used verbatim, and it decides what is asked.</b> This class adds no
+ * instruction of its own &mdash; no reason field, no structured schema &mdash; because
+ * adding one would change the model's task and break comparability with every score already
+ * recorded under that rubric. {@code scenario-judge} v2 asks for "a single value from 1 to
+ * 10" and gets a score with nothing beside it. v3 asks for the score and one sentence, on
+ * the same bands, and is a separate rubric run alongside v2 rather than a change to it.
+ * {@link Rubric#statesReason()} is how the reply is read either way.
  */
 @Component(
     id = "scenario-judge",
@@ -42,11 +44,20 @@ public class ScenarioJudge extends Agent {
     public record JudgeRequest(Transcript transcript, Rubric rubric) {}
 
     /**
-     * @param explanation why this passed or failed, for traces
+     * @param explanation the band, the score and the rubric that produced them, for a trace
+     *                    to be readable without opening the transcript
      * @param passed      only {@link Band#FAITHFUL} counts — see {@link Band#passed()}
+     * @param reason      the judge's own sentence, and empty under a rubric that asked for a
+     *                    bare number. Kept apart from {@code explanation} because one is the
+     *                    model's and the other is assembled here
      */
-    public record Result(String explanation, boolean passed, int score, Band band)
-        implements EvaluationResult {}
+    public record Result(String explanation, boolean passed, int score, Band band,
+                         String reason) implements EvaluationResult {
+
+        public Result {
+            reason = reason == null ? "" : reason.strip();
+        }
+    }
 
     public Effect<Result> judge(JudgeRequest request) {
         if (request == null || request.transcript() == null || request.rubric() == null) {
@@ -62,19 +73,21 @@ public class ScenarioJudge extends Agent {
     }
 
     private static Result toResult(String reply, JudgeRequest request) {
-        var parsed = Verdict.parseScore(reply);
+        var parsed = Verdict.read(
+            request.transcript().scenarioName(), request.rubric(), reply);
         if (parsed.isEmpty()) {
             // Not a failing score — an absent one. Defaulting would fabricate a judgement
-            // and quietly move a campaign's band distribution.
-            throw new IllegalStateException(
+            // and quietly move a campaign's band distribution. NoVerdict rather than a bare
+            // runtime exception, so the runner files this as the judge declining and not as
+            // a defect in the kit.
+            throw new io.akka.evalkit.domain.NoVerdict(
                 "judge returned no score for " + request.transcript().scenarioName()
                     + ": " + abbreviate(reply));
         }
-        int score = parsed.get();
-        var band = Band.of(score);
+        var verdict = parsed.get();
         return new Result(
-            band + " (" + score + "/10) under " + request.rubric().label(),
-            band.passed(), score, band);
+            verdict.band() + " (" + verdict.score() + "/10) under " + request.rubric().label(),
+            verdict.band().passed(), verdict.score(), verdict.band(), verdict.reason());
     }
 
     private static String abbreviate(String reply) {
@@ -94,8 +107,11 @@ public class ScenarioJudge extends Agent {
             java.util.function.BiFunction<Transcript, Rubric, Result> invoke) {
         return (transcript, rubric) -> {
             var result = invoke.apply(transcript, rubric);
+            // The reason, not the explanation. The explanation is assembled from the band
+            // and the score for a trace to read; putting it on the verdict would record a
+            // restatement of the two fields beside it as though it were the judge's finding.
             return new RunOutcome.Scored(Verdict.of(
-                transcript.scenarioName(), rubric, result.score(), result.explanation()));
+                transcript.scenarioName(), rubric, result.score(), result.reason()));
         };
     }
 }

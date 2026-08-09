@@ -5,6 +5,7 @@ import akka.javasdk.testkit.TestKitSupport;
 import akka.javasdk.testkit.TestModelProvider;
 import io.akka.evalkit.domain.Band;
 import io.akka.evalkit.domain.Rubric;
+import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Transcript;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class ScenarioJudgeTest extends TestKitSupport {
     }
 
     private static final Rubric RUBRIC = Rubric.load("scenario-judge", 2);
+    private static final Rubric REASONED = Rubric.load("scenario-judge", 3);
 
     private static final Transcript TRANSCRIPT = new Transcript(
         "GenUC-17a: Single pax chooses cash payment (Country = Canada)",
@@ -40,10 +42,14 @@ class ScenarioJudgeTest extends TestKitSupport {
         "The agent should inform the user that the payment will be made via Interac e-transfer.");
 
     private ScenarioJudge.Result judge() {
+        return judgeUnder(RUBRIC);
+    }
+
+    private ScenarioJudge.Result judgeUnder(Rubric rubric) {
         return componentClient.forAgent()
-            .inSession("test-session")
+            .inSession("test-session-v" + rubric.version())
             .method(ScenarioJudge::judge)
-            .invoke(new ScenarioJudge.JudgeRequest(TRANSCRIPT, RUBRIC));
+            .invoke(new ScenarioJudge.JudgeRequest(TRANSCRIPT, rubric));
     }
 
     @Test
@@ -86,6 +92,49 @@ class ScenarioJudgeTest extends TestKitSupport {
 
         assertThatThrownBy(this::judge)
             .hasMessageContaining("no score");
+    }
+
+    @Test
+    @DisplayName("under v3 the judge's own sentence reaches the result")
+    void reasonedRubricCarriesTheReason() {
+        model.fixedResponse("SCORE: 9\nREASON: The agent named Interac e-transfer.");
+
+        var result = judgeUnder(REASONED);
+
+        assertThat(result.score()).isEqualTo(9);
+        assertThat(result.reason()).isEqualTo("The agent named Interac e-transfer.");
+        assertThat(result.explanation()).contains("scenario-judge v3");
+    }
+
+    @Test
+    @DisplayName("under v2 there is no reason to carry")
+    void bareRubricCarriesNoReason() {
+        model.fixedResponse("9");
+
+        assertThat(judge().reason()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a v3 reply with no label fails the run rather than being read as bare")
+    void reasonedRubricDoesNotFallBack() {
+        // "9" answers v2 and does not answer v3. Reading it here would take the first
+        // integer out of whatever sentence the model wrote instead.
+        model.fixedResponse("9");
+
+        assertThatThrownBy(() -> judgeUnder(REASONED)).hasMessageContaining("no score");
+    }
+
+    @Test
+    @DisplayName("the verdict carries the judge's reason, not the assembled explanation")
+    void asJudgeRecordsTheReason() {
+        var outcome = ScenarioJudge.asJudge((transcript, rubric) -> new ScenarioJudge.Result(
+                "FAITHFUL (9/10) under scenario-judge v3", true, 9, Band.FAITHFUL,
+                "The agent named Interac e-transfer."))
+            .score(TRANSCRIPT, REASONED);
+
+        var verdict = ((RunOutcome.Scored) outcome).verdict();
+        assertThat(verdict.reason()).isEqualTo("The agent named Interac e-transfer.");
+        assertThat(verdict.rubricVersion()).isEqualTo(3);
     }
 
     @Test

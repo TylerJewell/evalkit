@@ -73,7 +73,7 @@ public final class ScenarioRunner {
         // Everything the run observed beyond the four rubric fields travels alongside the
         // transcript, so a metric reads it and a judge's input stays byte-identical.
         var evidence = new Evidence(reply.node(), reply.latency(), reply.toolsCalled(),
-            Tokens.NONE);
+            reply.modelCalls(), reply.systemMessage(), reply.failure(), Tokens.NONE);
         return new Execution.Produced(new Recording(transcript, evidence));
     }
 

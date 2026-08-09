@@ -43,10 +43,10 @@ evalkit covers these tasks:
 
 ### <a href="about:blank#_the_system_under_test"></a> The system under test
 
-evalkit reaches the service through `SystemUnderTest`, which declares two operations. The
-service can be an Akka service, an HTTP endpoint, or a process in another language.
+evalkit reaches the service through `SystemUnderTest`. The service can be an Akka service,
+an HTTP endpoint, or a process in another language.
 
-[SystemUnderTest.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/runner/SystemUnderTest.java)
+[SystemUnderTest.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/SystemUnderTest.java)
 ```java
 public interface SystemUnderTest {
 
@@ -67,39 +67,47 @@ public interface SystemUnderTest {
 ```
 
 | **1** | Put the service into the state a scenario assumes. A precursor that cannot land returns `Prepared.Failed` and becomes `NotReached`, which is a fact about the campaign. |
-| **2** | Say the graded turn and return what the service said back. |
+| **2** | Say the graded turn and return what the service said back. `Reply` carries the text, the specification node, the latency, the tool calls, the model calls and the failure that ended the run, and a target supplies whichever of those it can observe. |
 | **3** | States this target can construct, each with a one-line description. A campaign naming a fixture the target lacks is refused before anything is spent. |
 | **4** | Specification nodes this target can emit. An empty set means unknown, so the check is skipped and the campaign still runs. |
 | **5** | Tokens the service spent answering. The default reports nothing measured, and the report labels the total a floor. |
 
-## <a href="about:blank#_the_four_outcomes"></a> Outcomes a run can produce
+## <a href="about:blank#_outcomes"></a> Outcomes a run can produce
 
-`RunOutcome` is a sealed interface with four variants. Switches over it are exhaustive and
-carry no `default`, so a new variant is a compile error at every site that must handle it.
+`RunOutcome` is a sealed interface. Switches over it are exhaustive and carry no `default`,
+so a new variant is a compile error at every site that must handle it.
 
 | Outcome | What happened | Counted |
 |---|---|---|
 | `Scored` | A judge read the reply and gave it a score. | Yes |
 | `Asserted` | The reply was compared against a stated answer. No model was involved. | Yes |
+| `Measured` | A metric computed a number and compared it to a threshold. | Yes |
 | `NotReached` | The setup failed, or the service sent nothing back. | No |
-| `Unscoreable` | The judge timed out, refused, or returned something unreadable. | No |
+| `Unscoreable` | The scorer ran and reached no verdict. | No |
+| `ScorerFailed` | The scorer itself broke. | No |
 
 `Unscoreable` was added after a content filter refused to score an identification-failure
 transcript during calibration. Dropping that run would have raised the reported agreement
 between the judge and the human reviewer above the figure the run earned.
 
+`ScorerFailed` separates a defect in evalkit from a property of the transcript. A judge that
+declines says so by throwing `NoVerdict`, and every other exception reaching the runner is
+recorded as this kit failing.
+
 ## <a href="about:blank#_modules"></a> Modules
 
 ```
-evalkit-core      scenarios, runner, scorers, reports      no dependencies
-evalkit-formats   corpus loaders and importers             a JSON library
-evalkit-junit     the JUnit 5 extension                    JUnit 5
-evalkit-akka      durable campaigns, agent judges          Akka SDK
+evalkit-core      scenarios, runner, scorers, metrics, reports      no dependencies
+evalkit-akka      durable campaigns, agent judges                   Akka SDK
 ```
 
 `evalkit-core` compiles against the JDK alone. A service written in another language,
 reachable over a port, is evaluated by implementing one interface. Adding a dependency to
 `evalkit-core` requires an argument that convenience does not satisfy.
+
+`evalkit-akka` currently builds against an Akka SDK published by hand from an unmerged
+branch, which the [Build section of the README](https://github.com/tylerjewell/evalkit#build)
+describes.
 
 ## <a href="about:blank#_getting_started"></a> Getting started
 
@@ -107,40 +115,39 @@ reachable over a port, is evaluated by implementing one interface. Adding a depe
 <dependency>
   <groupId>io.akka.evalkit</groupId>
   <artifactId>evalkit-core</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
 
-A campaign needs scenarios, a target, and a scorer.
+A campaign needs scenarios, a target, and a router that decides how each scenario is
+settled.
 
-[FirstCampaign.java](https://github.com/tylerjewell/evalkit/blob/main/samples/src/main/java/FirstCampaign.java)
 ```java
-var scenarios = Corpus.of(
-  Scenario.named("refund-30d")
-    .from(Precursor.Fixture.named("authenticated-claim-open")) // (1)
-    .say("What if these shoes don't fit?")
-    .expect("a 30-day full refund at no extra cost"));
+var corpus = List.of(
+  new Scenario("refund-30d",
+    Optional.of("REFUND-004"),                                  // (1)
+    Precursor.Fixture.named("authenticated-claim-open"),
+    "What if these shoes don't fit?",
+    "a 30-day full refund at no extra cost"));
 
-var plan = new CampaignPlan("refund-policy", scenarios, Lanes.of(4), rubric); // (2)
+var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(4), rubric); // (2)
 
 if (plan.check(target) instanceof CampaignPlan.Check.Refused refused) { // (3)
   throw new IllegalStateException(String.join("; ", refused.reasons()));
 }
 
-var result = CampaignRunner.run(plan, target, scorer); // (4)
+var result = CampaignRunner.run(plan, target, router); // (4)
 System.out.println(RunSummary.of(result).render()); // (5)
 ```
 
-| **1** | A fixture names a state the target knows how to build. `Precursor.Replay` walks the conversation instead, which costs a call per turn and proves the state is reachable. |
+| **1** | The specification node this scenario exercises. Naming one settles the run by comparison, so no model is called. A scenario naming no node and no metric is judged. |
 | **2** | Lanes set how many scenarios run at once. The report states how many the run sustained. |
 | **3** | Pre-flight. Missing fixtures and unemittable nodes are refused in the first second. |
-| **4** | Every scenario produces a row. A scenario whose run throws produces `NotReached` with the reason. |
+| **4** | Every scenario produces a row. A scenario whose run throws produces `NotReached` carrying the reason. |
 | **5** | Terminal-width plain text, written for a reader who does not know the service. |
 
 ## <a href="about:blank#_see_also"></a> See also
 
-- [Scenarios and corpora](scenarios.html)
 - [Scoring](scoring.html)
-- [Running a campaign](running.html)
 - [Testing with the Akka TestKit](testing.html)
-- [Reports](reports.html)
+- [LLM evaluation in the Akka SDK](../../sdk/agents/llm_eval.html)

@@ -51,13 +51,28 @@ public interface SystemUnderTest {
      */
     record Reply(String text, java.util.Optional<String> node,
                  java.util.Optional<java.time.Duration> latency,
-                 java.util.List<ToolCall> toolsCalled) {
+                 java.util.List<ToolCall> toolsCalled,
+                 java.util.List<ModelCall> modelCalls,
+                 String systemMessage,
+                 java.util.Optional<Failure> failure) {
 
         public Reply {
             node = node == null ? java.util.Optional.empty() : node;
             latency = latency == null ? java.util.Optional.empty() : latency;
             toolsCalled = toolsCalled == null ? java.util.List.of()
                 : java.util.List.copyOf(toolsCalled);
+            modelCalls = modelCalls == null ? java.util.List.of()
+                : java.util.List.copyOf(modelCalls);
+            systemMessage = systemMessage == null ? "" : systemMessage;
+            failure = failure == null ? java.util.Optional.empty() : failure;
+        }
+
+        /** A reply carrying what the system said and where it said it from. */
+        public Reply(String text, java.util.Optional<String> node,
+                     java.util.Optional<java.time.Duration> latency,
+                     java.util.List<ToolCall> toolsCalled) {
+            this(text, node, latency, toolsCalled, java.util.List.of(), "",
+                java.util.Optional.empty());
         }
 
         /** A reply carrying only what the system said. */
@@ -75,12 +90,31 @@ public interface SystemUnderTest {
 
         /** The same reply, with how long it took. */
         public Reply taking(java.time.Duration elapsed) {
-            return new Reply(text, node, java.util.Optional.ofNullable(elapsed), toolsCalled);
+            return new Reply(text, node, java.util.Optional.ofNullable(elapsed), toolsCalled,
+                modelCalls, systemMessage, failure);
         }
 
         /** The same reply, with the tools the system invoked while answering. */
         public Reply calling(ToolCall... tools) {
-            return new Reply(text, node, latency, java.util.List.of(tools));
+            return new Reply(text, node, latency, java.util.List.of(tools), modelCalls,
+                systemMessage, failure);
+        }
+
+        /**
+         * The same reply, with the model calls behind it.
+         *
+         * <p>A target that can report its own calls reports them here, and the reasoning
+         * they carried is what a metric about planning reads. A target that reports only its
+         * final answer leaves this empty, which those metrics treat as an absence.
+         */
+        public Reply over(ModelCall... calls) {
+            return new Reply(text, node, latency, toolsCalled, java.util.List.of(calls),
+                systemMessage, failure);
+        }
+
+        /** The same reply, with the instruction the model was given. */
+        public Reply instructedBy(String instruction) {
+            return new Reply(text, node, latency, toolsCalled, modelCalls, instruction, failure);
         }
     }
 

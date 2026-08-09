@@ -16,6 +16,8 @@ import java.util.List;
  * @param failed      judged NO_MATCH
  * @param notReached  the precursor never landed. Says nothing about the system
  * @param unscoreable the judge did not answer. Also says nothing about the system
+ * @param scorerFailed the scorer broke. Says nothing about the system either, and unlike the
+ *                     two above it is a defect in this kit rather than a property of the run
  * @param asserted    settled by comparison against a named decision, with no model call
  * @param assertedPassed of those, how many reached the decision they named
  * @param measured    settled by a metric computing a number and comparing it to a threshold
@@ -27,7 +29,16 @@ import java.util.List;
 public record CampaignReport(int passed, int review, int failed,
                              int notReached, int unscoreable, int walked, int asserted,
                              int assertedPassed, int measured, int measuredPassed,
-                             int setupFailed, int noReply) {
+                             int setupFailed, int noReply, int scorerFailed) {
+
+    /** A report from before scorer failures were counted separately, which reads them as none. */
+    public CampaignReport(int passed, int review, int failed,
+                          int notReached, int unscoreable, int walked, int asserted,
+                          int assertedPassed, int measured, int measuredPassed,
+                          int setupFailed, int noReply) {
+        this(passed, review, failed, notReached, unscoreable, walked, asserted, assertedPassed,
+            measured, measuredPassed, setupFailed, noReply, 0);
+    }
 
     /**
      * A deterministic run has two outcomes, never three.
@@ -60,7 +71,7 @@ public record CampaignReport(int passed, int review, int failed,
         }
         int passed = 0, review = 0, failed = 0, notReached = 0, unscoreable = 0, walked = 0;
         int asserted = 0, assertedPassed = 0, measured = 0, measuredPassed = 0;
-        int setupFailed = 0, noReply = 0;
+        int setupFailed = 0, noReply = 0, scorerFailed = 0;
         for (int i = 0; i < outcomes.size(); i++) {
             RunOutcome outcome = outcomes.get(i);
             switch (outcome) {
@@ -96,14 +107,16 @@ public record CampaignReport(int passed, int review, int failed,
                     else noReply++;
                 }
                 case RunOutcome.Unscoreable ignored -> unscoreable++;
+                case RunOutcome.ScorerFailed ignored -> scorerFailed++;
             }
         }
         return new CampaignReport(passed, review, failed, notReached, unscoreable, walked,
-            asserted, assertedPassed, measured, measuredPassed, setupFailed, noReply);
+            asserted, assertedPassed, measured, measuredPassed, setupFailed, noReply,
+            scorerFailed);
     }
 
     public static CampaignReport empty() {
-        return new CampaignReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        return new CampaignReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     /**
@@ -121,7 +134,8 @@ public record CampaignReport(int passed, int review, int failed,
             walked + other.walked, asserted + other.asserted,
             assertedPassed + other.assertedPassed,
             measured + other.measured, measuredPassed + other.measuredPassed,
-            setupFailed + other.setupFailed, noReply + other.noReply);
+            setupFailed + other.setupFailed, noReply + other.noReply,
+            scorerFailed + other.scorerFailed);
     }
 
     /** Runs that produced evidence about the system. */
@@ -130,7 +144,7 @@ public record CampaignReport(int passed, int review, int failed,
     }
 
     public int total() {
-        return judged() + notReached + unscoreable;
+        return judged() + withoutEvidence();
     }
 
     /**
@@ -155,7 +169,7 @@ public record CampaignReport(int passed, int review, int failed,
      */
     public boolean isTrustworthy() {
         if (total() == 0) return false;
-        boolean enoughEvidence = (double) (notReached + unscoreable) / total() <= 0.10;
+        boolean enoughEvidence = (double) withoutEvidence() / total() <= 0.10;
         boolean enoughAgreement = judged() > 0 && (double) review / judged() <= 0.20;
         return enoughEvidence && enoughAgreement;
     }
@@ -172,8 +186,8 @@ public record CampaignReport(int passed, int review, int failed,
     }
 
     /** Runs that produced no evidence, whatever the reason. */
-    public int notReachedOrUnscoreable() {
-        return notReached + unscoreable;
+    public int withoutEvidence() {
+        return notReached + unscoreable + scorerFailed;
     }
 
     /** Runs that cost a model call. Comparison and computation settled the rest. */
@@ -190,8 +204,8 @@ public record CampaignReport(int passed, int review, int failed,
             caveats.append("  [pass rate not trustworthy]");
         }
         return ("%d judged of %d (%d asserted, %d scored) — %d passed, %d need review, "
-            + "%d failed; %d not reached, %d unscoreable%s")
+            + "%d failed; %d not reached, %d unscoreable, %d scorer failures%s")
             .formatted(judged(), total(), asserted, scored(), passed, review, failed,
-                notReached, unscoreable, caveats);
+                notReached, unscoreable, scorerFailed, caveats);
     }
 }

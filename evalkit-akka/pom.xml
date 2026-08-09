@@ -13,7 +13,7 @@
     <parent>
         <groupId>io.akka</groupId>
         <artifactId>akka-javasdk-parent</artifactId>
-        <version>3.6.1</version>
+        <version>3.6.0-59-7321c44b-dev-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
@@ -60,12 +60,12 @@
         <dependency>
             <groupId>io.akka</groupId>
             <artifactId>akka-javasdk</artifactId>
-            <version>3.6.1</version>
+            <version>3.6.0-59-7321c44b-dev-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.akka</groupId>
             <artifactId>akka-javasdk-testkit</artifactId>
-            <version>3.6.1</version>
+            <version>3.6.0-59-7321c44b-dev-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         <dependency>

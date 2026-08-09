@@ -93,4 +93,21 @@ public record Rubric(String id, int version, String promptTemplate) {
     public String label() {
         return id + " v" + version;
     }
+
+    /**
+     * Whether this rubric asks the judge to state why, alongside the score.
+     *
+     * <p>Read from the prompt rather than configured beside it, for the reason the prompt is
+     * data in the first place: the rubric is the only thing that knows what it asked for,
+     * and a declaration kept anywhere else can disagree with the text the model was sent.
+     *
+     * <p>What this decides is how a reply is read. A rubric asking for a bare number is read
+     * by {@link Verdict#parseScore}, which takes the first integer in range from anywhere in
+     * the reply; a rubric asking for two fields is read by {@link ModelReply}, which requires
+     * the label. Choosing the reader by what was asked is what stops a reply that lost its
+     * reason from being read as though the reason was never wanted.
+     */
+    public boolean statesReason() {
+        return promptTemplate.contains("SCORE:") && promptTemplate.contains("REASON:");
+    }
 }

@@ -103,11 +103,18 @@ the harness rather than the product, say so in prose instead.
 - Match the surrounding style. Touch only what the task requires.
 - Prefer the Edit tool over shell heredocs for anything containing regex or escapes —
   Java string escaping through Python heredocs has corrupted files repeatedly.
-- Build: `mvn install`. Core alone: `mvn -pl evalkit-core test`.
+- Build: `mvn install`, which needs a locally published `feature/governance` SDK — see the
+  README's Build section. Core alone: `mvn -pl evalkit-core test`, which needs none of that
+  and is the loop to work in.
 - **Verify that core still compiles with no Akka on the classpath** after touching it.
   That property is the product.
 
 ## Before publishing
+
+`evalkit-akka` pins `3.6.0-59-7321c44b-dev-SNAPSHOT`, an Akka SDK built by hand from an
+unmerged branch. Nothing can be released while that pin stands, and continuous integration
+cannot build the module either. Reverting to a released SDK costs the evaluation and ledger
+APIs, so the pin holds until the branch ships.
 
 Version is `0.1.0-SNAPSHOT` and the intended home is a registry, eventually Akka's.
 Three things are known-wrong and are in the README's Status section:
@@ -115,5 +122,6 @@ Three things are known-wrong and are in the README's Status section:
 1. Surefire pinned to 2.22.2 because that is what was cached offline — raise it once
    building against a real repository.
 2. `groupId` is `io.akka.evalkit`, which presumes a namespace not yet granted.
-3. Rubric v2 returns a bare score with no reason, and token accounting understates any
-   agent whose memory is off.
+3. Rubric v3 returns a reason beside the score on v2's bands, and the agreement between the
+   two is unmeasured until `JudgeCalibrationTest` runs with `-Dcalibration.compare=true`.
+   Token accounting understates any agent whose memory is off.

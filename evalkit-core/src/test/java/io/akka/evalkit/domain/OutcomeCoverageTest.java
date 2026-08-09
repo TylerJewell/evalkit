@@ -65,8 +65,12 @@ class OutcomeCoverageTest {
         var toolPolicy = ToolPermission.allowing("search_kb");
         Scorer tools = recording ->
             toolPolicy.outcome(toolPolicy.judge(recording.evidence().toolNames()));
-        Scorer refusing = recording -> {
-            throw new IllegalStateException("content filter refused " + recording.scenarioName());
+        // A scorer that ran and declined, which is a fact about the transcript.
+        Scorer declining = recording ->
+            new RunOutcome.Unscoreable("the content filter would not score " + recording.scenarioName());
+        // A scorer that broke, which is a fact about this kit. The two are different rows.
+        Scorer throwing = recording -> {
+            throw new IllegalStateException("the scorer threw on " + recording.scenarioName());
         };
 
         var scenarios = List.of(
@@ -75,12 +79,14 @@ class OutcomeCoverageTest {
             scenario("measured", "ready", "how?", Optional.empty(), Optional.of(TOOLS)),
             scenario("setup-failed", "broken", "how?", Optional.empty(), Optional.empty()),
             scenario("no-reply", "ready", "silence", Optional.empty(), Optional.empty()),
-            scenario("unscoreable", "ready", "refuse", Optional.empty(), Optional.empty()));
+            scenario("unscoreable", "ready", "decline", Optional.empty(), Optional.empty()),
+            scenario("scorer-failed", "ready", "throw", Optional.empty(), Optional.empty()));
 
         ScorerRouter router = candidate -> {
             if (candidate.specNode().isPresent()) return Optional.empty();
             if (candidate.metric().isPresent()) return Optional.of(tools);
-            if (candidate.id().equals("unscoreable")) return Optional.of(refusing);
+            if (candidate.id().equals("unscoreable")) return Optional.of(declining);
+            if (candidate.id().equals("scorer-failed")) return Optional.of(throwing);
             return Optional.of(recording ->
                 new RunOutcome.Scored(Verdict.of(recording.scenarioName(), RUBRIC, 9, "")));
         };
@@ -106,7 +112,8 @@ class OutcomeCoverageTest {
     void theDeclaredVariantsAreTheExpectedSet() {
         // Fails when a variant is added, which is the reminder to give it a case below.
         assertThat(declaredVariants())
-            .containsExactly("Asserted", "Measured", "NotReached", "Scored", "Unscoreable");
+            .containsExactly("Asserted", "Measured", "NotReached", "Scored", "ScorerFailed",
+                "Unscoreable");
     }
 
     @Test
@@ -138,12 +145,13 @@ class OutcomeCoverageTest {
     void everyVariantIsCounted() {
         var report = runEveryVariant().report();
 
-        assertThat(report.total()).isEqualTo(6);
+        assertThat(report.total()).isEqualTo(7);
         assertThat(report.asserted()).isEqualTo(1);
         assertThat(report.measured()).isEqualTo(1);
         assertThat(report.scored()).isEqualTo(1);
         assertThat(report.notReached()).isEqualTo(2);
         assertThat(report.unscoreable()).isEqualTo(1);
+        assertThat(report.scorerFailed()).isEqualTo(1);
         assertThat(report.setupFailed()).isEqualTo(1);
         assertThat(report.noReply()).isEqualTo(1);
     }
@@ -166,8 +174,9 @@ class OutcomeCoverageTest {
     void theCountsAddUp() {
         var report = runEveryVariant().report();
 
-        assertThat(report.judged() + report.notReached() + report.unscoreable())
-            .isEqualTo(report.total());
+        assertThat(report.judged() + report.withoutEvidence()).isEqualTo(report.total());
+        assertThat(report.notReached() + report.unscoreable() + report.scorerFailed())
+            .isEqualTo(report.withoutEvidence());
         assertThat(report.passed() + report.review() + report.failed())
             .isEqualTo(report.judged());
         assertThat(report.assertedPassed() + report.assertedFailed())
@@ -187,7 +196,8 @@ class OutcomeCoverageTest {
                     Collectors.toCollection(TreeSet::new))));
 
         assertThat(byEvidence.get(true)).containsExactly("Asserted", "Measured", "Scored");
-        assertThat(byEvidence.get(false)).containsExactly("NotReached", "Unscoreable");
+        assertThat(byEvidence.get(false))
+            .containsExactly("NotReached", "ScorerFailed", "Unscoreable");
     }
 
     @Test

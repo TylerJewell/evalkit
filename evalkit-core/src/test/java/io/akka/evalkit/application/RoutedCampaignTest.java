@@ -183,7 +183,9 @@ class RoutedCampaignTest {
 
         var result = CampaignRunner.run(plan, new Target(), router);
 
-        assertThat(result.report().unscoreable()).isEqualTo(1);
+        // Unreachable infrastructure is this kit failing, not the metric declining.
+        assertThat(result.report().scorerFailed()).isEqualTo(1);
+        assertThat(result.report().unscoreable()).isZero();
         assertThat(result.outcomes().get(0).describe()).contains("embedding service unreachable");
     }
 

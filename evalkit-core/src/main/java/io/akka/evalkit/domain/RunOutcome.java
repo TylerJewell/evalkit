@@ -42,13 +42,32 @@ public sealed interface RunOutcome {
      * weeks later cannot tell the two apart.
      */
     record Measured(String metricId, int metricVersion, double value,
-                    double threshold, boolean withinThreshold) implements RunOutcome {
+                    double threshold, boolean withinThreshold, String reason)
+        implements RunOutcome {
 
         public Measured {
             if (metricId == null || metricId.isBlank()) {
                 throw new IllegalArgumentException("measured outcome needs a metric id");
             }
             if (metricVersion < 1) throw new IllegalArgumentException("metric version starts at 1");
+            reason = reason == null ? "" : reason.strip();
+        }
+
+        /**
+         * A measurement with nothing to say beyond the number.
+         *
+         * <p>Which is most of them. A metric that counts set membership has no reasoning to
+         * report past the count, and a metric that asked a model for one score has the
+         * model's sentence &mdash; the same rule {@link io.akka.evalkit.metric.Judgement}
+         * states for a single judgement.
+         */
+        public Measured(String metricId, int metricVersion, double value,
+                        double threshold, boolean withinThreshold) {
+            this(metricId, metricVersion, value, threshold, withinThreshold, "");
+        }
+
+        public boolean statesReason() {
+            return !reason.isEmpty();
         }
     }
 
@@ -65,6 +84,21 @@ public sealed interface RunOutcome {
 
     /** The judge could not or would not answer: a filter, a timeout, an unparseable reply. */
     record Unscoreable(String reason) implements RunOutcome {}
+
+    /**
+     * The scorer itself broke, so no judgement was ever reached.
+     *
+     * <p>Distinct from {@link Unscoreable}, which is a scorer that ran and declined. A judge
+     * refusing a transcript is a fact about the transcript; a metric throwing a
+     * {@code NullPointerException} is a fact about this kit. Reporting both as "the judge did
+     * not answer" hides a defect here inside a caveat about the subject, and a defect that
+     * reads as a caveat is a defect nobody fixes.
+     *
+     * <p>Neither counts toward a pass rate. They are separated so that a campaign whose
+     * unscored runs are all this variant is recognisable as a broken campaign rather than a
+     * difficult corpus.
+     */
+    record ScorerFailed(String reason) implements RunOutcome {}
 
     /**
      * Whether this counts toward a pass rate at all.
@@ -84,6 +118,7 @@ public sealed interface RunOutcome {
             case Measured m -> m.withinThreshold();
             case NotReached ignored -> false;
             case Unscoreable ignored -> false;
+            case ScorerFailed ignored -> false;
         };
     }
 
@@ -91,21 +126,28 @@ public sealed interface RunOutcome {
         return this instanceof Scored s && s.verdict().band().needsReview();
     }
 
+    /** A row's detail, with whatever the producer stated appended to it. */
+    private static String with(String detail, String reason) {
+        return reason.isEmpty() ? detail : detail + " — " + reason;
+    }
+
     default String describe() {
         return switch (this) {
-            // Score only. Rubric v2 asks the judge for a bare 1-10 and nothing else, so
-            // a scored outcome has no reason attached to print — see ScenarioJudge.
-            case Scored s -> s.verdict().band() + " (" + s.verdict().score() + "/10)";
+            // The band and the score, which is the whole of what a rubric asking for a bare
+            // number returns. A rubric that asks for a reason adds the judge's sentence.
+            case Scored s -> with(
+                s.verdict().band() + " (" + s.verdict().score() + "/10)", s.verdict().reason());
             case Asserted a -> a.passed()
                 ? "reached " + a.expectedNode()
                 : "expected " + a.expectedNode() + ", reached " + a.actualNode();
-            case Measured m -> "%s v%d: %.2f against %.2f".formatted(
-                m.metricId(), m.metricVersion(), m.value(), m.threshold());
+            case Measured m -> with("%s v%d: %.2f against %.2f".formatted(
+                m.metricId(), m.metricVersion(), m.value(), m.threshold()), m.reason());
             case NotReached n -> switch (n.cause()) {
                 case SETUP_FAILED -> "never reached the question — " + n.reason();
                 case NO_REPLY -> "no reply — " + n.reason();
             };
             case Unscoreable u -> "unscoreable — " + u.reason();
+            case ScorerFailed f -> "the scorer failed — " + f.reason();
         };
     }
 }

@@ -98,6 +98,26 @@ public final class RunSummary {
         public Tokens.Basis basis() {
             return callsMissingUsage == 0 ? Tokens.Basis.MEASURED : Tokens.Basis.PARTIAL;
         }
+
+        /**
+         * What a set of runs spent, counted from the calls they recorded.
+         *
+         * <p>Derived rather than declared. A target that reports its own model calls no
+         * longer has to also report how many of them it failed to account for &mdash; a
+         * call that produced text and reported no usage is counted here, so the floor is
+         * established from the record instead of trusted from the target.
+         *
+         * @param judge what the judge spent, which no recording of the system carries
+         */
+        public static Spend over(java.util.List<Recording> recordings, Tokens judge) {
+            Tokens system = recordings.stream()
+                .map(recording -> recording.evidence().spend())
+                .reduce(Tokens.NONE, Tokens::plus);
+            int unaccounted = recordings.stream()
+                .mapToInt(recording -> recording.evidence().callsMissingUsage())
+                .sum();
+            return new Spend(system, judge, unaccounted);
+        }
     }
 
     // ---- the two blocks ----
@@ -195,7 +215,7 @@ public final class RunSummary {
         rule(out);
         para(out, report.passed() + " of " + total + " requirements behaved as specified, "
             + report.failed() + " did not, " + report.review()
-            + " were too borderline to call and " + report.notReachedOrUnscoreable()
+            + " were too borderline to call and " + report.withoutEvidence()
             + " produced no result.");
         blank(out);
 
@@ -213,10 +233,11 @@ public final class RunSummary {
         line(out, "  " + pad("undecided", 27) + rightText("-", 17) + rightText("-", 9)
             + right(report.review(), 9) + right(report.review(), 7));
         line(out, "  " + pad("no result", 27) + rightText("", 17) + rightText("", 9)
-            + rightText("", 9) + right(report.notReachedOrUnscoreable(), 7));
+            + rightText("", 9) + right(report.withoutEvidence(), 7));
         sub(out, "never reached the question", report.setupFailed(), total);
         sub(out, "no reply within " + replyTimeoutSeconds + " seconds", report.noReply(), total);
         sub(out, "answer not assessed", report.unscoreable(), total);
+        sub(out, "the scoring itself failed", report.scorerFailed(), total);
 
         blank(out);
         para(out, explainNonResults(report, replyTimeoutSeconds));
@@ -241,9 +262,9 @@ public final class RunSummary {
             }
         }
 
-        if (report.notReachedOrUnscoreable() > 0) {
+        if (report.withoutEvidence() > 0) {
             blank(out);
-            para(out, "None of the " + report.notReachedOrUnscoreable()
+            para(out, "None of the " + report.withoutEvidence()
                 + " tell us anything about the product. This run therefore reports no "
                 + "overall pass rate. The " + report.failed() + " findings below stand.");
         }

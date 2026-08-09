@@ -10,99 +10,127 @@
 
 ## <a href="about:blank#_overview"></a> Overview
 
-A scorer reads a finished `Transcript` and returns a `RunOutcome`. Execution and scoring are
-separate steps, so a rubric applies to a recording without running the conversation
-again and two services are compared under one rubric version.
+A scorer reads a finished `Recording` and returns a `RunOutcome`. Execution and scoring are
+separate steps, so a rubric applies to a recording without running the conversation again,
+and two services are compared under one rubric version.
+
+A `Recording` holds a `Transcript` and an `Evidence`. The transcript carries the four fields
+a rubric interpolates. The evidence carries what the run observed beyond them: the
+specification node, the latency, the tool calls, the model calls, the instruction the model
+was given, and the failure that ended the run. A metric reads the evidence. A judge reads
+the transcript alone, so its input stays byte-identical whatever else the run observed.
 
 Three scorer families exist, and each is defined by what settles the result.
 
 | Family | Settles the result by | Model calls | Outcome |
 |---|---|---|---|
-| `deterministic` | Comparison against a stated expectation. | 0 | `Asserted` |
-| `heuristic` | Computation over the reply against a threshold. | 0 | `Measured` |
-| `agentic` | A judge agent reading the transcript against a versioned rubric. | 1 or more | `Scored` or `Unscoreable` |
+| Comparison | The reply reached the specification node the scenario named. | 0 | `Asserted` |
+| Computation | A metric scored the reply against a threshold. | 0 or more | `Measured` |
+| Judgement | A judge read the transcript against a versioned rubric. | 1 or more | `Scored` |
 
-Every scenario is routed before any call goes out. A scenario that names a specification node is
-exercising a decision with a right answer, and sending it to a model buys a slightly random
-opinion and pays for it. In one recorded corpus, 510 of 514 scenarios named a node.
+Every scenario is routed before any call goes out. A scenario that names a specification node
+is exercising a decision with a right answer, and sending it to a model buys a slightly
+random opinion and pays for it. In one recorded corpus, 510 of 514 scenarios named a node.
 
 ## <a href="about:blank#_the_scorer_interface"></a> The scorer interface
 
-[Scorer.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/Scorer.java)
+[Scorer.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/Scorer.java)
 ```java
 public interface Scorer {
 
-  RunOutcome score(Transcript transcript); // (1)
+  RunOutcome score(Recording recording); // (1)
 
-  String id(); // (2)
+  default String id() { // (2)
+    return getClass().getSimpleName();
+  }
 }
 ```
 
 | **1** | The return type is `RunOutcome` so that a scorer which cannot produce a result says so. A `double` return type can express a low score and cannot express the absence of one, and the number it returns instead reaches someone's pass rate. |
-| **2** | Names what produced the outcome, for the report. A judge returns its rubric label, a heuristic returns its metric label. |
+| **2** | Names what produced the outcome, for the report. A judge returns its rubric label and a metric returns its metric label. |
 
-A `ScorerRouter` chooses the scorer for each scenario. The bundled implementation reads the
-scenario: a named node routes to `NodeMatch`, a declared metric routes to that metric, and
-everything else routes to the judge.
+`ScorerRouter.byExpectation` chooses the scorer for each scenario. A named node is left to
+the runner, which compares it through `SpecNodeMatch`. A named metric routes to that metric.
+A scenario naming neither states its expectation in prose, which only a judge reads.
 
-## <a href="about:blank#_deterministic_scorers"></a> Deterministic scorers
+## <a href="about:blank#_comparison"></a> Comparison
 
-A deterministic result is a pass or a fail. Comparison has no confidence to be borderline
+A comparison result is a pass or a fail. Comparison has no confidence to be borderline
 about, so the undecided column carries a dash for this family. A figure in that cell would
 report a defect in evalkit.
 
-[NodeMatch.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/deterministic/NodeMatch.java)
+[SpecNodeMatch.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/SpecNodeMatch.java)
 ```java
-var scorer = NodeMatch.expecting("GenUC-16a.3"); // (1)
-
-RunOutcome outcome = scorer.score(transcript);
-// Asserted[passed=false, expected=GenUC-16a.3, actual=GenUC-17a]
+RunOutcome outcome = SpecNodeMatch.assertReached("GenUC-16a.3", reply.node()); // (1)
+// Asserted[passed=false, expectedNode=GenUC-16a.3, actualNode=GenUC-17a]
 ```
 
 | **1** | The target reports the node it answered from through `Reply.node()`. A target that reports no node produces a failing `Asserted` naming what was expected. |
 
-`ExactMatch`, `JsonSchemaMatch` and `ToolCallMatch` complete the family. `ToolCallMatch`
-asserts that a named tool was invoked with given arguments, which is the agentic case that
-needs no model to settle.
+## <a href="about:blank#_computation"></a> Computation
 
-## <a href="about:blank#_heuristic_scorers"></a> Heuristic scorers
-
-A heuristic scorer computes a number over the reply and compares it against a threshold.
-Execution repeats exactly. The meaning is approximate, because the threshold is a judgment
+A metric computes a number over the recording and compares it against a threshold. The
+arithmetic repeats exactly. The meaning is approximate, because the threshold is a judgment
 encoded as a number.
 
-[Measured.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/heuristic/Measured.java)
+`Metric` splits the work in two. Collecting judgements may call a model, and turning
+judgements into a number is a pure function, so `aggregate` runs in a unit test with no
+provider and no key.
+
+[Metric.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/metric/Metric.java)
+```java
+var metric = ToolPermission.allowing("search_kb", "reply");
+var judgements = metric.judge(List.of("search_kb", "delete_account"));
+
+metric.aggregate(judgements);   // 0.5
+metric.withinThreshold(0.5);    // false
+```
+
+The bundled metrics are `ToolPermission`, `ToolCorrectness`, `ArgumentCorrectness`,
+`TurnRelevancy`, `TurnFaithfulness` and `CitationFaithfulness`. `Dag` expresses a rubric as
+a decision graph and calls a model only at branch points.
+
+`AlignmentMetric` covers the metrics whose score is one model call: `TaskCompletion`,
+`StepEfficiency`, `PlanQuality` and `PlanAdherence`. An alignment metric implements `Scorer`,
+because a single model-produced score gives `aggregate` nothing to work on.
+
+A metric with nothing to read returns `Unscoreable`. `PlanQuality` needs the reasoning a
+run's model calls carried, and a run whose provider returned none produces no score.
+
+[RunOutcome.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/RunOutcome.java)
 ```java
 record Measured(String metricId, int metricVersion,
-                double value, double threshold, boolean withinThreshold)
+                double value, double threshold, boolean withinThreshold,
+                String reason)
   implements RunOutcome {}
 ```
 
+The reason is empty for a metric that counts, and carries a sentence for a metric whose
+score came from a model.
+
 |  | A tuned threshold moves a score without the service changing. One corpus in this project's history scored 23, 17 and 19 out of 40 across three passes at a text-extraction heuristic while the service never changed. `Measured` carries a metric id and version for that reason, and `Scoring.compare` refuses to compare results produced under different metric versions. |
 
-`LatencyBudget` and `TokenBudget` are the two heuristics worth running on every campaign,
-because both measure a property of the service that carries no interpretation.
+## <a href="about:blank#_judgement"></a> Judgement
 
-## <a href="about:blank#_agentic_scorers"></a> Agentic scorers
-
-An agentic scorer sends the transcript to a model with a versioned rubric. The agentic
-family is the only one that costs money and the only one that can return `Unscoreable`.
+A judge sends the transcript to a model with a versioned rubric. This family is the only one
+that always costs money.
 
 ### <a href="about:blank#_rubrics_are_versioned_data"></a> Rubrics are versioned data
 
-[Rubric.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/agentic/Rubric.java)
+[Rubric.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/Rubric.java)
 ```java
-var rubric = Rubric.load("scenario-judge", 2); // (1)
+var rubric = Rubric.load("scenario-judge", 3); // (1)
 
-var verdict = Verdict.of(transcript.scenarioName(), rubric, 8, ""); // (2)
+var verdict = Verdict.read("refund-30d", rubric, reply).orElseThrow(); // (2)
 ```
 
-| **1** | Loads `rubrics/scenario-judge-v2.txt` from the classpath. `evalkit-akka` adds a source backed by a [PromptTemplate entity](../../sdk/agents/prompt.html), so a rubric can be updated on a running service. |
-| **2** | Every verdict carries the rubric id and version that produced it. |
+| **1** | Loads `rubrics/scenario-judge-v3.txt` from the classpath. v2 asks for a value from 1 to 10 and nothing else. v3 asks for that value and one sentence stating what decided it, on bands worded exactly as v2 words them. |
+| **2** | Every verdict carries the rubric id and version that produced it. `Rubric.statesReason` decides which reader applies, so a reply to v3 that lost its label is unreadable instead of being read as a bare number. |
 
 `Scoring.compare` throws when two verdict sets carry different rubric versions. Scoring a
-baseline under v2 and a candidate under v3 attributes a change in the rubric to the service. Re-score the kept transcripts under the newer rubric instead, which costs
-judge calls and no conversations.
+baseline under v2 and a candidate under v3 attributes a change in the rubric to the service.
+Re-score the kept transcripts under the newer rubric instead, which costs judge calls and no
+conversations.
 
 ### <a href="about:blank#_bands_carry_the_result"></a> Bands carry the result
 
@@ -112,75 +140,24 @@ describes the judge. The middle band counts as undecided, because measured agree
 independent reviewer is 89 to 91 percent on clear-cut replies and 53 percent on borderline
 ones.
 
-### <a href="about:blank#_judge_panels"></a> Judge panels
+## <a href="about:blank#_runs_that_produced_nothing"></a> Runs that produced nothing
 
-A panel scores one transcript with several judges and reports the shape of the
-disagreement.
+A run can end with nothing to report about the service. The outcome says which way that
+happened, and none of these three enters a pass rate.
 
-In `evalkit-akka` the judges run as delegated workers of an
-[Autonomous Agent](../../sdk/autonomous-agents.html). `Delegation` partitions context, so a
-worker scores without reading another worker's verdict.
+| Outcome | Produced by |
+|---|---|
+| `NotReached` | The precursor never landed, or the service answered nothing. |
+| `Unscoreable` | A scorer ran and reached no verdict, or threw `NoVerdict`. |
+| `ScorerFailed` | A scorer threw anything else, which is a defect in evalkit. |
 
-[JudgePanel.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-akka/src/main/java/io/akka/evalkit/akka/JudgePanel.java)
-```java
-@Component(id = "judge-panel",
-    description = "Produces independent verdicts on one transcript.")
-public class JudgePanel extends AutonomousAgent {
-
-  @Override
-  public AgentDefinition definition() {
-    return define()
-      .capability(TaskAcceptance.of(JudgeTasks.SCORE).maxIterationsPerTask(3)) // (1)
-      .capability(Delegation
-          .to(FaithfulnessJudge.class, GroundingJudge.class, ToneJudge.class)
-          .maxParallelWorkers(3)); // (2)
-  }
-}
-```
-
-| **1** | The iteration limit terminates a task the model neither completes nor abandons. |
-| **2** | Each delegated judge is a request-based `Agent` scoring the transcript in one round-trip. |
-
-|  | `Moderation` also runs several agents over one input, and a participant receives the conversation entries added since its last turn. A judge that reads another judge's verdict cannot contribute to an agreement figure. Use `Delegation` to measure agreement and `Moderation` for a refutation pass over a verdict already recorded. |
-
-A panel whose judges agree returns `Scored` and records the agreement in the report. A panel
-whose judges disagree returns `Disputed`, which holds every verdict and counts as undecided.
-A panel that cannot reach its quorum, because judges timed out or refused, returns
-`Unscoreable` on the same terms as a single judge.
-
-|  | `Disputed` is conflicting evidence and stays out of the pass-rate denominator. Averaging the panel would replace an observed disagreement with a number that hides it. |
-
-### <a href="about:blank#_calibration_gates_a_campaign"></a> Calibration gates a campaign
-
-A judge is a measuring instrument and drifts. `Calibration` records agreement against a
-held-out set labelled by a person.
-
-```java
-record Calibration(String rubricId, int rubricVersion, int samples,
-                   double clearCutAgreement, double borderlineAgreement,
-                   Instant measuredAt) {}
-```
-
-`CampaignPlan.check` refuses a campaign whose judge calibration is absent, older than a
-stated age, or below a stated agreement. A campaign that runs states what its judge was
-worth on the day it ran.
-
-## <a href="about:blank#_built_in_evaluators"></a> Built-in Akka evaluators
-
-`evalkit-akka` adapts the evaluators that ship with the Akka SDK, so
-[ToxicityEvaluator, SummarizationEvaluator and HallucinationEvaluator](../../sdk/agents/llm_eval.html#_built_in_evaluators)
-are usable as scorers without a rubric of your own.
-
-```java
-var scorer = AkkaEvaluator.of(componentClient, ToxicityEvaluator.class);
-```
-
-The evaluator returns an `EvaluationResult`, which the Akka runtime captures into metrics
-and traces. `AkkaEvaluator` maps a passing result to `Scored` and a thrown call to
-`Unscoreable`.
+A content filter refused to score one transcript during calibration, which is the recorded
+case for `Unscoreable`. That refusal reaches the runner as a thrown exception several frames
+inside parsing a reply. `NoVerdict` lets the throwing code name which of the two happened,
+because the runner cannot tell them apart from the stack.
 
 ## <a href="about:blank#_see_also"></a> See also
 
-- [Scenarios and corpora](scenarios.html)
-- [Reports](reports.html)
+- [evalkit overview](index.html)
+- [Testing with the Akka TestKit](testing.html)
 - [LLM evaluation in the Akka SDK](../../sdk/agents/llm_eval.html)

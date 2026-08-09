@@ -3,6 +3,7 @@ package io.akka.evalkit.application;
 import io.akka.evalkit.domain.CampaignPlan;
 import io.akka.evalkit.domain.CampaignReport;
 import io.akka.evalkit.domain.Lanes;
+import io.akka.evalkit.domain.NoVerdict;
 import io.akka.evalkit.domain.Precursor;
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Rubric;
@@ -147,11 +148,14 @@ public final class CampaignRunner {
         var transcript = produced.transcript();
         try {
             return judge.score(transcript, rubric);
+        } catch (NoVerdict declined) {
+            // The judge ran and would not answer — a content filter, an unreadable reply.
+            // Absent evidence about the transcript, never a verdict.
+            return new RunOutcome.Unscoreable(rootMessage(declined));
         } catch (RuntimeException e) {
-            // A judge that refuses — a content filter, a timeout, an unreadable reply —
-            // is absent evidence, never a verdict. This already happened once against a
-            // real provider, so it is handled rather than anticipated.
-            return new RunOutcome.Unscoreable(rootMessage(e));
+            // Anything else is this kit breaking, which is a different row and a different
+            // reading. See RunOutcome.ScorerFailed.
+            return new RunOutcome.ScorerFailed(rootMessage(e));
         }
     }
 
@@ -172,10 +176,12 @@ public final class CampaignRunner {
 
         try {
             return scorer.orElseThrow().score(produced.recording());
+        } catch (NoVerdict declined) {
+            return new RunOutcome.Unscoreable(rootMessage(declined));
         } catch (RuntimeException e) {
-            // Every scorer family reaches here. A metric that threw computed nothing, and
-            // a run with no computed result is no more a finding than a refused judge.
-            return new RunOutcome.Unscoreable(rootMessage(e));
+            // Every scorer family reaches here. A metric that threw computed nothing, and a
+            // throw that is not a declared absence is this kit failing.
+            return new RunOutcome.ScorerFailed(rootMessage(e));
         }
     }
 
@@ -188,9 +194,14 @@ public final class CampaignRunner {
     private static List<String> notes(CampaignReport report, Lanes.Utilisation utilisation) {
         var notes = new ArrayList<String>();
         if (!report.isTrustworthy()) {
-            notes.add("pass rate is not quotable: "
-                + (report.notReached() + report.unscoreable()) + " runs produced no evidence and "
-                + report.review() + " are undecided");
+            notes.add("pass rate is not quotable: " + report.withoutEvidence()
+                + " runs produced no evidence and " + report.review() + " are undecided");
+        }
+        if (report.scorerFailed() > 0) {
+            // Not a caveat about the system. A scorer that threw is a defect here, and it
+            // belongs on its own line so it is fixed rather than absorbed.
+            notes.add(report.scorerFailed() + " runs failed inside a scorer, which is a "
+                + "defect in this kit rather than a finding about the system");
         }
         if (!report.provesAnyReachability() && report.judged() > 0) {
             notes.add("entirely seeded — this campaign cannot detect a state that has "

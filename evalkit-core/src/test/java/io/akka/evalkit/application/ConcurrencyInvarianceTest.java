@@ -180,9 +180,9 @@ class ConcurrencyInvarianceTest {
 
         assertThat(result.completed()).hasSize(400);
         assertThat(report.total()).isEqualTo(400);
-        // The refusals land in unscoreable and nowhere else, so the count still adds up.
-        assertThat(report.judged() + report.notReached() + report.unscoreable()).isEqualTo(400);
-        assertThat(report.unscoreable()).isPositive();
+        // The throws land in one column and nowhere else, so the count still adds up.
+        assertThat(report.judged() + report.withoutEvidence()).isEqualTo(400);
+        assertThat(report.scorerFailed()).isPositive();
     }
 
     @Test

@@ -43,3 +43,60 @@ pinned by a test under io.akka.evalkit.conformance.
 io.akka.evalkit.conformance.PortedMetrics carries the same record in code, and
 ConformanceCoverageTest fails the build when a ported metric appears without an
 entry or an entry appears without a test.
+
+
+--------------------------------------------------------------------------------
+Ported in shape, with no upstream values
+--------------------------------------------------------------------------------
+
+The types below reproduce behaviour described in DeepEval's source rather than
+values reproduced from its tests, because at the commit above no such values
+exist. The tests for the four trace-level metrics skip when OPENAI_API_KEY is
+unset, run a live agent, and assert only that the golden is not multimodal; the
+two tool metrics have no test file. Each type names the source file it was read
+from, and each is exercised by a test that fixes this kit's own behaviour.
+
+  io.akka.evalkit.metric.ToolCorrectness
+      from ToolCorrectnessMetric
+      deepeval/metrics/tool_correctness/tool_correctness.py
+
+  io.akka.evalkit.metric.ArgumentCorrectness
+      from ArgumentCorrectnessMetric
+      deepeval/metrics/argument_correctness/argument_correctness.py
+
+  io.akka.evalkit.metric.TaskCompletion
+      from TaskCompletionMetric
+      deepeval/metrics/task_completion/task_completion.py
+
+  io.akka.evalkit.metric.StepEfficiency
+      from StepEfficiencyMetric
+      deepeval/metrics/step_efficiency/step_efficiency.py
+
+  io.akka.evalkit.metric.PlanQuality
+      from PlanQualityMetric
+      deepeval/metrics/plan_quality/plan_quality.py
+
+  io.akka.evalkit.metric.PlanAdherence
+      from PlanAdherenceMetric
+      deepeval/metrics/plan_adherence/plan_adherence.py
+
+
+--------------------------------------------------------------------------------
+Deliberate divergences
+--------------------------------------------------------------------------------
+
+One behaviour differs from upstream on purpose. A score recorded by this kit is
+not comparable with a score recorded by DeepEval for a run that hit it.
+
+1. A run with nothing to read is not a passing score.
+
+   PlanQualityMetric and PlanAdherenceMetric score 1 and pass when a trace
+   carries no plan. ToolCorrectnessMetric scores 1 when no tools were expected
+   and none were called. ArgumentCorrectnessMetric scores 1 when there were no
+   tool calls to judge. Here PlanQuality, PlanAdherence, StepEfficiency and
+   ArgumentCorrectness return RunOutcome.Unscoreable for those runs, which keeps
+   them out of the pass rate rather than counting them toward it.
+
+ToolCorrectness also omits upstream's tool-selection score, which takes the lower
+of the deterministic score and a model's opinion of whether better tools were
+available. That question is TaskCompletion's here.

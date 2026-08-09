@@ -131,9 +131,10 @@ class CampaignRunnerTest {
     @Test
     @DisplayName("a judge that throws becomes absent evidence, not a failure")
     void judgeRefusal() {
-        // Gemini's content filter did exactly this during calibration.
+        // Gemini's content filter did exactly this during calibration. A judge that declines
+        // says so with NoVerdict, which is what separates it from a judge that broke.
         CampaignRunner.Judge refusing = (t, r) -> {
-            throw new IllegalStateException("content filter refused the transcript");
+            throw new io.akka.evalkit.domain.NoVerdict("content filter refused the transcript");
         };
 
         var result = CampaignRunner.run(
@@ -141,9 +142,28 @@ class CampaignRunnerTest {
             new Target("authenticated"), refusing);
 
         assertThat(result.report().unscoreable()).isEqualTo(1);
+        assertThat(result.report().scorerFailed()).isZero();
         assertThat(result.report().failed()).isZero();
         assertThat(result.outcomes()).first().isInstanceOfSatisfying(RunOutcome.Unscoreable.class,
             u -> assertThat(u.reason()).contains("content filter"));
+    }
+
+    @Test
+    @DisplayName("a judge that breaks is a defect here, not a refusal about the transcript")
+    void judgeFault() {
+        CampaignRunner.Judge broken = (t, r) -> {
+            throw new IllegalStateException("the judge client was not configured");
+        };
+
+        var result = CampaignRunner.run(
+            plan(List.of(judged("a", Precursor.Fixture.named("authenticated"))), 1),
+            new Target("authenticated"), broken);
+
+        assertThat(result.report().scorerFailed()).isEqualTo(1);
+        assertThat(result.report().unscoreable()).isZero();
+        assertThat(result.report().failed()).isZero();
+        assertThat(result.notes())
+            .anySatisfy(note -> assertThat(note).contains("defect in this kit"));
     }
 
     @Test

@@ -49,6 +49,7 @@ class JudgeCalibrationTest extends TestKitSupport {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Rubric RUBRIC = Rubric.load("scenario-judge", 2);
+    private static final Rubric REASONED = Rubric.load("scenario-judge", 3);
 
     record Sample(String corpus, String scenario, Transcript transcript, int reference) {}
 
@@ -109,6 +110,151 @@ class JudgeCalibrationTest extends TestKitSupport {
         // and reporting only the setting hides that entirely.
         double achieved = busyNanos.get() / 1e9 / elapsed;
         report(scored, failures, samples.size(), lanes, elapsed, achieved);
+    }
+
+    /**
+     * What asking for a reason did to the score.
+     *
+     * <p>v3 asks for the same bands in the same words as v2 and adds one sentence. Whether
+     * that leaves the score alone is a measurement, not an expectation: a model asked to
+     * explain itself may settle somewhere else, and a rubric that moves the bands is a new
+     * scale rather than v2 with a reason attached.
+     *
+     * <p>Costs two judge calls per transcript, so it is opt-in on top of the opt-in above:
+     *
+     * <pre>
+     * mvn test -Dtest=JudgeCalibrationTest -Dcalibration=true -Dcalibration.compare=true \
+     *          -Dcalibration.sample=/path/to/sample.jsonl -Dcalibration.lanes=8
+     * </pre>
+     */
+    @Test
+    @EnabledIfSystemProperty(named = "calibration.compare", matches = "true")
+    @DisplayName("score the sample under v2 and v3 and report what the reason moved")
+    void compareRubricVersions() throws Exception {
+        var samples = load(Path.of(System.getProperty("calibration.sample")));
+        int lanes = Integer.getInteger("calibration.lanes", 8);
+        System.out.printf("judging %d transcripts twice across %d lanes%n", samples.size(), lanes);
+
+        var compared = new ArrayList<Compared>();
+        var failures = new ArrayList<String>();
+
+        try (var pool = Executors.newFixedThreadPool(lanes)) {
+            List<Callable<Void>> work = samples.stream().map(sample -> (Callable<Void>) () -> {
+                try {
+                    var bare = judge(sample, RUBRIC);
+                    var reasoned = judge(sample, REASONED);
+                    synchronized (compared) {
+                        compared.add(new Compared(sample, bare.score(), reasoned.score(),
+                            reasoned.reason()));
+                    }
+                } catch (RuntimeException e) {
+                    synchronized (failures) {
+                        failures.add(sample.scenario() + " — " + rootMessage(e));
+                    }
+                }
+                return null;
+            }).toList();
+            pool.invokeAll(work);
+        }
+        reportComparison(compared, failures, samples.size());
+    }
+
+    private ScenarioJudge.Result judge(Sample sample, Rubric rubric) {
+        return componentClient.forAgent()
+            .inSession("calibration-v" + rubric.version() + "-" + sample.scenario().hashCode())
+            .method(ScenarioJudge::judge)
+            .invoke(new ScenarioJudge.JudgeRequest(sample.transcript(), rubric));
+    }
+
+    private record Compared(Sample sample, int bare, int reasoned, String reason) {
+
+        Band bareBand() {
+            return Band.of(bare);
+        }
+
+        Band reasonedBand() {
+            return Band.of(reasoned);
+        }
+
+        boolean statesReason() {
+            return reason != null && !reason.isBlank();
+        }
+    }
+
+    private void reportComparison(List<Compared> compared, List<String> failures, int total)
+        throws Exception {
+        if (compared.isEmpty()) {
+            throw new AssertionError("no transcript scored under both rubrics; failures: " + failures);
+        }
+
+        int n = compared.size();
+        int sameBand = 0;
+        int sameScore = 0;
+        int withReason = 0;
+        int bareAgrees = 0;
+        int reasonedAgrees = 0;
+        long moved = 0;
+        var matrix = new EnumMap<Band, Map<Band, Integer>>(Band.class);
+
+        for (Compared c : compared) {
+            if (c.bareBand() == c.reasonedBand()) sameBand++;
+            if (c.bare() == c.reasoned()) sameScore++;
+            if (c.statesReason()) withReason++;
+            if (Band.of(c.sample().reference()) == c.bareBand()) bareAgrees++;
+            if (Band.of(c.sample().reference()) == c.reasonedBand()) reasonedAgrees++;
+            moved += Math.abs(c.reasoned() - c.bare());
+            matrix.computeIfAbsent(c.bareBand(), k -> new EnumMap<>(Band.class))
+                .merge(c.reasonedBand(), 1, Integer::sum);
+        }
+
+        System.out.println("\n=========== scenario-judge v2 against v3 ===========");
+        System.out.printf("judged twice      %d of %d  (%d failed)%n", n, total, failures.size());
+        System.out.printf("%nband agreement    %d/%d  %.1f%%   <- v3 is a drop-in only if this is high%n",
+            sameBand, n, 100.0 * sameBand / n);
+        System.out.printf("same score        %d/%d  %.1f%%%n", sameScore, n, 100.0 * sameScore / n);
+        System.out.printf("mean movement     %.2f points%n", (double) moved / n);
+        System.out.printf("stated a reason   %d/%d  %.1f%%   <- the whole point of v3%n",
+            withReason, n, 100.0 * withReason / n);
+        System.out.printf("%nagreement with the reference%n");
+        System.out.printf("  v2              %d/%d  %.1f%%%n", bareAgrees, n, 100.0 * bareAgrees / n);
+        System.out.printf("  v3              %d/%d  %.1f%%%n",
+            reasonedAgrees, n, 100.0 * reasonedAgrees / n);
+
+        System.out.println("\nconfusion (rows = v2, cols = v3)");
+        System.out.printf("%-12s%12s%12s%12s%n", "", "NO_MATCH", "PARTIAL", "FAITHFUL");
+        for (Band bare : Band.values()) {
+            var row = matrix.getOrDefault(bare, Map.of());
+            System.out.printf("%-12s%12d%12d%12d%n", bare,
+                row.getOrDefault(Band.NO_MATCH, 0),
+                row.getOrDefault(Band.PARTIAL, 0),
+                row.getOrDefault(Band.FAITHFUL, 0));
+        }
+
+        if (!failures.isEmpty()) {
+            System.out.println("\nfailures (first 5):");
+            failures.stream().limit(5).forEach(f -> System.out.println("  " + f));
+        }
+
+        var out = Path.of(System.getProperty("calibration.sample"))
+            .resolveSibling("calibration-v2-v3.csv");
+        var lines = new ArrayList<String>();
+        lines.add("corpus,scenario,reference_score,v2_score,v3_score,v2_band,v3_band,same_band,v3_reason");
+        for (Compared c : compared) {
+            lines.add("%s,\"%s\",%d,%d,%d,%s,%s,%s,\"%s\"".formatted(
+                c.sample().corpus(), c.sample().scenario().replace("\"", "'"),
+                c.sample().reference(), c.bare(), c.reasoned(),
+                c.bareBand(), c.reasonedBand(), c.bareBand() == c.reasonedBand(),
+                c.reason().replace("\"", "'").replace("\n", " ")));
+        }
+        Files.write(out, lines);
+        System.out.println("\nper-transcript results: " + out);
+
+        if (withReason == 0) {
+            // Not a finding about the judge. Every v3 reply arriving without a reason means
+            // the rubric or the reader is broken, and the comparison above measured nothing.
+            throw new AssertionError(
+                "no v3 judgement carried a reason; the rubric asked for one");
+        }
     }
 
     // ---- reporting ----

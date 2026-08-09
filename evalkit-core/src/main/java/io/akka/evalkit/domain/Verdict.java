@@ -8,21 +8,54 @@ import java.util.regex.Pattern;
  *
  * <p>The rubric id and version travel with the score because without them a score is
  * uninterpretable six weeks later &mdash; see {@link Rubric}.
+ *
+ * @param reason the judge's own words, and empty under a rubric that asked for a bare
+ *               number. What used to sit here was assembled from the band and the score,
+ *               which restated the two fields beside it and told a reader nothing they
+ *               could act on; {@link RunOutcome#describe()} builds that line where it is
+ *               needed, because it is rendering rather than evidence
  */
 public record Verdict(String scenarioName, String rubricId, int rubricVersion,
-                      int score, Band band, String rationale) {
+                      int score, Band band, String reason) {
 
     public Verdict {
         if (score < 1 || score > 10) throw new IllegalArgumentException("score outside 1-10: " + score);
         if (band != Band.of(score)) {
             throw new IllegalArgumentException("band " + band + " does not hold score " + score);
         }
-        rationale = rationale == null ? "" : rationale;
+        reason = reason == null ? "" : reason.strip();
     }
 
-    public static Verdict of(String scenarioName, Rubric rubric, int score, String rationale) {
+    public static Verdict of(String scenarioName, Rubric rubric, int score, String reason) {
         return new Verdict(scenarioName, rubric.id(), rubric.version(), score,
-            Band.of(score), rationale);
+            Band.of(score), reason);
+    }
+
+    /** A verdict from a rubric that asked for a bare number, so there is no reason to carry. */
+    public static Verdict of(String scenarioName, Rubric rubric, int score) {
+        return of(scenarioName, rubric, score, "");
+    }
+
+    public boolean statesReason() {
+        return !reason.isEmpty();
+    }
+
+    /**
+     * The verdict a reply carries, read the way its rubric asked for it.
+     *
+     * <p>Empty means the judge did not answer, which is {@link RunOutcome.Unscoreable} and
+     * never a score. A rubric that asked for a reason and got a reply with no label is
+     * unreadable here rather than falling back to the bare-number reader: that fallback
+     * would take the first integer out of an ordinary sentence and report it as a
+     * judgement.
+     */
+    public static Optional<Verdict> read(String scenarioName, Rubric rubric, String reply) {
+        if (rubric.statesReason()) {
+            return ModelReply.read(reply)
+                .flatMap(stated -> parseScore(stated.score())
+                    .map(score -> of(scenarioName, rubric, score, stated.reason())));
+        }
+        return parseScore(reply).map(score -> of(scenarioName, rubric, score));
     }
 
     public boolean passed() {

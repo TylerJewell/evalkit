@@ -210,8 +210,12 @@ public class CampaignWorkflow extends Workflow<CampaignWorkflow.State> {
         var notes = new ArrayList<String>();
         var tally = state.tally();
         if (!tally.isTrustworthy() && tally.total() > 0) {
-            notes.add("pass rate is not quotable: " + (tally.notReached() + tally.unscoreable())
+            notes.add("pass rate is not quotable: " + tally.withoutEvidence()
                 + " runs produced no evidence and " + tally.review() + " are undecided");
+        }
+        if (tally.scorerFailed() > 0) {
+            notes.add(tally.scorerFailed() + " runs failed inside a scorer, which is a defect "
+                + "in this kit rather than a finding about the system");
         }
         if (!tally.provesAnyReachability() && tally.judged() > 0) {
             notes.add("entirely seeded — this campaign cannot detect a state that has "
