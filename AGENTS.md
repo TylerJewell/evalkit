@@ -20,7 +20,9 @@ different assistant reads the same files.
 # Runs the core tests, which prove evalkit-core compiles with no Akka present.
 mvn -pl evalkit-core test
 
-# Adds evalkit-akka, which needs the Akka repository akka:setup configures.
+# Adds evalkit-akka. Needs the Akka SDK, which is not on Maven Central: install
+# the Akka Specify plugin and run /akka:setup, which writes the repository into
+# ~/.m2/settings.xml. See https://doc.akka.io/getting-started/set-up-dev-env.html
 mvn install
 
 # Audit prose. Exit code 1 on any hit. Never pass conventions/prose.md itself:

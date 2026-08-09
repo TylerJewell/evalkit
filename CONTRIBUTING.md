@@ -35,10 +35,14 @@ mvn install                                              # adds evalkit-akka
 python tools/audit-prose.py docs/specs/*.html docs/site/evalkit/*.html.md
 ```
 
-`evalkit-akka` depends on the Akka SDK, which is not on Maven Central. Building
-that module needs the per-account repository `akka:setup` writes into
-`~/.m2/settings.xml`. A change confined to `evalkit-core` is testable without
-it, and continuous integration covers `evalkit-core` on every pull request.
+`evalkit-akka` depends on the Akka SDK, which is not on Maven Central. Install
+the Akka Specify plugin in your AI coding assistant, following
+[the setup guide](https://doc.akka.io/getting-started/set-up-dev-env.html), then
+run `/akka:setup`. That configures the CLI, Java, Maven and your Akka download
+token, and writes the repository into `~/.m2/settings.xml`.
+
+A change confined to `evalkit-core` needs none of that, and continuous
+integration covers `evalkit-core` on every pull request.
 
 The prose auditor reads documentation, specifications and the comments inside
 code samples. Never pass it `conventions/prose.md`. That file quotes every construction it

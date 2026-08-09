@@ -206,16 +206,24 @@ a port is evaluated by implementing `SystemUnderTest`.
 evalkit builds with Java 21 and Maven.
 
 ```shell
-mvn -pl evalkit-core test    # the whole of evalkit-core, no credentials needed
-mvn install                  # adds evalkit-akka, which needs Akka SDK access
+mvn -pl evalkit-core test    # the whole of evalkit-core, no setup needed
+mvn install                  # adds evalkit-akka
 ```
 
-`evalkit-core` declares no dependencies, so anyone can build and test it.
+`evalkit-core` declares no dependencies, so a clone and a JDK are enough.
 
 `evalkit-akka` depends on the Akka SDK, which is not published to Maven Central.
-Building that module needs the per-account repository that `akka:setup` writes
-into `~/.m2/settings.xml`. Continuous integration builds it only where that URL
-is configured as a secret, and covers `evalkit-core` everywhere.
+The Akka Specify plugin puts it on your machine:
+
+1. Install the Akka Specify plugin in your AI coding assistant, following
+   [the setup guide](https://doc.akka.io/getting-started/set-up-dev-env.html).
+2. Run `/akka:setup`, which configures the CLI, Java, Maven and your Akka
+   download token, and writes the repository into `~/.m2/settings.xml`.
+3. Run `mvn install`.
+
+Continuous integration builds `evalkit-akka` where that repository URL is
+configured as the `AKKA_MAVEN_REPO_URL` secret, and covers `evalkit-core`
+everywhere.
 
 ```xml
 <dependency>
