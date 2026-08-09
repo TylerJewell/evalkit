@@ -206,9 +206,16 @@ a port is evaluated by implementing `SystemUnderTest`.
 evalkit builds with Java 21 and Maven.
 
 ```shell
-mvn install                  # all modules
-mvn -pl evalkit-core test    # core alone, no runtime needed
+mvn -pl evalkit-core test    # the whole of evalkit-core, no credentials needed
+mvn install                  # adds evalkit-akka, which needs Akka SDK access
 ```
+
+`evalkit-core` declares no dependencies, so anyone can build and test it.
+
+`evalkit-akka` depends on the Akka SDK, which is not published to Maven Central.
+Building that module needs the per-account repository that `akka:setup` writes
+into `~/.m2/settings.xml`. Continuous integration builds it only where that URL
+is configured as a secret, and covers `evalkit-core` everywhere.
 
 ```xml
 <dependency>

@@ -17,11 +17,11 @@ different assistant reads the same files.
 ## Commands
 
 ```shell
-# Build both modules.
-mvn install
-
 # Runs the core tests, which prove evalkit-core compiles with no Akka present.
 mvn -pl evalkit-core test
+
+# Adds evalkit-akka, which needs the Akka repository akka:setup configures.
+mvn install
 
 # Audit prose. Exit code 1 on any hit. Never pass conventions/prose.md itself:
 # the rules file quotes every construction it bans, so it reports 75 hits.

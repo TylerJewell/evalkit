@@ -30,10 +30,15 @@ metric is most useful with the judgements that produced the score, because
 ## Before you open a pull request
 
 ```shell
-mvn install                                              # both modules, all tests
-mvn -pl evalkit-core test                                # core alone, no runtime
+mvn -pl evalkit-core test                                # no credentials needed
+mvn install                                              # adds evalkit-akka
 python tools/audit-prose.py docs/specs/*.html docs/site/evalkit/*.html.md
 ```
+
+`evalkit-akka` depends on the Akka SDK, which is not on Maven Central. Building
+that module needs the per-account repository `akka:setup` writes into
+`~/.m2/settings.xml`. A change confined to `evalkit-core` is testable without
+it, and continuous integration covers `evalkit-core` on every pull request.
 
 The prose auditor reads documentation, specifications and the comments inside
 code samples. Never pass it `conventions/prose.md`. That file quotes every construction it

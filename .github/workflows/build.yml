@@ -9,37 +9,24 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  core:
+    name: evalkit-core
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: temurin
           cache: maven
 
-      - name: Build and test
-        run: mvn -B install
-
-  dependency-free-core:
-    # evalkit-core compiling with no Akka on the classpath is the property that
-    # makes the library usable outside Akka, so it is checked on its own rather
-    # than inferred from the reactor build.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: temurin
-          cache: maven
-
-      - name: Core alone
+      - name: Test
         run: mvn -B -pl evalkit-core test
 
+      # A dependency-free core is what lets a service in any language be
+      # evaluated by implementing one interface, so it is asserted rather than
+      # inferred from a green build.
       - name: Assert the compile classpath carries nothing
         run: |
           mvn -B -q -pl evalkit-core dependency:list -DincludeScope=compile \
@@ -50,12 +37,76 @@ jobs:
             exit 1
           fi
 
-  prose:
+  akka:
+    name: evalkit-akka
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # The Akka SDK is not published to Maven Central. A developer gets it from
+      # a per-account repository that `/akka:setup` writes into ~/.m2/settings.xml,
+      # so this module builds only where that URL is available. Without the
+      # secret the job reports what is missing instead of failing on a
+      # dependency nobody outside can resolve.
+      - name: Check for Akka repository access
+        id: access
+        env:
+          AKKA_MAVEN_REPO_URL: ${{ secrets.AKKA_MAVEN_REPO_URL }}
+        run: |
+          if [ -n "$AKKA_MAVEN_REPO_URL" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AKKA_MAVEN_REPO_URL is not set, so evalkit-akka was not built. evalkit-core is covered by its own job."
+          fi
+
+      - name: Configure the Akka repository
+        if: steps.access.outputs.available == 'true'
+        env:
+          AKKA_MAVEN_REPO_URL: ${{ secrets.AKKA_MAVEN_REPO_URL }}
+        run: |
+          mkdir -p ~/.m2
+          # Written by the shell rather than by an echo of the URL, so the
+          # credential in the path never reaches the log.
+          cat > ~/.m2/settings.xml <<'XML'
+          <settings>
+            <profiles>
+              <profile>
+                <id>akka</id>
+                <repositories>
+                  <repository><id>akka</id><url>AKKA_URL</url></repository>
+                </repositories>
+                <pluginRepositories>
+                  <pluginRepository><id>akka</id><url>AKKA_URL</url></pluginRepository>
+                </pluginRepositories>
+              </profile>
+            </profiles>
+            <activeProfiles><activeProfile>akka</activeProfile></activeProfiles>
+          </settings>
+          XML
+          python3 - <<'PY'
+          import os, pathlib
+          p = pathlib.Path.home() / '.m2' / 'settings.xml'
+          p.write_text(p.read_text().replace('AKKA_URL', os.environ['AKKA_MAVEN_REPO_URL']))
+          PY
+
+      - name: Build and test
+        if: steps.access.outputs.available == 'true'
+        run: mvn -B install
+
+  prose:
+    name: prose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
