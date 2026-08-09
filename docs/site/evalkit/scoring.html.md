@@ -28,7 +28,7 @@ opinion and pays for it. In one recorded corpus, 510 of 514 scenarios named a no
 
 ## <a href="about:blank#_the_scorer_interface"></a> The scorer interface
 
-[Scorer.java](https://github.com/akka/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/Scorer.java)
+[Scorer.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/Scorer.java)
 ```java
 public interface Scorer {
 
@@ -51,7 +51,7 @@ A deterministic result is a pass or a fail. Comparison has no confidence to be b
 about, so the undecided column carries a dash for this family. A figure in that cell would
 report a defect in evalkit.
 
-[NodeMatch.java](https://github.com/akka/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/deterministic/NodeMatch.java)
+[NodeMatch.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/deterministic/NodeMatch.java)
 ```java
 var scorer = NodeMatch.expecting("GenUC-16a.3"); // (1)
 
@@ -71,7 +71,7 @@ A heuristic scorer computes a number over the reply and compares it against a th
 Execution repeats exactly. The meaning is approximate, because the threshold is a judgment
 encoded as a number.
 
-[Measured.java](https://github.com/akka/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/heuristic/Measured.java)
+[Measured.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/heuristic/Measured.java)
 ```java
 record Measured(String metricId, int metricVersion,
                 double value, double threshold, boolean withinThreshold)
@@ -90,7 +90,7 @@ family is the only one that costs money and the only one that can return `Unscor
 
 ### <a href="about:blank#_rubrics_are_versioned_data"></a> Rubrics are versioned data
 
-[Rubric.java](https://github.com/akka/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/agentic/Rubric.java)
+[Rubric.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/scorer/agentic/Rubric.java)
 ```java
 var rubric = Rubric.load("scenario-judge", 2); // (1)
 
@@ -121,7 +121,7 @@ In `evalkit-akka` the judges run as delegated workers of an
 [Autonomous Agent](../../sdk/autonomous-agents.html). `Delegation` partitions context, so a
 worker scores without reading another worker's verdict.
 
-[JudgePanel.java](https://github.com/akka/evalkit/blob/main/evalkit-akka/src/main/java/io/akka/evalkit/akka/JudgePanel.java)
+[JudgePanel.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-akka/src/main/java/io/akka/evalkit/akka/JudgePanel.java)
 ```java
 @Component(id = "judge-panel",
     description = "Produces independent verdicts on one transcript.")

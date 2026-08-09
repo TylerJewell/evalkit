@@ -2,8 +2,8 @@
 
 ## Reporting a vulnerability
 
-Report security issues to security@akka.io. Do not open a public GitHub issue
-for a vulnerability.
+Report a vulnerability through GitHub's private reporting, under the Security
+tab of this repository. Do not open a public issue for a vulnerability.
 
 Include what you did, what happened, and what you expected. A reproduction
 against a fake `SystemUnderTest` is enough, and a real corpus is never needed.

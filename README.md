@@ -3,7 +3,7 @@
 Runs recorded scenarios against a conversational service and prints a report of
 the result.
 
-[![Build](https://github.com/akka/evalkit/actions/workflows/build.yml/badge.svg)](https://github.com/akka/evalkit/actions/workflows/build.yml)
+[![Build](https://github.com/tylerjewell/evalkit/actions/workflows/build.yml/badge.svg)](https://github.com/tylerjewell/evalkit/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 ```java

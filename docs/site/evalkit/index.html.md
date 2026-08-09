@@ -46,7 +46,7 @@ Use evalkit when you need to:
 evalkit reaches the service through `SystemUnderTest`, which declares two operations. The
 service can be an Akka service, an HTTP endpoint, or a process in another language.
 
-[SystemUnderTest.java](https://github.com/akka/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/runner/SystemUnderTest.java)
+[SystemUnderTest.java](https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/runner/SystemUnderTest.java)
 ```java
 public interface SystemUnderTest {
 
@@ -113,7 +113,7 @@ reachable over a port, is evaluated by implementing one interface. Adding a depe
 
 A campaign needs scenarios, a target, and a scorer.
 
-[FirstCampaign.java](https://github.com/akka/evalkit/blob/main/samples/src/main/java/FirstCampaign.java)
+[FirstCampaign.java](https://github.com/tylerjewell/evalkit/blob/main/samples/src/main/java/FirstCampaign.java)
 ```java
 var scenarios = Corpus.of(
   Scenario.named("refund-30d")

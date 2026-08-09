@@ -29,9 +29,10 @@ professional setting.
 
 ## Enforcement
 
-Report abusive, harassing or otherwise unacceptable behaviour to
-conduct@akka.io. All complaints will be reviewed and investigated promptly and
-fairly, and the privacy and security of the reporter will be respected.
+Report abusive, harassing or otherwise unacceptable behaviour to the repository
+owner, through GitHub's private reporting under the Security tab. All complaints
+will be reviewed and investigated, and the privacy and security of the reporter
+will be respected.
 
 ## Attribution
 

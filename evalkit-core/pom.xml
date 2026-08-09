@@ -10,7 +10,7 @@
     <name>evalkit-core</name>
     <description>Scoring, outcomes and reporting. No runtime dependency of any kind.</description>
 
-    <url>https://github.com/akka/evalkit</url>
+    <url>https://github.com/tylerjewell/evalkit</url>
 
     <licenses>
         <license>
@@ -22,21 +22,20 @@
 
     <developers>
         <developer>
-            <name>Akka</name>
-            <organization>Lightbend, Inc. dba Akka</organization>
-            <organizationUrl>https://akka.io</organizationUrl>
+            <name>Tyler Jewell</name>
+            <url>https://github.com/tylerjewell</url>
         </developer>
     </developers>
 
     <scm>
-        <url>https://github.com/akka/evalkit</url>
-        <connection>scm:git:https://github.com/akka/evalkit.git</connection>
-        <developerConnection>scm:git:git@github.com:akka/evalkit.git</developerConnection>
+        <url>https://github.com/tylerjewell/evalkit</url>
+        <connection>scm:git:https://github.com/tylerjewell/evalkit.git</connection>
+        <developerConnection>scm:git:git@github.com:tylerjewell/evalkit.git</developerConnection>
     </scm>
 
     <issueManagement>
         <system>GitHub Issues</system>
-        <url>https://github.com/akka/evalkit/issues</url>
+        <url>https://github.com/tylerjewell/evalkit/issues</url>
     </issueManagement>
 
     <!--

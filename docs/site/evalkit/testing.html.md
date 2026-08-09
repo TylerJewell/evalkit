@@ -68,7 +68,7 @@ and JUnit stay on the classpath.
 answer on every run and costs nothing. Deterministic mode suits the deterministic scorer
 family and the tests covering the campaign itself.
 
-[RefundPolicyEval.java](https://github.com/akka/evalkit/blob/main/samples/src/eval/java/RefundPolicyEval.java)
+[RefundPolicyEval.java](https://github.com/tylerjewell/evalkit/blob/main/samples/src/eval/java/RefundPolicyEval.java)
 ```java
 class RefundPolicyEval extends EvalKitSupport { // (1)
 
