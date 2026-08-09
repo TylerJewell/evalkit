@@ -83,19 +83,13 @@ one recorded corpus 510 of 514 scenarios were settled without a model call.
 produced it, and `Scoring.compare` refuses to compare scores across versions.
 `scenario-judge` v3 returns the score and one sentence on why, on v2's bands.
 
-**A failure and an absence are different results.** `RunOutcome` is a sealed interface
-with five variants. `Scored`, `Asserted` and `Measured` mean the service answered.
-`NotReached` means the setup never completed and `Unscoreable` means nothing readable
-came back, and neither enters the pass rate.
-
 **A campaign is refused before it runs.** `CampaignPlan.check` asks the service which
 states it can build and which answers it can produce, and refuses a campaign that cannot
 succeed. A run that would fail at minute forty stops in the first second.
 
 **A metric with nothing to examine returns `Unscoreable`.** A plan metric needs a plan to
 read and an argument metric needs a tool call to read, and a run supplying neither
-produces no score. A check that found nothing and reported full marks looks identical
-from outside to a check that worked.
+produces no score.
 
 **A report prints no single pass-rate number.** A campaign mixes exact comparisons,
 threshold computations and model verdicts, and one percentage has to pick a lie to tell
@@ -170,37 +164,70 @@ OpenTelemetry.
 </dependency>
 ```
 
-### Write a scenario
+### Reach your service
 
-`REFUND-004` is a **specification node**, the identifier of the requirement this
-scenario exercises. Naming one is what lets the run be settled without a model.
+`SystemUnderTest` is the whole seam. Put the service in a state, say the graded turn to
+it, and declare the states it can build.
 
 ```java
-var corpus = List.of(
-    new Scenario("refund-outside-window",
-        Optional.of("REFUND-004"),                       // the requirement it exercises
-        Precursor.replay("I want a refund", "order 4417"),
-        "It has been 45 days. Can I still return it?",
-        "Refuses, and states the 30-day window"));
+class ClaimsService implements SystemUnderTest {
+
+    public Prepared prepare(Precursor precursor) {
+        return new Prepared.Ready("session-1", "");          // your session id
+    }
+
+    public Reply submit(String sessionId, String userText) {
+        return Reply.from("It has been 45 days, so the 30-day window has closed.",
+                          "REFUND-004");                     // the node it answered from
+    }
+
+    public Map<String, String> fixtures() {
+        return Map.of();
+    }
+}
 ```
 
 ### Run a campaign
 
-`Lanes.of(8)` runs eight scenarios at a time. `target` is your `SystemUnderTest`, and
-the `ScorerRouter` decides per scenario whether a comparison, a metric or a model
-settles it.
+`REFUND-004` is a **specification node**, the identifier of the requirement the scenario
+exercises. Naming one settles the run by comparison, so this campaign calls no model.
 
 ```java
-var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(8), router);
+var corpus = List.of(
+    new Scenario("refund-outside-window",
+        Optional.of("REFUND-004"),
+        Precursor.replay("I want a refund", "order 4417"),
+        "It has been 45 days. Can I still return it?",
+        "Refuses, and states the 30-day window"));
 
-switch (plan.check(target)) {
-    case CampaignPlan.Check.Refused r -> { r.reasons().forEach(System.err::println); return; }
-    case CampaignPlan.Check.Ready ready -> System.out.println(RunSummary.scope(ready.plan()));
+var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(8),
+                            Rubric.load("scenario-judge", 3));
+
+if (plan.check(target) instanceof CampaignPlan.Check.Refused refused) {
+    refused.reasons().forEach(System.err::println);
+    return;
 }
 
-var result = CampaignRunner.run(plan, target, router);
-System.out.println(RunSummary.of(result).render());
+var result = CampaignRunner.run(plan, target, scenario -> Optional.empty());
+
+System.out.println(result.report().summary());
+result.notes().forEach(System.out::println);
 ```
+
+The router returns empty for every scenario, which leaves the runner to compare the node
+the service reported against the node the scenario named. `Lanes.of(8)` runs eight
+scenarios at a time.
+
+### Read the result
+
+```
+1 judged of 1 (1 asserted, 0 scored) — 1 passed, 0 need review, 0 failed;
+0 not reached, 0 unscoreable, 0 scorer failures
+```
+
+`CampaignReport.summary` is one line for a build log. `RunSummary.opening` and
+`RunSummary.results` render the report a compliance reader gets. Every figure in that
+report arrives as an argument, so nothing reaches a reader without a caller stating it.
 
 ### Use a metric on its own
 

@@ -137,14 +137,14 @@ if (plan.check(target) instanceof CampaignPlan.Check.Refused refused) { // (3)
 }
 
 var result = CampaignRunner.run(plan, target, router); // (4)
-System.out.println(RunSummary.of(result).render()); // (5)
+System.out.println(result.report().summary()); // (5)
 ```
 
 | **1** | The specification node this scenario exercises. Naming one settles the run by comparison, so no model is called. A scenario naming no node and no metric is judged. |
 | **2** | Lanes set how many scenarios run at once. The report states how many the run sustained. |
 | **3** | Pre-flight. Missing fixtures and unemittable nodes are refused in the first second. |
 | **4** | Every scenario produces a row. A scenario whose run throws produces `NotReached` carrying the reason. |
-| **5** | Terminal-width plain text, written for a reader who does not know the service. |
+| **5** | One line for a build log. `RunSummary.results` renders the terminal-width report written for a reader who does not know the service. |
 
 ## <a href="about:blank#_see_also"></a> See also
 

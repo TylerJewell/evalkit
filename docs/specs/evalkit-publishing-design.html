@@ -226,12 +226,13 @@ evalkit-akka      durable campaigns, agent judges                   Akka SDK</co
 
         <pre><code>var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(8), rubric);
 
-switch (plan.check(target)) {
-    case CampaignPlan.Check.Refused r -&gt; { r.reasons().forEach(System.err::println); return; }
-    case CampaignPlan.Check.Ready ready -&gt; System.out.println(RunSummary.scope(ready.plan()));
+if (plan.check(target) instanceof CampaignPlan.Check.Refused refused) {
+    refused.reasons().forEach(System.err::println);
+    return;
 }
 
-var result = CampaignRunner.run(plan, target, router);</code></pre>
+var result = CampaignRunner.run(plan, target, router);
+System.out.println(result.report().summary());</code></pre>
 
         <p><code>CampaignPlan.check</code> asks the target which states it can build and which nodes it can emit, and refuses a campaign the target cannot satisfy. A campaign that would fail at minute forty for a reason knowable at minute zero stops in the first second.</p>
 
