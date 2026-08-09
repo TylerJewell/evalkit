@@ -31,10 +31,27 @@ jobs:
         run: |
           mvn -B -q -pl evalkit-core dependency:list -DincludeScope=compile \
             -DoutputFile=compile-deps.txt
-          if grep -qE '^ {3}[a-z]' evalkit-core/compile-deps.txt; then
+          # A dependency line is a coordinate, so it carries colons. Matching on
+          # indentation alone read the literal word "none" that dependency:list
+          # prints for an empty list, and failed the build on the healthy case.
+          if grep -qE '^ +[^ ]+:[^ ]+:[^ ]+:' evalkit-core/compile-deps.txt; then
             echo "evalkit-core has gained a compile dependency:"
             cat evalkit-core/compile-deps.txt
             exit 1
+          fi
+
+      # The check above can only pass by finding nothing, so it ships with a
+      # case it is known to catch. Adding a real dependency to evalkit-core has
+      # to fail the build, and this proves the pattern that decides it does.
+      - name: Prove the assertion catches a dependency
+        run: |
+          printf '\nThe following files have been resolved:\n   none\n\n' > clean.txt
+          printf '\nThe following files have been resolved:\n   org.slf4j:slf4j-api:jar:2.0.13:compile\n\n' > dirty.txt
+          if grep -qE '^ +[^ ]+:[^ ]+:[^ ]+:' clean.txt; then
+            echo "the pattern rejects an empty dependency list"; exit 1
+          fi
+          if ! grep -qE '^ +[^ ]+:[^ ]+:[^ ]+:' dirty.txt; then
+            echo "the pattern misses a real dependency"; exit 1
           fi
 
   akka:
