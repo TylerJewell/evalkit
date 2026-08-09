@@ -358,6 +358,27 @@ codebase." Claiming every member of a set is a claim someone can falsify with on
 counterexample. Say what the file holds: "records what went wrong before the rules were
 written."
 
+**Gerund subjects with the object dropped.** "Collecting may call a model." "Routing
+happens before any call goes out." A transitive verb used as a gerund subject still needs
+its object, and without one the sentence reads as an unfinished thought. Name it:
+"Collecting the judgements may call a model." "Every scenario is routed before any call
+goes out."
+
+**Terms used before they are defined.** Every term of art gets a definition sentence
+before any sentence that uses it, and the definition says what the thing *is* rather than
+how it behaves. "A scenario names the state to start from, the message to send, and the
+answer to expect" explains how a scenario works without ever saying that a scenario is one
+test. Define first, then describe: "A scenario describes one test: an id, the state the
+service has to be in before the test starts, the message to send, and the answer expected
+back." This applies to every term the reader meets for the first time in a document, not
+only to the first use in the repository.
+
+**Arguing a property instead of stating it.** "compiles against the JDK and nothing else."
+The "and nothing else" adds emphasis rather than information, which is how a claim sounds
+when it is being defended. Itemise instead: "requires Java 21, declares no compile
+dependencies, and uses JUnit 5 and AssertJ for its own tests." A reader can check an
+itemised list and cannot check an emphasis.
+
 ## Required voice
 
 - **Declarative.** Subject–verb–fact. One idea per sentence.

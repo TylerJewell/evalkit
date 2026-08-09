@@ -22,7 +22,7 @@ Three scorer families exist, and each is defined by what settles the result.
 | `heuristic` | Computation over the reply against a threshold. | 0 | `Measured` |
 | `agentic` | A judge agent reading the transcript against a versioned rubric. | 1 or more | `Scored` or `Unscoreable` |
 
-Routing happens before any call goes out. A scenario that names a specification node is
+Every scenario is routed before any call goes out. A scenario that names a specification node is
 exercising a decision with a right answer, and sending it to a model buys a slightly random
 opinion and pays for it. In one recorded corpus, 510 of 514 scenarios named a node.
 

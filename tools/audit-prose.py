@@ -164,6 +164,16 @@ RULES = [
  (r"\bis\s+as\s+follows\b", 'announcement stub', 'both', ALL),
  (r"(?:^|(?<=[.!?])\s)The same \w+\s+(turns? up|appears?|shows? up|happens?|occurs?|applies)\b",
   'announcement stub', 'prose', ALL),
+ # A transitive verb as a gerund subject, with the object dropped. "Collecting may
+ # call a model" leaves the reader to supply what is collected, and the sentence
+ # reads as an unfinished thought. Name the object: "Collecting the judgements may
+ # call a model." Restricted to verbs that take one, so "Judging is per-transcript"
+ # is caught and an intransitive gerund is not.
+ (r"(?:^|(?<=[.!?])\s)(Collecting|Scoring|Judging|Routing|Parsing|Reading|Writing|"
+  r"Counting|Comparing|Aggregating|Seeding|Replaying|Measuring|Loading|Extracting)\s+"
+  r"(may|can|could|will|would|should|must|is|are|was|were|costs?|needs?|takes?|"
+  r"requires?|gives?|makes?|happens?|runs?|leaves?|becomes?)\b",
+  'gerund subject with no object', 'prose', ALL),
  # A pointer standing in for the thing it points at.
  (r"\bthe (former|latter)\b", 'back-reference to a thing never named', 'both', ALL),
  # An ordinal answers "which one" and names nothing. "The second is a setup

@@ -35,6 +35,7 @@ Add a line here in the same change that adds a rule.
 - [unstated quantity] A number that moves that far is not measuring the service.
 - [definitional epigram] A number that moves when a regex changes is a number about the regex.
 - [argues for the choice] RunOutcome therefore carries a variant for each of them.
+- [gerund subject with no object] A metric collects judgements. Collecting may call a model.
 
 ## Not caught
 
@@ -45,4 +46,5 @@ visible as a regression rather than as an improvement.
 - CampaignPlan.check rejects a plan naming a fixture the target cannot build.
 - A judge and an independent reviewer agreed on 53 percent of the replies scoring in the middle band.
 - Run mvn install to build both modules.
+- Collecting the judgements may call a model.
 - The Akka Specify plugin writes the repository into your settings file.

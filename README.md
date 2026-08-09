@@ -1,18 +1,134 @@
 # evalkit
 
-Puts a conversational service into a known state, sends it one message, scores
-the reply, and prints a report that separates a wrong answer from a run that
-produced no answer at all.
+**The evaluation harness for conversational services.**
 
 [![Build](https://github.com/tylerjewell/evalkit/actions/workflows/build.yml/badge.svg)](https://github.com/tylerjewell/evalkit/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 
-[Quickstart](#quickstart) · [Metrics](#metrics) · [Reports](#a-report) ·
-[Build](#build) · [Contributing](CONTRIBUTING.md) · [Docs](docs/site/evalkit/)
+[Quickstart](#quickstart) · [Metrics and features](#metrics-and-features) ·
+[Integrations](#integrations) · [Reports](#a-report) ·
+[Contributing](CONTRIBUTING.md) · [Documentation](docs/site/evalkit/)
+
+evalkit is an open-source evaluation harness for conversational services, written
+in Java. The harness is similar to JUnit and specialized for services that hold a
+conversation: it puts the service into a known state, sends one message, scores
+the reply against a stated expectation, and prints a report a compliance reader
+can act on. A reply is scored by comparison against a named requirement, by a
+metric that computes a number, or by a model reading the transcript against a
+versioned rubric, and the harness records which of the three settled each run.
+
+The words below are used throughout. A **scenario** describes one test: an id, the
+state the service has to be in before the test starts, the message to send, and
+the answer expected back. A **corpus** is a list of scenarios. A
+**campaign** is one run of a corpus against one service, and it produces one
+report. A **judge** is a model that reads a transcript against a rubric and
+returns a score from 1 to 10.
+
+## Metrics and features
+
+**Metrics ported from DeepEval**, each pinned to the expected values in DeepEval's
+own tests at a recorded commit:
+
+| Metric | Scores | Model calls |
+|---|---|---|
+| `ToolPermission` | Whether an agent called only the tools it was allowed to call | 0 |
+| `TurnRelevancy` | The share of exchanges whose reply answered what was asked | 1 per exchange |
+| `TurnFaithfulness` | The share of claims in a reply that the retrieved passages support | 1 per claim |
+| `CitationFaithfulness` | Whether each citation points at a passage supporting the claim beside it | 1 per citation |
+| `Dag` | The branch a judge chose through a decision graph | 1 per judgement node |
+
+**A scenario naming a specification node costs no model call.** The scorer
+checks which node the reply reached. A scenario naming a metric with
+deterministic judgements is settled by arithmetic. On one recorded corpus, 510 of
+514 scenarios were settled this way, which is what makes a large corpus
+affordable.
+
+**A judge reads the transcript against a versioned rubric.** A rubric is a
+judge's prompt, held as data under `resources/rubrics/` and loaded by id and
+version. Every `Verdict` carries the id and version that produced it, and
+`Scoring.compare` refuses to compare scores across versions.
+
+**`RunOutcome` separates a failure from an absence.** The sealed interface has
+five variants. `Scored`, `Asserted` and `Measured` mean the service answered and
+the answer was assessed. `NotReached` means the setup never completed, and
+`Unscoreable` means the judge produced nothing readable. The last pair stays out
+of the pass total.
+
+**A campaign is refused before it runs.** `CampaignPlan.check` asks the service
+which states it can build and which answers it can produce, compares those
+against what the corpus needs, and refuses a campaign that cannot succeed.
+
+**A scenario reaches its starting state by replay or by seeding.**
+`Precursor.replay` walks the recorded turns through the same interface a user
+would use, which is slow and proves the state is reachable. `Precursor.fixture`
+asks the service to write the state directly, which costs no model calls.
+
+**`RunSummary` writes for a reader who cannot check the work.** The report is
+terminal-width plain text, and it states what will be tested before the run, what
+was found after, the judge's bands and its measured agreement with a human
+reviewer, and what the run cannot show. `Accounting` counts the model calls whose
+token usage the service could not report, and labels the total a floor.
+
+**A campaign bounds its concurrency and survives a restart.** `Lanes` sets how
+many scenarios run at once. In an Akka project a campaign is a workflow that
+writes a cursor after each wave, so a restart repeats one wave instead of the
+whole campaign.
+
+**A conformance suite pins each ported metric to its upstream values.**
+`io.akka.evalkit.conformance` holds those fixtures, and
+`ConformanceCoverageTest` fails the build when a ported metric has no fixture,
+when a fixture names a metric that no longer exists, or when an entry records no
+upstream commit.
+
+## What evalkit adds
+
+DeepEval established the metric shapes this project ports. The behaviour below
+has no counterpart there.
+
+**A run that produced no result is never a failure.** A judge that times out or
+refuses gives `Unscoreable`, and a setup that does not complete gives
+`NotReached`. The report keeps both out of the pass rate, because neither result
+says anything about the service.
+
+**A report prints no single pass-rate number.** A campaign mixes exact
+comparisons, threshold computations and model verdicts. Averaging them gives a
+borderline model verdict the same weight as an exact match, so `CampaignReport`
+keeps the three in separate columns and prints no combined figure.
+
+**A deterministic result is a pass or a fail, never undecided.** A comparison
+either matched or missed, and a number is either inside its threshold or outside
+it. The undecided column shows a dash for both, and a figure in either cell means
+this kit has a bug.
+
+**Campaigns survive a restart.** In the Akka module a campaign is a durable
+workflow, so an hours-long run resumes after a deploy.
+
+## Integrations
+
+**`evalkit-core` evaluates any service reachable over a port.** The module
+requires Java 21, declares no compile dependencies, and uses JUnit 5 and AssertJ
+for its own tests. A service written in any language is evaluated by implementing
+one interface.
+
+```java
+public interface SystemUnderTest {
+    Prepared prepare(Precursor precursor);       // get into position
+    Reply submit(String sessionId, String userText);
+    Map<String, String> fixtures();              // states this service can build
+}
+```
+
+**`evalkit-akka` runs a campaign inside an Akka project.** The campaign becomes
+a durable workflow, judges become Akka agents, and the whole service starts under
+the Akka TestKit, so the campaign calls the real agents.
+
+**A campaign runs as an ordinary JUnit 5 test.** The result reports through the
+same build and the same CI job as the rest of the suite.
 
 ## Quickstart
 
-`evalkit-core` compiles against the JDK and nothing else.
+### Installation
 
 ```xml
 <dependency>
@@ -22,9 +138,10 @@ produced no answer at all.
 </dependency>
 ```
 
-A scenario names the state to start from, the message to send, and the answer to
-expect. A campaign runs a corpus of them against a `SystemUnderTest` and prints a
-report.
+### Write your first scenario
+
+A **specification node** is the identifier of the requirement a scenario
+exercises, and `REFUND-004` below is one.
 
 ```java
 var corpus = List.of(
@@ -33,7 +150,15 @@ var corpus = List.of(
         Precursor.replay("I want a refund", "order 4417"),
         "It has been 45 days. Can I still return it?",
         "Refuses, and states the 30-day window"));
+```
 
+### Run the campaign
+
+`Lanes.of(8)` runs eight scenarios at a time. `target` is the `SystemUnderTest`.
+The router is a `ScorerRouter`, which decides for each scenario whether the result
+is settled by comparison, by a metric or by a model.
+
+```java
 var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(8), router);
 
 switch (plan.check(target)) {
@@ -45,74 +170,42 @@ var result = CampaignRunner.run(plan, target, router);
 System.out.println(RunSummary.of(result).render());
 ```
 
-`plan.check(target)` runs before any call goes out. The check asks the service
-which states it can build and which answers it can produce, compares those
-against what the corpus needs, and refuses a campaign that cannot succeed. A
-campaign that would fail at minute forty for a reason knowable at minute zero
-stops in the first second.
+`plan.check(target)` runs before any call goes out, so a campaign that would fail
+at minute forty for a reason knowable at minute zero stops in the first second.
 
-## Metrics
+### Use a metric on its own
 
-A metric collects judgements and turns them into a number. Collecting may call a
-model. `aggregate` is a pure function of the judgements, so it runs in a unit test
-with no provider and no key.
+A **judgement** is one yes-or-no observation about a reply, such as whether a
+single tool call was authorised. A **metric** turns a list of judgements into a
+number and compares that number against a threshold. Collecting the judgements
+may call a model. Turning them into a number is a pure function, so `aggregate`
+runs in a unit test with no provider and no key.
 
 ```java
-public interface Metric {
-    MetricRef ref();
-    double threshold();
-    double aggregate(List<Judgement> judgements);   // pure
-}
+var metric = ToolPermission.allowing("search_kb", "reply");
+var judgements = metric.judge(List.of("search_kb", "delete_account"));
+
+metric.aggregate(judgements);                 // 0.5
+metric.withinThreshold(0.5);                  // false
+ToolPermission.unauthorised(judgements);      // ["delete_account"]
 ```
 
-| Metric | Scores | Model calls | Origin |
-|---|---|---|---|
-| `ToolPermission` | Whether an agent called only the tools it was allowed to call | 0 | DeepEval |
-| `TurnRelevancy` | The share of exchanges whose reply answered what was asked | 1 per exchange | DeepEval |
-| `TurnFaithfulness` | The share of claims in a reply that the retrieved passages support | 1 per claim | DeepEval |
-| `CitationFaithfulness` | Whether each citation points at a passage supporting the claim beside it | 1 per citation | DeepEval |
-| `Dag` | The branch a judge chose through a decision graph | 1 per judgement node | DeepEval |
+### Run inside an Akka project
 
-The five ported types take their expected values from
-[DeepEval](https://github.com/confident-ai/deepeval)'s own tests at a pinned
-commit, recorded in `NOTICE` and in `io.akka.evalkit.conformance.PortedMetrics`.
-`ConformanceCoverageTest` fails the build when a ported metric has no fixture,
-when a fixture names a metric that no longer exists, or when an entry records no
-upstream commit.
-
-`MetricRef` carries a version and `Scoring.compare` refuses to compare across
-versions. Raising a threshold from 0.75 to 0.80 turns passing runs into failing
-ones without touching the service, and a recorded score has to stay readable six
-weeks later.
+Add `evalkit-akka`, extend `EvalKitSupport`, and the campaign starts the service
+under the Akka TestKit and calls the deployed agents through the component client.
+Building this module needs the Akka SDK, which the [Build](#build) section covers.
 
 ## How a scenario is settled
 
-Routing happens before any call goes out, which is what makes a large corpus
-affordable. On one recorded corpus, 510 of 514 scenarios named a specification
-node and cost no model call at all.
+Every scenario is routed to one of the three families below before any call goes
+out.
 
 | Family | Settles the result by | Model calls |
 |---|---|---|
 | Comparison | The reply reached the node the scenario named. | 0 |
 | Computation | A metric scored the reply against a threshold. | 0 |
 | Judgement | A model read the transcript against a versioned rubric. | 1 or more |
-
-## Standalone or inside an Akka project
-
-`evalkit-core` evaluates any service reachable over a port. Implement
-`SystemUnderTest` and the rest of the kit works unchanged.
-
-```java
-public interface SystemUnderTest {
-    Prepared prepare(Precursor precursor);       // get into position
-    Reply submit(String sessionId, String userText);
-    Map<String, String> fixtures();              // states this service can build
-}
-```
-
-`evalkit-akka` runs inside an Akka project. A campaign becomes a durable
-workflow that survives a restart, judges are Akka agents, and the whole service
-starts under the Akka TestKit, so a campaign calls the real agents.
 
 ## What a run produces
 
@@ -190,22 +283,6 @@ A report never prints:
 A reader would quote any of those figures. The report prints counts by category
 instead, and the categories that belong together add up.
 
-A campaign mixes checks settled by string comparison with numbers computed
-against a threshold and replies scored by a model. Averaging them gives a
-borderline model verdict the same weight as an exact match. `CampaignReport`
-keeps the three in separate columns.
-
-A comparison either matched the stated answer or missed it, and a number is
-either inside its threshold or outside it. The undecided column shows a dash for
-both, and a figure in either cell means this kit has a bug.
-
-A judge that times out, hits a content filter, or returns something unreadable
-reports nothing about the service. Such a run is recorded as `Unscoreable` and
-stays out of the pass total.
-
-A service may or may not report its own model usage. `Accounting` counts the
-calls whose usage was invisible, and the report labels the total a floor.
-
 ## Why the outcomes are split this way
 
 A low score by itself does not distinguish a wrong answer from a run that never
@@ -225,27 +302,19 @@ records it.
 Scoring a `NotReached` or an `Unscoreable` run as zero reports a working service
 as a broken one, so the report counts both on their own lines.
 
-Two measurements settled the rest of the report. A judge and an independent
-reviewer agreed on 89 to 91 percent of clear replies and on 53 percent of the
-replies scoring in the middle band, which is close enough to chance that the
-middle band counts as undecided and never as a pass. Separately, one corpus
-stated its expected answers without stating the inputs those answers depend on,
-so an early version parsed the inputs from the scenario titles with a regular
-expression: the same unchanged service scored 23, 17 and 19 out of 40 under
-three versions of it, and a scenario now states its own setup as data.
+A **band** is one of the three ranges a judge's score falls into: 8 to 10 matched,
+4 to 7 matched in part, 1 to 3 did not match. A judge and an independent reviewer
+agreed on 89 to 91 percent of clear replies and on 53 percent of the replies
+scoring in the middle band, which is close enough to chance that the middle band
+counts as undecided and never as a pass.
+
+One corpus stated its expected answers without stating the inputs those answers
+depend on, so an early version parsed the inputs from the scenario titles with a
+regular expression. The same unchanged service scored 23, 17 and 19 out of 40
+under three versions of that expression, and a scenario now states its own setup
+as data.
 
 `docs/design-history.md` records what went wrong before the rules were written.
-
-## Roadmap
-
-Tracked as GitHub issues. The open ones before a first release:
-
-- publish to Maven Central, which needs a `groupId` this project owns
-- raise the Surefire plugin from 2.22.2, pinned to what was cached offline
-- return a reason alongside the score from rubric v2, which today returns a bare
-  number
-- count the tokens of an agent whose memory is off, which the current accounting
-  understates
 
 ## Build
 
@@ -255,8 +324,6 @@ evalkit builds with Java 21 and Maven.
 mvn -pl evalkit-core test    # the whole of evalkit-core, no setup needed
 mvn install                  # adds evalkit-akka
 ```
-
-`evalkit-core` declares no dependencies, so a clone and a JDK are enough.
 
 `evalkit-akka` depends on the Akka SDK, which is not published to Maven Central.
 The Akka Specify plugin puts it on your machine:
@@ -282,6 +349,27 @@ A service written in any language behind a port is evaluated by implementing
 `SystemUnderTest`. Adding a dependency to `evalkit-core` needs an argument, and
 convenience is not one.
 
+## Contributing
+
+Issues and pull requests are welcome. `CONTRIBUTING.md` covers the rules a
+contributor would not expect, starting with the requirement that every audit ships
+with a case it is known to catch.
+
+## Roadmap
+
+- [x] Deterministic scoring by specification node
+- [x] Metrics ported from DeepEval, pinned to upstream fixtures
+- [x] DAG decision graphs
+- [x] Model judging with versioned rubrics
+- [x] Outcome taxonomy separating an unscored run from a failed one
+- [x] Refusal before the run
+- [x] Durable campaigns on Akka
+- [x] Token accounting with an explicit floor
+- [ ] Publish to Maven Central under a `groupId` this project owns
+- [ ] Raise the Surefire plugin from 2.22.2
+- [ ] Return a reason alongside the score from rubric v2
+- [ ] Count the tokens of an agent whose memory is off
+
 ## Documentation
 
 - `docs/site/evalkit/` — reference documentation
@@ -289,12 +377,10 @@ convenience is not one.
 - `docs/design-history.md` — what went wrong before the rules were written
 - `CONTRIBUTING.md` — how a change gets in, and what every audit owes
 
-## Contributing
-
-Issues and pull requests are welcome. `CONTRIBUTING.md` covers the rules a
-contributor would not expect, starting with the requirement that every audit
-ships with a case it is known to catch.
-
 ## Licence
 
 evalkit is licensed under Apache 2.0. See `LICENSE` and `NOTICE`.
+
+Parts of this project are derived from
+[DeepEval](https://github.com/confident-ai/deepeval) by Confident AI, also
+Apache 2.0. `NOTICE` records which types and the commit they were read at.
