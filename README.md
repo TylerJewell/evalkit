@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 
-[Documentation](docs/site/evalkit/) · [Metrics](#metrics-and-features) ·
+[Documentation](docs/site/evalkit/) · [Metrics](#metrics) ·
 [Quickstart](#quickstart) · [Integrations](#integrations) ·
 [Akka Verify](#akka-verify) · [Contributing](CONTRIBUTING.md)
 
@@ -25,7 +25,7 @@ sentence stating what decided it.
 A **scenario** is one test. A **corpus** is a list of them. A **campaign** is one run of
 a corpus against one service, and it produces one report.
 
-## Metrics and features
+## Metrics
 
 <details open>
 <summary><b>Agentic metrics</b></summary>
@@ -73,38 +73,6 @@ and their fixtures hold this kit's own behaviour instead. `PortedMetrics` record
 claim each metric makes and `NOTICE` names the source file each was read from.
 
 </details>
-
-**Most of a corpus costs nothing to score.** A scenario naming a requirement is settled
-by comparison, and a metric with deterministic judgements is settled by arithmetic. On
-one recorded corpus 510 of 514 scenarios were settled without a model call.
-
-**A judge reads against a versioned rubric.** A rubric is data under
-`resources/rubrics/`, loaded by id and version. Every `Verdict` carries the pair that
-produced it, and `Scoring.compare` refuses to compare scores across versions.
-`scenario-judge` v3 returns the score and one sentence on why, on v2's bands.
-
-**A campaign is refused before it runs.** `CampaignPlan.check` asks the service which
-states it can build and which answers it can produce, and refuses a campaign that cannot
-succeed. A run that would fail at minute forty stops in the first second.
-
-**A metric with nothing to examine returns `Unscoreable`.** A plan metric needs a plan to
-read and an argument metric needs a tool call to read, and a run supplying neither
-produces no score.
-
-**A report prints no single pass-rate number.** A campaign mixes exact comparisons,
-threshold computations and model verdicts, and one percentage has to pick a lie to tell
-about the rest. `CampaignReport` keeps the three in separate columns.
-
-**A report is written for a reader who cannot check the work.** `RunSummary` prints
-terminal-width plain text, stating what will be tested before the run, what was found
-after, the judge's bands and its measured agreement, and what the run cannot show.
-
-**Campaigns bound their concurrency and survive a restart.** `Lanes` sets how many
-scenarios run at once. On Akka a campaign is a durable workflow that writes a cursor
-after each wave, so a restart repeats one wave.
-
-[`docs/design-history.md`](docs/design-history.md) records what went wrong before the
-rules were written.
 
 ## Integrations
 
