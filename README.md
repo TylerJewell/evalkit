@@ -30,26 +30,26 @@ a corpus against one service, and it produces one report.
 <details open>
 <summary><b>Agentic metrics</b></summary>
 
-| Metric | Scores | Model calls |
-|---|---|---|
-| `ToolPermission` | Whether an agent called only the tools it was allowed to call | 0 |
-| `ToolCorrectness` | Whether the expected tools were called, by name, arguments or order | 0 |
-| `ArgumentCorrectness` | The share of tool calls made with arguments that serve the request | 1 per call |
-| `TaskCompletion` | How far what came back matches the task the scenario stated | 1 |
-| `StepEfficiency` | Whether the run reached the task without steps it did not need | 1 |
-| `PlanQuality` | Whether the plan the agent formed would achieve the task | 1 |
-| `PlanAdherence` | Whether the agent then did what it had planned | 1 |
+| Metric | Scores |
+|---|---|
+| `ToolPermission` | Whether an agent called only the tools it was allowed to call |
+| `ToolCorrectness` | Whether the expected tools were called, by name, arguments or order |
+| `ArgumentCorrectness` | The share of tool calls made with arguments that serve the request |
+| `TaskCompletion` | How far what came back matches the task the scenario stated |
+| `StepEfficiency` | Whether the run reached the task without steps it did not need |
+| `PlanQuality` | Whether the plan the agent formed would achieve the task |
+| `PlanAdherence` | Whether the agent then did what it had planned |
 
 </details>
 
 <details>
 <summary><b>Retrieval and turn-level metrics</b></summary>
 
-| Metric | Scores | Model calls |
-|---|---|---|
-| `TurnRelevancy` | The share of exchanges whose reply answered what was asked | 1 per exchange |
-| `TurnFaithfulness` | The share of claims in a reply that the retrieved passages support | 1 per claim |
-| `CitationFaithfulness` | Whether each citation points at a passage supporting the claim beside it | 1 per citation |
+| Metric | Scores |
+|---|---|
+| `TurnRelevancy` | The share of exchanges whose reply answered what was asked |
+| `TurnFaithfulness` | The share of claims in a reply that the retrieved passages support |
+| `CitationFaithfulness` | Whether each citation points at a passage supporting the claim beside it |
 
 </details>
 
