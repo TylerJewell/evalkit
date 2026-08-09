@@ -18,11 +18,14 @@ different assistant reads the same files.
 
 ```shell
 # Runs the core tests, which prove evalkit-core compiles with no Akka present.
-mvn -pl evalkit-core test
+# Built from the module: Maven reads every module POM in the aggregator before it
+# honours -pl, and evalkit-akka inherits an SDK parent that resolves only where
+# the Akka repository is configured.
+mvn -f evalkit-core/pom.xml test
 
 # Adds evalkit-akka. Needs an Akka SDK built from the feature/governance branch,
 # because the evaluation and ledger APIs are not released yet. The README's Build
-# section has the five steps. Continuous integration cannot run this.
+# section carries the procedure. Continuous integration skips this job.
 mvn install
 
 # Audit prose. Exit code 1 on any hit. Never pass conventions/prose.md itself:

@@ -132,10 +132,11 @@ OpenTelemetry.
 </dependency>
 ```
 
-### Reach your service
+### Implement the target
 
-`SystemUnderTest` is the whole seam. Put the service in a state, say the graded turn to
-it, and declare the states it can build.
+`SystemUnderTest` is the only interface a target implements. `prepare` puts the service
+into the state a scenario assumes. `submit` says the graded turn and returns what came
+back. `fixtures` names the states this target can build.
 
 ```java
 class ClaimsService implements SystemUnderTest {
@@ -161,6 +162,8 @@ class ClaimsService implements SystemUnderTest {
 exercises. Naming one settles the run by comparison, so this campaign calls no model.
 
 ```java
+var target = new ClaimsService();
+
 var corpus = List.of(
     new Scenario("refund-outside-window",
         Optional.of("REFUND-004"),

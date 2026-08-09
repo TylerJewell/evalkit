@@ -21,15 +21,20 @@ jobs:
           distribution: temurin
           cache: maven
 
+      # Built from the module and not with -pl from the root. Maven reads every
+      # module POM in the aggregator before it honours -pl, and evalkit-akka
+      # inherits an SDK parent that only resolves where the Akka repository is
+      # configured. Reading that POM failed this job, which tests the module
+      # that has no Akka in it at all.
       - name: Test
-        run: mvn -B -pl evalkit-core test
+        run: mvn -B -f evalkit-core/pom.xml test
 
       # A dependency-free core is what lets a service in any language be
       # evaluated by implementing one interface, so it is asserted rather than
       # inferred from a green build.
       - name: Assert the compile classpath carries nothing
         run: |
-          mvn -B -q -pl evalkit-core dependency:list -DincludeScope=compile \
+          mvn -B -q -f evalkit-core/pom.xml dependency:list -DincludeScope=compile \
             -DoutputFile=compile-deps.txt
           # A dependency line is a coordinate, so it carries colons. Matching on
           # indentation alone read the literal word "none" that dependency:list
