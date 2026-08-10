@@ -1,6 +1,6 @@
-# evalkit
+# Akka Evalkit
 
-**Evaluation for conversational AI, with a report a reviewer can act on.**
+**Evaluations for conversational AI.**
 
 [![Build](https://github.com/tylerjewell/evalkit/actions/workflows/build.yml/badge.svg)](https://github.com/tylerjewell/evalkit/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -10,34 +10,18 @@
 [Quickstart](#quickstart) · [Works with](#works-with) ·
 [Akka Verify](#akka-verify) · [Contributing](CONTRIBUTING.md)
 
-evalkit is an open-source evaluation library for teams shipping conversational AI. A team
-records the cases the service has to handle. evalkit runs those cases against the service
-and reports how it went, together with what the numbers are worth.
+Akka Evalkit is a simple-to-use, open-source LLM evaluation framework, for evaluating large-language model systems. It is similar to Pytest and DeepEval but specialized for unit testing LLM apps and agentic systems authored in Java. Evalkit incorporates the latest research to run evals via metrics such as G-Eval, task completion, answer relevancy, and  hallucinations, which uses LLM-as-a-judge and other NLP models that run locally on your machine.
 
-The audience is whoever has to stand behind the result: the engineer before a deploy, the
-risk reviewer before a launch, the auditor afterwards.
+With Evalkit, you can easily evaluate:
+* LLM apps end-to-end as black boxes
+* Complete agent trajectories across every decision and action
+* Individual agent steps such as LLM calls, tool use, retrieval, and sub-agent handoffs
 
-## Why teams use it
+Use these evaluations to determine the optimal models, prompts, and architecture to improve your AI quality, prevent prompt drifting, or even transition from OpenAI to Claude with confidence.
 
-**The report reaches a non-engineer.** Plain text states what was tested, what was found,
-and what the run cannot show, for a reader who does not know the service.
+Evalkit runs campaigns using Akka's durable execution engine, in order to support long-lived, long-process evaluations that cover millions of scenarios.  With durable execution campaigns, you can restart the evaluation engine and continue where the campaign left off.
 
-**The numbers do not overclaim.** A campaign mixes exact checks, computed scores and model
-judgements, and evalkit reports the three separately with no blended percentage.
-
-**A run that produced nothing is never counted as a failure.** A setup that did not
-complete and a judge that would not answer are each reported as their own result.
-
-**A large corpus stays affordable.** A case that names the requirement it exercises is
-settled without calling a model, so hundreds of cases run on every change.
-
-**Long runs survive a restart.** A campaign against a live service can run for hours and
-resume after a deploy.
-
-**A service in any language can be evaluated.** The service can run on Akka, behind an
-HTTP endpoint, or as a process in another language.
-
-## What it measures
+## Metrics and measurements
 
 <details open>
 <summary><b>Agentic behaviour</b></summary>
@@ -74,17 +58,7 @@ genuinely in doubt.
 
 </details>
 
-<details>
-<summary><b>Where the metrics come from</b></summary>
-
-Metrics are ported from [DeepEval](https://github.com/confident-ai/deepeval), Apache 2.0.
-Five metrics reproduce the expected values in DeepEval's own tests. The remaining metrics
-carry no upstream values, because DeepEval publishes none for them, and `NOTICE` records
-which claim each metric makes.
-
-</details>
-
-## What you get back
+## Reports
 
 ```
 Refund policy evaluation    run 2026-08-08T09:14Z    system claims-svc 4.2.0
@@ -92,9 +66,9 @@ Refund policy evaluation    run 2026-08-08T09:14Z    system claims-svc 4.2.0
 63 of 80 requirements behaved as specified, 9 did not, 4 were too borderline
 to call and 4 produced no result.
 
-                               checked by rules measured   judged  total
-  as specified                               52        0       11     63
-  did not                                     6        0        3      9
+                                           rules   measured judged  total
+  behaved as specified                       52        0       11     63
+  did not behave                              6        0        3      9
   undecided                                   -        -        4      4
   no result                                                            4
     never reached the question                                         3
@@ -102,14 +76,7 @@ to call and 4 produced no result.
     answer not assessed                                                0
 
 Model usage: 412,880 tokens, 388,140 in and 24,740 out.
-
-This evaluation kit can show that the system answered correctly from a stated
-starting point, but it doesn't prove that a user can reach that point unaided.
 ```
-
-The report will not print a single pass-rate percentage, a zero for a run nobody scored,
-or a token total the service could not measure. What it refuses to print, and why, is in
-[the design history](docs/design-history.md).
 
 ## Quickstart
 
