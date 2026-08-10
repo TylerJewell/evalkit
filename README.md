@@ -152,6 +152,131 @@ System.out.println(result.report().summary());
 Connecting a service takes one small adapter, which
 [the documentation](docs/site/evalkit/index.html.md) covers.
 
+## Where the eval code goes
+
+A campaign costs provider spend and runs for minutes. A source root at `src/eval/java`
+compiles under a Maven profile and stays off the build that runs on every commit.
+
+```
+<service>/
+├── pom.xml               build-helper adds src/eval under the eval profile
+├── specs/
+│   └── refund-policy/
+│       └── spec.md       acceptance criteria, the source of truth for spec nodes
+├── src/
+│   ├── main/java/…       the service
+│   ├── test/java/…       unit and integration tests, run on every commit
+│   └── eval/
+│       ├── java/com/acme/evalkit/
+│       │   ├── dataset/    ScenarioSource implementations, corpus loaders
+│       │   ├── runner/     SystemUnderTest adapter, fixtures, lane configuration
+│       │   ├── scorer/
+│       │   │   ├── deterministic/  node match, exact match, schema, tool-call assertions
+│       │   │   ├── heuristic/      similarity, JSON validity, latency and token budgets
+│       │   │   └── agentic/        judge agents, panels, calibration
+│       │   └── reports/    renderers and baseline comparison
+│       └── resources/
+│           ├── datasets/*.jsonl
+│           ├── rubrics/*.txt      versioned, never edited in place
+│           └── baselines/*.json   prior runs, for band movement
+└── target/evalkit/       rendered reports and transcripts, gitignored
+```
+
+`reports/` holds renderers. A rendered report is build output and lands in `target/`. A
+prior run kept so a new run can be compared against it is an input, and it lands in
+`resources/baselines/` under version control.
+
+```xml
+<profile>
+  <id>eval</id>
+  <build><plugins>
+    <plugin>
+      <groupId>org.codehaus.mojo</groupId>
+      <artifactId>build-helper-maven-plugin</artifactId>
+      <executions><execution>
+        <phase>generate-test-sources</phase>
+        <goals><goal>add-test-source</goal></goals>
+        <configuration><sources><source>src/eval/java</source></sources></configuration>
+      </execution></executions>
+    </plugin>
+  </plugins></build>
+</profile>
+```
+
+Campaigns run with `mvn -Peval verify`. The root is added as a test source, so the Akka
+TestKit and JUnit stay on the classpath without a second dependency block.
+
+An eval source root declares no endpoints and registers no components. The
+`domain`/`application`/`api` convention the evalkit library follows would produce four
+near-empty packages there, so the eval tree is organised by function.
+
+## Recording a corpus once
+
+A campaign spends provider money on the traffic it causes. `FileLedger` writes what each run
+recorded into `datasets/` as markdown, and a later campaign scores those files under a new
+rubric without reaching the service again.
+
+```java
+var corpus = FileLedger.open(Path.of("src/eval/resources/datasets"));
+result.completed().forEach(completed ->
+    completed.recording().ifPresent(recording -> corpus.save(recording.interaction())));
+```
+
+Each file holds one interaction, with the conversation in prose sections and the figures in
+list items.
+
+```markdown
+# Interaction
+
+- id: refund-outside-window-01
+- session: session-42
+- latency: PT1.4S
+
+## System
+
+You are a refund assistant.
+
+## User
+
+It has been 45 days. Can I still return it?
+
+## Model call
+
+### Thinking
+
+The order is 45 days old, which is outside the window.
+
+### Tool search_kb
+
+```arguments
+{"query":"return window"}
+```
+
+```response
+30-day return window
+```
+
+### Reply
+
+Our return window is 30 days, so this order sits outside it.
+
+### Tokens
+
+- input: 1204
+- output: 38
+```
+
+The `id` field is what identifies an interaction. A file renamed while a corpus is tidied
+still holds the interaction every recorded evaluation names. Two files claiming one id are
+refused when the corpus is opened.
+
+`RecordedInteractions` runs a campaign over that corpus, and reaches no service.
+
+```java
+var recorded = new RecordedInteractions(corpus, corpus.fixtures());
+var result = CampaignRunner.run(plan, recorded, router);
+```
+
 ## Works with
 
 **Akka services.** Campaigns run against real agents under the Akka TestKit, and a corpus
@@ -183,9 +308,11 @@ built on Akka and agents built elsewhere.
 
 ## Project status
 
-Version 0.1.0-SNAPSHOT, and nothing is published to Maven Central yet. `evalkit-core`
-builds and tests anywhere with Java 21. `evalkit-akka` currently needs an Akka SDK built
-by hand from an unreleased branch, which [CONTRIBUTING.md](CONTRIBUTING.md) covers.
+Version 0.1.0-SNAPSHOT, and nothing is published to Maven Central yet. Both modules need
+an Akka SDK built by hand from an unreleased branch, which
+[CONTRIBUTING.md](CONTRIBUTING.md) covers. `evalkit-core` reads
+`akka.javasdk.ledger.InteractionRecord` and extends `akka.javasdk.evaluation.Evaluator`,
+so Java 21 alone no longer builds it.
 
 ## Roadmap
 

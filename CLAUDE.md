@@ -24,15 +24,19 @@ When those conflict, the number loses.
 ## Module boundary
 
 ```
-evalkit-core   scoring, outcomes, reporting, scheduling   NO dependencies
-evalkit-akka   durable campaigns, model judge             Akka SDK
+evalkit-core   scoring, outcomes, reporting, evaluators   akka-javasdk
+evalkit-akka   durable campaigns, model judge             Akka SDK + TestKit
 ```
 
-`evalkit-core` has no dependencies and that is a constraint, not a coincidence. What a
-run may claim is a question about evidence, not infrastructure. **Adding a dependency
-to core requires an argument**, and "it would be convenient" is not one. A service in
-another language behind an HTTP port must be able to use it by implementing one
-interface.
+**A type comes from the SDK when it carries evidence. A type stays in evalkit when it
+holds an invariant the SDK does not enforce.** `InteractionRecord`, `ModelResponse`,
+`ToolCall` and `Failure` are the SDK's. `Verdict` pairs a 1-to-10 score with its `Band`
+and rejects a pair that disagrees. `RunOutcome` carries `NotReached`, which no ledger
+record represents, because an interaction that never happened was never recorded.
+
+Adding a dependency beyond `akka-javasdk` still requires an argument, and "it would be
+convenient" is not one. A service in another language behind an HTTP port is still
+evaluated by implementing `SystemUnderTest`, and the adapter implementing it is Java.
 
 The aggregator POM parents nothing: `evalkit-core` has no parent, `evalkit-akka`
 inherits `akka-javasdk-parent` because its TestKit needs the build that supplies.
@@ -104,10 +108,8 @@ the harness rather than the product, say so in prose instead.
 - Prefer the Edit tool over shell heredocs for anything containing regex or escapes —
   Java string escaping through Python heredocs has corrupted files repeatedly.
 - Build: `mvn install`, which needs a locally published `feature/governance` SDK — see the
-  README's Build section. Core alone: `mvn -pl evalkit-core test`, which needs none of that
-  and is the loop to work in.
-- **Verify that core still compiles with no Akka on the classpath** after touching it.
-  That property is the product.
+  README's Build section. Core alone: `mvn -f evalkit-core/pom.xml test`, which needs the
+  same SDK and is the loop to work in.
 
 ## Before publishing
 

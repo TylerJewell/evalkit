@@ -10,7 +10,7 @@ import io.akka.evalkit.domain.Scenario;
 import io.akka.evalkit.domain.Scorer;
 import io.akka.evalkit.domain.ScorerRouter;
 import io.akka.evalkit.domain.SystemUnderTest;
-import io.akka.evalkit.domain.ToolCall;
+import io.akka.evalkit.ledger.Interactions;
 import io.akka.evalkit.domain.Verdict;
 import io.akka.evalkit.metric.Judgement;
 import io.akka.evalkit.metric.Metric;
@@ -52,7 +52,7 @@ class RoutedCampaignTest {
         public Reply submit(String sessionId, String userText) {
             return Reply.from("the refund takes 30 days", "GenUC-17a")
                 .taking(java.time.Duration.ofMillis(240))
-                .calling(ToolCall.named("search_kb"), ToolCall.named("delete_account"));
+                .calling(Interactions.tool("search_kb"), Interactions.tool("delete_account"));
         }
 
         @Override
@@ -224,7 +224,7 @@ class RoutedCampaignTest {
         public RunOutcome score(Recording recording) {
             // The tool names come from the evidence the run recorded, which is the whole
             // reason a recording carries more than the four rubric fields.
-            return metric.outcome(metric.judge(recording.evidence().toolNames()));
+            return metric.outcome(metric.judge(recording.toolNames()));
         }
     }
 
@@ -261,8 +261,8 @@ class RoutedCampaignTest {
             new CampaignPlan("evidence", List.of(judged("j1")), Lanes.of(1), RUBRIC),
             new Target(), ScorerRouter.judgingEverything(capture));
 
-        assertThat(seen.get().evidence().latency()).contains(java.time.Duration.ofMillis(240));
-        assertThat(seen.get().evidence().toolNames())
+        assertThat(seen.get().latency()).contains(java.time.Duration.ofMillis(240));
+        assertThat(seen.get().toolNames())
             .containsExactly("search_kb", "delete_account");
         // A rubric interpolates four fields and none of them is a tool call, so the
         // judge's input is unchanged by anything added to the evidence.

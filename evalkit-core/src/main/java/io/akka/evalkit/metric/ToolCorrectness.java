@@ -1,6 +1,8 @@
 package io.akka.evalkit.metric;
 
-import io.akka.evalkit.domain.ToolCall;
+import akka.javasdk.ledger.ToolCall;
+import io.akka.evalkit.ledger.Arguments;
+import io.akka.evalkit.ledger.Interactions;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -65,7 +67,7 @@ public final class ToolCorrectness implements Metric {
 
     /** The tools this scenario expects, by name. */
     public static ToolCorrectness expecting(String... tools) {
-        return expecting(java.util.Arrays.stream(tools).map(ToolCall::named).toList());
+        return expecting(java.util.Arrays.stream(tools).map(Interactions::tool).toList());
     }
 
     /** The tools this scenario expects, with the arguments {@link #comparingArguments()} reads. */
@@ -157,8 +159,11 @@ public final class ToolCorrectness implements Metric {
         for (int i = 0; i < expected.size(); i++) {
             ToolCall want = expected.get(i);
             ToolCall got = called.get(i);
+            // Parsed on both sides, because two calls carrying the same members in a
+            // different order spell different JSON and agree on every argument.
             boolean same = want.name().equals(got.name())
-                && (!comparingArguments || want.arguments().equals(got.arguments()))
+                && (!comparingArguments
+                    || Arguments.parse(want.arguments()).equals(Arguments.parse(got.arguments())))
                 && (!comparingOutput || want.response().equals(got.response()));
             judgements.add(same ? Judgement.affirmed(want.name())
                 : Judgement.denied(want.name(), "position " + (i + 1) + " called " + got.name()));
@@ -250,7 +255,9 @@ public final class ToolCorrectness implements Metric {
         // A wrong return is a wrong call whatever the arguments were, so this is checked
         // before the arguments earn any partial credit.
         if (comparingOutput && !want.response().equals(got.response())) return 0.0;
-        return comparingArguments ? compare(want.arguments(), got.arguments()) : 1.0;
+        return comparingArguments
+            ? compare(Arguments.parse(want.arguments()), Arguments.parse(got.arguments()))
+            : 1.0;
     }
 
     /**

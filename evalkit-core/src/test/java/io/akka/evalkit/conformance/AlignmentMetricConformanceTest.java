@@ -1,11 +1,10 @@
 package io.akka.evalkit.conformance;
 
-import io.akka.evalkit.domain.Evidence;
-import io.akka.evalkit.domain.ModelCall;
 import io.akka.evalkit.domain.Recording;
 import io.akka.evalkit.domain.RunOutcome;
-import io.akka.evalkit.domain.ToolCall;
-import io.akka.evalkit.domain.Tokens;
+import akka.javasdk.ledger.ModelResponse;
+import akka.javasdk.ledger.ToolCall;
+import io.akka.evalkit.ledger.Interactions;
 import io.akka.evalkit.domain.Transcript;
 import io.akka.evalkit.metric.AlignmentMetric;
 import io.akka.evalkit.metric.PlanAdherence;
@@ -43,16 +42,34 @@ class AlignmentMetricConformanceTest {
             "Booked for 8pm.", "Books a table for the evening");
     }
 
+    /**
+     * A recording of a run that called these tools and nothing else.
+     *
+     * <p>An interaction record keeps a tool call under the model response that made it, so a
+     * run with a tool call has a model call to hang it on and a run with neither records no
+     * model responses at all.
+     */
     private static Recording recording(ToolCall... called) {
-        return new Recording(transcript(), new Evidence(Optional.empty(), Optional.empty(),
-            List.of(called), Tokens.NONE));
+        if (called.length == 0) {
+            return new Recording(transcript(),
+                Interactions.of("", "", "book me a table", List.of(),
+                    Optional.empty(), Optional.empty()),
+                Optional.empty());
+        }
+        return over(Interactions.calling(Interactions.response("Booked for 8pm."), called));
     }
 
     /** A recording whose model calls carried reasoning, which is where a plan lives. */
     private static Recording reasoning(String thinking, ToolCall... called) {
+        return over(Interactions.thinking(
+            Interactions.calling(Interactions.response("Booked for 8pm."), called), thinking));
+    }
+
+    private static Recording over(ModelResponse call) {
         return new Recording(transcript(),
-            new Evidence(Optional.empty(), Optional.empty(), List.of(called), Tokens.NONE)
-                .over(List.of(ModelCall.of("Booked for 8pm.").thinking(thinking))));
+            Interactions.of("", "", "book me a table", List.of(call),
+                Optional.empty(), Optional.empty()),
+            Optional.empty());
     }
 
     private static AlignmentMetric.Assessor answering(String reply) {
@@ -160,9 +177,11 @@ class AlignmentMetricConformanceTest {
             new StepEfficiency(question -> {
                 asked.set(question);
                 return "SCORE: 0.5\nREASON: two searches where one would do";
-            }).score(recording(ToolCall.named("search"), ToolCall.named("book")));
+            }).score(recording(Interactions.tool("search"), Interactions.tool("book")));
 
-            assertThat(asked.get().against()).isEqualTo("tool: search\ntool: book");
+            // The model call is a step. A recorded tool call hangs off the response that
+            // made it, so a run that called a tool made a model call to call it from.
+            assertThat(asked.get().against()).isEqualTo("model call\ntool: search\ntool: book");
         }
 
         @Test
@@ -174,10 +193,10 @@ class AlignmentMetricConformanceTest {
                 return "SCORE: 1\nREASON: followed";
             })
                 .readingPlanFrom(recording -> Optional.of("search, then book"))
-                .score(recording(ToolCall.named("search")));
+                .score(recording(Interactions.tool("search")));
 
             assertThat(asked.get().task()).contains("Books a table").contains("search, then book");
-            assertThat(asked.get().against()).isEqualTo("tool: search");
+            assertThat(asked.get().against()).isEqualTo("model call\ntool: search");
         }
     }
 
@@ -204,7 +223,7 @@ class AlignmentMetricConformanceTest {
             // The pair that makes the case above worth having. Without it, a metric that
             // always returned Measured would pass the test above just as well.
             var outcome = new PlanQuality(answering("SCORE: 0.9\nREASON: unreachable"))
-                .score(recording(ToolCall.named("search")));
+                .score(recording(Interactions.tool("search")));
 
             assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
         }
@@ -213,7 +232,7 @@ class AlignmentMetricConformanceTest {
         @DisplayName("plan adherence reads the recorded reasoning too")
         void adherenceReadsReasoning() {
             var outcome = new PlanAdherence(answering("SCORE: 1\nREASON: followed"))
-                .score(reasoning("Search, then book.", ToolCall.named("search")));
+                .score(reasoning("Search, then book.", Interactions.tool("search")));
 
             assertThat(outcome).isInstanceOf(RunOutcome.Measured.class);
         }
@@ -255,7 +274,7 @@ class AlignmentMetricConformanceTest {
         void noPlanIsAbsentEvidence() {
             var metric = new PlanQuality(answering("SCORE: 1\nREASON: unreachable"));
 
-            var outcome = metric.score(recording(ToolCall.named("search")));
+            var outcome = metric.score(recording(Interactions.tool("search")));
 
             assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
             assertThat(outcome.isEvidence()).isFalse();
@@ -297,7 +316,7 @@ class AlignmentMetricConformanceTest {
                 .readingPlanFrom(recording -> Optional.of("search, then book"))
                 .score(recording());
             var withoutPlan = new PlanAdherence(answering("SCORE: 1\nREASON: unreachable"))
-                .score(recording(ToolCall.named("search")));
+                .score(recording(Interactions.tool("search")));
 
             assertThat(withoutSteps).isInstanceOf(RunOutcome.Unscoreable.class);
             assertThat(withoutPlan).isInstanceOf(RunOutcome.Unscoreable.class);

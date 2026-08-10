@@ -29,7 +29,7 @@ public final class ScenarioRunner {
             }
 
             public java.util.Optional<String> node() {
-                return recording.evidence().node();
+                return recording.node();
             }
         }
 
@@ -70,11 +70,22 @@ public final class ScenarioRunner {
         var graded = "User: " + scenario.gradedTurn() + "\n\nAgent: " + answer;
         var transcript = new Transcript(
             scenario.id(), ready.historySoFar(), graded, answer, scenario.expectedOutcome());
-        // Everything the run observed beyond the four rubric fields travels alongside the
-        // transcript, so a metric reads it and a judge's input stays byte-identical.
-        var evidence = new Evidence(reply.node(), reply.latency(), reply.toolsCalled(),
-            reply.modelCalls(), reply.systemMessage(), reply.failure(), Tokens.NONE);
-        return new Execution.Produced(new Recording(transcript, evidence));
+        // Everything the run observed beyond the four rubric fields travels in the
+        // interaction record, so a metric reads it and a judge's input stays byte-identical.
+        // A tool call the target reported without a model call around it is attached to a
+        // call carrying the answer, because the record holds tool calls under the response
+        // that made them.
+        var calls = reply.modelCalls().isEmpty() && !reply.toolsCalled().isEmpty()
+            ? java.util.List.of(io.akka.evalkit.ledger.Interactions.calling(
+                io.akka.evalkit.ledger.Interactions.response(answer),
+                reply.toolsCalled().toArray(new akka.javasdk.ledger.ToolCall[0])))
+            : reply.modelCalls();
+        var interaction = io.akka.evalkit.ledger.Interactions.identified(
+            io.akka.evalkit.ledger.Interactions.of(
+                ready.sessionId(), reply.systemMessage(), scenario.gradedTurn(), calls,
+                reply.latency(), reply.failure()),
+            scenario.id());
+        return new Execution.Produced(new Recording(transcript, interaction, reply.node()));
     }
 
     /**

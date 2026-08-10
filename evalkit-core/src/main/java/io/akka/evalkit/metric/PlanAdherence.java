@@ -44,7 +44,7 @@ public final class PlanAdherence extends AlignmentMetric {
     @Override
     protected Optional<Question> ask(Recording recording) {
         String task = recording.transcript().expectedOutcome();
-        String steps = StepEfficiency.render(recording.evidence());
+        String steps = StepEfficiency.render(recording);
         if (task.isBlank() || steps.isEmpty()) return Optional.empty();
 
         return plans.apply(recording)

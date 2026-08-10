@@ -153,7 +153,7 @@ public abstract sealed class AlignmentMetric implements Scorer
      * that the agent did not plan, and the metrics reading this report it as such.
      */
     static Optional<String> recordedPlan(Recording recording) {
-        String reasoning = recording.evidence().thinking();
+        String reasoning = recording.thinking();
         return reasoning.isBlank() ? Optional.empty() : Optional.of(reasoning);
     }
 }

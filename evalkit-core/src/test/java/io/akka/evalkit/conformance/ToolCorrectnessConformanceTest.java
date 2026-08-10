@@ -1,6 +1,7 @@
 package io.akka.evalkit.conformance;
 
-import io.akka.evalkit.domain.ToolCall;
+import akka.javasdk.ledger.ToolCall;
+import io.akka.evalkit.ledger.Interactions;
 import io.akka.evalkit.metric.ToolCorrectness;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,11 +28,11 @@ class ToolCorrectnessConformanceTest {
 
     private static double score(ToolCorrectness metric, String... called) {
         return metric.aggregate(metric.judge(java.util.Arrays.stream(called)
-            .map(ToolCall::named).toList()));
+            .map(Interactions::tool).toList()));
     }
 
     private static ToolCall call(String name, String key, String value) {
-        return new ToolCall(name, Map.of(key, value));
+        return Interactions.tool(name, Map.of(key, value));
     }
 
     @Nested
@@ -51,7 +52,7 @@ class ToolCorrectnessConformanceTest {
         @DisplayName("one expected tool of two scores 0.5 and names the one missed")
         void oneExpectedToolMissed() {
             var metric = ToolCorrectness.expecting("search_kb", "reply");
-            var judgements = metric.judge(List.of(ToolCall.named("search_kb")));
+            var judgements = metric.judge(List.of(Interactions.tool("search_kb")));
 
             assertThat(metric.aggregate(judgements)).isEqualTo(0.5);
             assertThat(ToolCorrectness.missing(judgements)).containsExactly("reply");
@@ -127,15 +128,15 @@ class ToolCorrectnessConformanceTest {
         @DisplayName("matching arguments scores the share of keys that agree")
         void argumentsAgreeInPart() {
             var metric = ToolCorrectness.expecting(
-                List.of(new ToolCall("search", Map.of("query", "refund", "limit", "5"))))
+                List.of(Interactions.tool("search", Map.of("query", "refund", "limit", "5"))))
                 .comparingArguments();
 
             var bothRight = metric.judge(List.of(
-                new ToolCall("search", Map.of("query", "refund", "limit", "5"))));
+                Interactions.tool("search", Map.of("query", "refund", "limit", "5"))));
             var oneRight = metric.judge(List.of(
-                new ToolCall("search", Map.of("query", "refund", "limit", "50"))));
+                Interactions.tool("search", Map.of("query", "refund", "limit", "50"))));
             var noneRight = metric.judge(List.of(
-                new ToolCall("search", Map.of("query", "cancel", "limit", "50"))));
+                Interactions.tool("search", Map.of("query", "cancel", "limit", "50"))));
 
             assertThat(metric.aggregate(bothRight)).isEqualTo(1.0);
             assertThat(metric.aggregate(oneRight)).isEqualTo(0.5);
@@ -146,12 +147,12 @@ class ToolCorrectnessConformanceTest {
         @DisplayName("an argument key the call never sent counts against the share")
         void argumentsMissingAKey() {
             var metric = ToolCorrectness.expecting(
-                List.of(new ToolCall("search", Map.of("query", "refund"))))
+                List.of(Interactions.tool("search", Map.of("query", "refund"))))
                 .comparingArguments();
 
             // Keys are counted over the union, so an extra argument dilutes a right one.
             assertThat(metric.aggregate(metric.judge(List.of(
-                new ToolCall("search", Map.of("query", "refund", "locale", "en"))))))
+                Interactions.tool("search", Map.of("query", "refund", "locale", "en"))))))
                 .isEqualTo(0.5);
         }
 
@@ -159,11 +160,11 @@ class ToolCorrectnessConformanceTest {
         @DisplayName("exact match compares arguments whole, with no partial credit")
         void exactMatchArgumentsAreAllOrNothing() {
             var metric = ToolCorrectness.expecting(
-                List.of(new ToolCall("search", Map.of("query", "refund", "limit", "5"))))
+                List.of(Interactions.tool("search", Map.of("query", "refund", "limit", "5"))))
                 .exactly().comparingArguments();
 
             assertThat(metric.aggregate(metric.judge(List.of(
-                new ToolCall("search", Map.of("query", "refund", "limit", "50"))))))
+                Interactions.tool("search", Map.of("query", "refund", "limit", "50"))))))
                 .isEqualTo(0.0);
         }
 
@@ -197,11 +198,11 @@ class ToolCorrectnessConformanceTest {
     class ComparingOutput {
 
         private static final List<ToolCall> EXPECTED =
-            List.of(new ToolCall("", "search", Map.of("query", "tables"), "3 tables free"));
+            List.of(Interactions.returning(Interactions.tool("search", Map.of("query", "tables")), "3 tables free"));
 
         private static double scoreAgainst(ToolCorrectness metric, String response) {
             return metric.aggregate(metric.judge(List.of(
-                new ToolCall("", "search", Map.of("query", "tables"), response))));
+                Interactions.returning(Interactions.tool("search", Map.of("query", "tables")), response))));
         }
 
         @Test
@@ -265,7 +266,7 @@ class ToolCorrectnessConformanceTest {
         @DisplayName("the score depends on the judgements alone")
         void aggregateIsPure() {
             var metric = ToolCorrectness.expecting("a", "b");
-            var judgements = metric.judge(List.of(ToolCall.named("a")));
+            var judgements = metric.judge(List.of(Interactions.tool("a")));
 
             assertThat(metric.aggregate(judgements)).isEqualTo(metric.aggregate(judgements));
             assertThat(metric.aggregate(judgements)).isEqualTo(0.5);
@@ -284,11 +285,11 @@ class ToolCorrectnessConformanceTest {
         @DisplayName("a partly matching call is affirmed only when it matches whole")
         void partialCreditIsNotAnAffirmation() {
             var metric = ToolCorrectness.expecting(
-                List.of(new ToolCall("search", Map.of("query", "refund", "limit", "5"))))
+                List.of(Interactions.tool("search", Map.of("query", "refund", "limit", "5"))))
                 .comparingArguments();
 
             var judgement = metric.judge(List.of(
-                new ToolCall("search", Map.of("query", "refund", "limit", "50")))).get(0);
+                Interactions.tool("search", Map.of("query", "refund", "limit", "50")))).get(0);
 
             assertThat(judgement.credit()).isEqualTo(0.5);
             assertThat(judgement.affirmed()).isFalse();

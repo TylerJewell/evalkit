@@ -1,9 +1,9 @@
 package io.akka.evalkit.metric;
 
-import io.akka.evalkit.domain.Evidence;
-import io.akka.evalkit.domain.ModelCall;
+import akka.javasdk.ledger.ModelResponse;
+import akka.javasdk.ledger.ToolCall;
 import io.akka.evalkit.domain.Recording;
-import io.akka.evalkit.domain.ToolCall;
+import io.akka.evalkit.ledger.Arguments;
 
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -43,7 +43,7 @@ public final class StepEfficiency extends AlignmentMetric {
     @Override
     protected Optional<Question> ask(Recording recording) {
         String task = recording.transcript().expectedOutcome();
-        String steps = render(recording.evidence());
+        String steps = render(recording);
         return task.isBlank() || steps.isEmpty() ? Optional.empty()
             : Optional.of(new Question("task against steps", task, steps));
     }
@@ -59,21 +59,22 @@ public final class StepEfficiency extends AlignmentMetric {
      * <p>Model calls first and tool calls after, each in the order the run made them. See the
      * note on this class about what that ordering does and does not establish.
      */
-    static String render(Evidence evidence) {
+    static String render(Recording recording) {
         return Stream.concat(
-                evidence.modelCalls().stream().map(StepEfficiency::describe),
-                evidence.toolsCalled().stream().map(StepEfficiency::describe))
+                recording.modelCalls().stream().map(StepEfficiency::describe),
+                recording.toolsCalled().stream().map(StepEfficiency::describe))
             .collect(Collectors.joining("\n"));
     }
 
-    private static String describe(ModelCall call) {
-        return call.statesThinking()
+    private static String describe(ModelResponse call) {
+        return call.thinking() != null && !call.thinking().isEmpty()
             ? "model call, reasoning: " + call.thinking()
             : "model call";
     }
 
     private static String describe(ToolCall call) {
-        return call.arguments().isEmpty() ? "tool: " + call.name()
-            : "tool: " + call.name() + " " + new java.util.TreeMap<>(call.arguments());
+        var arguments = Arguments.read(call.arguments()).orElse(java.util.Map.of());
+        return arguments.isEmpty() ? "tool: " + call.name()
+            : "tool: " + call.name() + " " + new java.util.TreeMap<>(arguments);
     }
 }

@@ -147,22 +147,32 @@ class ConformanceCoverageTest {
      * empty for that reason.
      */
     private static Set<String> metricIdsOnClasspath() {
-        var url = Metric.class.getClassLoader().getResource("io/akka/evalkit/metric");
-        if (url == null || !"file".equals(url.getProtocol())) return Set.of();
-        try (Stream<Path> files = Files.list(Path.of(url.toURI()))) {
-            return files
-                .map(path -> path.getFileName().toString())
-                .filter(name -> name.endsWith(".class") && !name.contains("$"))
-                .map(name -> "io.akka.evalkit.metric." + name.substring(0, name.length() - 6))
-                .map(ConformanceCoverageTest::load)
-                .filter(ConformanceCoverageTest::isScorable)
-                .map(ConformanceCoverageTest::metricIdOf)
-                .collect(java.util.stream.Collectors.toCollection(TreeSet::new));
+        // Every directory carrying the package, not the first. A test class sharing the
+        // package puts target/test-classes ahead of target/classes, and reading only the
+        // first found one metric-free directory and reported an empty classpath.
+        var found = new TreeSet<String>();
+        try {
+            var urls = Metric.class.getClassLoader().getResources("io/akka/evalkit/metric");
+            while (urls.hasMoreElements()) {
+                var url = urls.nextElement();
+                if (!"file".equals(url.getProtocol())) continue;
+                try (Stream<Path> files = Files.list(Path.of(url.toURI()))) {
+                    files.map(path -> path.getFileName().toString())
+                        .filter(name -> name.endsWith(".class") && !name.contains("$"))
+                        .map(name -> "io.akka.evalkit.metric."
+                            + name.substring(0, name.length() - 6))
+                        .map(ConformanceCoverageTest::load)
+                        .filter(ConformanceCoverageTest::isScorable)
+                        .map(ConformanceCoverageTest::metricIdOf)
+                        .forEach(found::add);
+                }
+            }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } catch (URISyntaxException e) {
             throw new IllegalStateException("could not read the metric package", e);
         }
+        return found;
     }
 
     /**

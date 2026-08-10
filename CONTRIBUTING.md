@@ -31,16 +31,16 @@ metric is most useful with the judgements that produced the score, because
 ## Before you open a pull request
 
 ```shell
-mvn -f evalkit-core/pom.xml test                         # no credentials needed
+mvn -f evalkit-core/pom.xml test                         # needs the Akka repository
 python tools/audit-prose.py docs/specs/*.html docs/site/evalkit/*.html.md README.md
 ```
 
 Build `evalkit-core` from its own POM. Maven reads every module POM in the
 aggregator before it honours `-pl`, and `evalkit-akka` inherits an SDK parent
-that resolves only where the Akka repository is configured.
+whose plugins pull more than the core tests need.
 
-A change confined to `evalkit-core` needs nothing else, and continuous
-integration covers it on every pull request.
+`evalkit-core` depends on `akka-javasdk`, so a pull request from a fork builds
+neither module until the SDK ships.
 
 ### Building evalkit-akka
 
@@ -74,11 +74,11 @@ bans, and it carries a marker that opts it out.
 
 ## What a change needs
 
-**`evalkit-core` declares no dependencies.** A service written in another
-language, reachable over a port, is evaluated by implementing one interface.
-Adding a dependency there requires an argument, and convenience is not one.
-After touching that module, run `mvn -pl evalkit-core test` and confirm it
-compiles with no Akka on the classpath.
+**`evalkit-core` depends on `akka-javasdk` and on nothing else.** A type comes
+from the SDK when it carries evidence, and a type stays in evalkit when it holds
+an invariant the SDK does not enforce. Adding a third dependency requires an
+argument, and convenience is not one. A service written in another language,
+reachable over a port, is evaluated by implementing `SystemUnderTest`.
 
 **A new outcome variant is a compile error everywhere it matters.** `RunOutcome`
 is sealed and every switch over it is exhaustive with no `default`. Adding a

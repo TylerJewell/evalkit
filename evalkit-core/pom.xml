@@ -8,7 +8,7 @@
     <artifactId>evalkit-core</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <name>evalkit-core</name>
-    <description>Scoring, outcomes and reporting. No runtime dependency of any kind.</description>
+    <description>Scoring, outcomes and reporting, over the Akka ledger's interaction record.</description>
 
     <url>https://github.com/tylerjewell/evalkit</url>
 
@@ -39,17 +39,30 @@
     </issueManagement>
 
     <!--
-      No dependencies, and that is the point rather than an accident. What a run
-      may claim, how an outcome is classified and what the report refuses to say
-      are decisions about evidence, not about infrastructure. Adding a dependency
-      here should require an argument.
+      akka-javasdk supplies the evidence types. A scorer reads
+      akka.javasdk.ledger.InteractionRecord and an evaluator extends
+      akka.javasdk.evaluation.Evaluator, so a score this kit produced and a score
+      read back from the ledger describe the same interaction. The types evalkit
+      keeps are the ones holding an invariant the SDK does not enforce: Verdict
+      pairs a 1-to-10 score with its Band, and RunOutcome carries NotReached,
+      which no ledger record can represent.
+
+      No parent. evalkit-akka inherits akka-javasdk-parent because its TestKit
+      needs the build that supplies; this module declares the dependency and
+      nothing else.
     -->
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <akka.sdk.version>3.6.0-59-7321c44b-dev-SNAPSHOT</akka.sdk.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>io.akka</groupId>
+            <artifactId>akka-javasdk</artifactId>
+            <version>${akka.sdk.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

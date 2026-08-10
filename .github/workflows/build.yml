@@ -15,49 +15,69 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # evalkit-core depends on akka-javasdk, which is not published to Maven
+      # Central. Both modules now need the per-account repository the Akka
+      # Specify plugin writes into ~/.m2/settings.xml, so a pull request from a
+      # fork builds neither until the SDK ships.
+      #
+      # Checked before Java is installed, because setting up the Maven cache in
+      # a job that goes on to skip its build warns that the path it was told to
+      # cache does not exist.
+      - name: Check for Akka repository access
+        id: access
+        env:
+          AKKA_MAVEN_REPO_URL: ${{ secrets.AKKA_MAVEN_REPO_URL }}
+        run: |
+          if [ -n "$AKKA_MAVEN_REPO_URL" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AKKA_MAVEN_REPO_URL is not set, so evalkit-core was not built."
+          fi
+
       - uses: actions/setup-java@v5
+        if: steps.access.outputs.available == 'true'
         with:
           java-version: '21'
           distribution: temurin
           cache: maven
 
+      - name: Configure the Akka repository
+        if: steps.access.outputs.available == 'true'
+        env:
+          AKKA_MAVEN_REPO_URL: ${{ secrets.AKKA_MAVEN_REPO_URL }}
+        run: |
+          mkdir -p ~/.m2
+          # Written by the shell rather than by an echo of the URL, so the
+          # credential in the path never reaches the log.
+          cat > ~/.m2/settings.xml <<'XML'
+          <settings>
+            <profiles>
+              <profile>
+                <id>akka</id>
+                <repositories>
+                  <repository><id>akka</id><url>AKKA_URL</url></repository>
+                </repositories>
+                <pluginRepositories>
+                  <pluginRepository><id>akka</id><url>AKKA_URL</url></pluginRepository>
+                </pluginRepositories>
+              </profile>
+            </profiles>
+            <activeProfiles><activeProfile>akka</activeProfile></activeProfiles>
+          </settings>
+          XML
+          python3 - <<'PY'
+          import os, pathlib
+          p = pathlib.Path.home() / '.m2' / 'settings.xml'
+          p.write_text(p.read_text().replace('AKKA_URL', os.environ['AKKA_MAVEN_REPO_URL']))
+          PY
+
       # Built from the module and not with -pl from the root. Maven reads every
       # module POM in the aggregator before it honours -pl, and evalkit-akka
-      # inherits an SDK parent that only resolves where the Akka repository is
-      # configured. Reading that POM failed this job, which tests the module
-      # that has no Akka in it at all.
+      # inherits an SDK parent whose plugins pull more than this job needs.
       - name: Test
+        if: steps.access.outputs.available == 'true'
         run: mvn -B -f evalkit-core/pom.xml test
-
-      # A dependency-free core is what lets a service in any language be
-      # evaluated by implementing one interface, so it is asserted rather than
-      # inferred from a green build.
-      - name: Assert the compile classpath carries nothing
-        run: |
-          mvn -B -q -f evalkit-core/pom.xml dependency:list -DincludeScope=compile \
-            -DoutputFile=compile-deps.txt
-          # A dependency line is a coordinate, so it carries colons. Matching on
-          # indentation alone read the literal word "none" that dependency:list
-          # prints for an empty list, and failed the build on the healthy case.
-          if grep -qE '^ +[^ ]+:[^ ]+:[^ ]+:' evalkit-core/compile-deps.txt; then
-            echo "evalkit-core has gained a compile dependency:"
-            cat evalkit-core/compile-deps.txt
-            exit 1
-          fi
-
-      # The check above can only pass by finding nothing, so it ships with a
-      # case it is known to catch. Adding a real dependency to evalkit-core has
-      # to fail the build, and this proves the pattern that decides it does.
-      - name: Prove the assertion catches a dependency
-        run: |
-          printf '\nThe following files have been resolved:\n   none\n\n' > clean.txt
-          printf '\nThe following files have been resolved:\n   org.slf4j:slf4j-api:jar:2.0.13:compile\n\n' > dirty.txt
-          if grep -qE '^ +[^ ]+:[^ ]+:[^ ]+:' clean.txt; then
-            echo "the pattern rejects an empty dependency list"; exit 1
-          fi
-          if ! grep -qE '^ +[^ ]+:[^ ]+:[^ ]+:' dirty.txt; then
-            echo "the pattern misses a real dependency"; exit 1
-          fi
 
   akka:
     name: evalkit-akka

@@ -1,6 +1,7 @@
 package io.akka.evalkit.domain;
 
 import io.akka.evalkit.application.CampaignRunner;
+import io.akka.evalkit.ledger.Interactions;
 import io.akka.evalkit.metric.Judgement;
 import io.akka.evalkit.metric.MetricRef;
 import io.akka.evalkit.metric.ToolPermission;
@@ -46,7 +47,7 @@ class OutcomeCoverageTest {
         public Reply submit(String sessionId, String userText) {
             if (userText.equals("silence")) return Reply.of("");
             return Reply.from("the refund takes 30 days", "GenUC-17a")
-                .calling(ToolCall.named("search_kb"), ToolCall.named("delete_account"));
+                .calling(Interactions.tool("search_kb"), Interactions.tool("delete_account"));
         }
 
         @Override
@@ -64,7 +65,7 @@ class OutcomeCoverageTest {
     private static CampaignRunner.Result runEveryVariant() {
         var toolPolicy = ToolPermission.allowing("search_kb");
         Scorer tools = recording ->
-            toolPolicy.outcome(toolPolicy.judge(recording.evidence().toolNames()));
+            toolPolicy.outcome(toolPolicy.judge(recording.toolNames()));
         // A scorer that ran and declined, which is a fact about the transcript.
         Scorer declining = recording ->
             new RunOutcome.Unscoreable("the content filter would not score " + recording.scenarioName());

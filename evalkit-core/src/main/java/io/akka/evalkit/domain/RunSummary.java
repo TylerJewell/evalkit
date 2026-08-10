@@ -111,10 +111,10 @@ public final class RunSummary {
          */
         public static Spend over(java.util.List<Recording> recordings, Tokens judge) {
             Tokens system = recordings.stream()
-                .map(recording -> recording.evidence().spend())
+                .map(Recording::spend)
                 .reduce(Tokens.NONE, Tokens::plus);
             int unaccounted = recordings.stream()
-                .mapToInt(recording -> recording.evidence().callsMissingUsage())
+                .mapToInt(Recording::callsMissingUsage)
                 .sum();
             return new Spend(system, judge, unaccounted);
         }

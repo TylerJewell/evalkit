@@ -1,5 +1,9 @@
 package io.akka.evalkit.domain;
 
+import akka.javasdk.ledger.Failure;
+import akka.javasdk.ledger.ModelResponse;
+import akka.javasdk.ledger.ToolCall;
+
 import java.util.Map;
 
 /**
@@ -52,7 +56,7 @@ public interface SystemUnderTest {
     record Reply(String text, java.util.Optional<String> node,
                  java.util.Optional<java.time.Duration> latency,
                  java.util.List<ToolCall> toolsCalled,
-                 java.util.List<ModelCall> modelCalls,
+                 java.util.List<ModelResponse> modelCalls,
                  String systemMessage,
                  java.util.Optional<Failure> failure) {
 
@@ -107,7 +111,7 @@ public interface SystemUnderTest {
          * they carried is what a metric about planning reads. A target that reports only its
          * final answer leaves this empty, which those metrics treat as an absence.
          */
-        public Reply over(ModelCall... calls) {
+        public Reply over(ModelResponse... calls) {
             return new Reply(text, node, latency, toolsCalled, java.util.List.of(calls),
                 systemMessage, failure);
         }

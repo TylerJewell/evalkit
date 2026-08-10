@@ -66,6 +66,34 @@ public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rub
         return reasons.isEmpty() ? new Check.Ready(this) : new Check.Refused(reasons);
     }
 
+    /**
+     * Pre-flight, including the evaluators the run expects to be bound.
+     *
+     * <p>An evaluator binds to an agent through configuration rather than through code, so a
+     * name is only checked when something looks it up. A binding naming a component nobody
+     * registered scores nothing and reports nothing, which reads as an agent that behaved.
+     *
+     * @param configured the evaluator component ids named in configuration
+     * @param registered the evaluator component ids the service registered
+     */
+    public Check check(SystemUnderTest target, List<String> configured, List<String> registered) {
+        var checked = check(target);
+        var reasons = new java.util.ArrayList<String>(
+            checked instanceof Check.Refused refused ? refused.reasons() : List.of());
+
+        var unregistered = configured.stream()
+            .filter(id -> !registered.contains(id))
+            .distinct()
+            .sorted()
+            .toList();
+        if (!unregistered.isEmpty()) {
+            reasons.add("no evaluator is registered for " + unregistered
+                + "; those bindings would score nothing and report nothing");
+        }
+
+        return reasons.isEmpty() ? new Check.Ready(this) : new Check.Refused(reasons);
+    }
+
     /** Scenarios that need a model to grade them. */
     public int judged() {
         return (int) scenarios.stream().filter(Scenario::needsJudge).count();
