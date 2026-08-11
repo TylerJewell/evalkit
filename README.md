@@ -473,11 +473,31 @@ id.
 | refund-14d | specification node | failed | ----- | 0 of 5 |
 ```
 
-One requirement per line and a stable order means `diff` reads it the way a code review
-reads a patch. `akka eval diff` compares the rows and reports the run's own details
-separately, because the id, the timestamp and the token counts differ on every run and
-would bury three lines of signal under eight of noise. Two runs scored under different
-rubric or policy versions are refused.
+One requirement to a line keeps the file readable and greppable. `akka eval diff` reads
+those rows and prints what moved.
+
+```
+Against the run on 2026-08-04
+  --------------------------------------------------------------------------
+  requirement            was               now               change
+  --------------------------------------------------------------------------
+  duplicate-claim        varied  1 of 5    failed  0 of 5    worse
+  escalation-path        passed  5 of 5    varied  4 of 5    worse
+  no-fee-claim           failed  0 of 5    passed  5 of 5    better
+  refund-30d             varied  2 of 5    varied  4 of 5    better
+  receipt-per-airline    -                 failed  0 of 5    new
+  step-count-3           failed  0 of 5    -                 gone
+  --------------------------------------------------------------------------
+
+  62 requirements are unchanged. Both runs used rubric scenario-judge v3 and
+  policy refund-desk v3.
+```
+
+Six rows out of sixty-eight, because a requirement that did the same thing twice has
+nothing to report. `refund-30d` holds its verdict and doubles its passes, which a
+comparison of verdicts alone drops. Worse sorts first, so a long list never hides a
+regression at the bottom. The id, the timestamp and the token counts differ on
+every run and stay out of it. Two runs scored under different rubric or policy versions are refused.
 
 ### Exit codes
 
