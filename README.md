@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 
-[Documentation](docs/site/evalkit/) · [What a run reports](#what-a-run-reports) ·
+[Documentation](docs/site/evalkit/) · [Reporting sample](#reporting-sample) ·
 [Metrics](#metrics-and-measurements) · [Quickstart](#quickstart) ·
 [Works with](#works-with) · [Akka Verify](#akka-verify) ·
 [Contributing](CONTRIBUTING.md)
@@ -22,30 +22,31 @@ Use these evaluations to determine the optimal models, prompts, and architecture
 
 Evalkit runs campaigns using Akka's durable execution engine, in order to support long-lived, long-process evaluations that cover millions of scenarios.  With durable execution campaigns, you can restart the evaluation engine and continue where the campaign left off.
 
-## What a run reports
-
-Plain text, 80 columns, written for someone who has to act on the result and does not
-know how the system is built. This is a campaign that ran each requirement once.
+## Reporting sample
 
 ```
 Refund policy evaluation      run 2026-08-11T09:14Z    system claims-svc 4.2.0
-policy refund-desk v3     rubric scenario-judge v3    80 requirements, 80 runs
+policy refund-desk v3    rubric scenario-judge v3    80 requirements, 400 runs
 record  target/evalkit/refund-policy-20260811T0914Z.jsonl
 
 1  What the run found
 ---------------------
 
-  passed            ################################           63
-  failed            ####                                        9
+  passed every run  #############################              58
+  failed every run  ####                                        9
+  varied            ##                                          5
   undecided         ##                                          4
   no result         ##                                          4
 
-Each requirement ran once. Undecided landed in the judge's middle band. No
-result stopped before there was an answer to score.
+Each requirement ran 5 times. Varied passed some runs and failed others.
+Undecided landed in the judge's middle band. No result stopped before there
+was an answer to score.
 
-One run cannot tell a requirement the system meets from one it happened to
-meet. Five runs would show a requirement holds at least 55% of the time,
-twenty runs at least 86%, fifty at least 94%.
+Five runs is not many. A requirement the system only handles 8 times in 10
+would still pass all 5 of them about a third of the time. So a requirement
+that passed all 5 could really be working anywhere from 55% to 100% of the
+time, and five runs cannot tell you where in that range it sits. Twenty runs
+would narrow it to 86% and up, fifty runs to 94% and up.
 
 2  What failed
 --------------
@@ -55,59 +56,86 @@ twenty runs at least 86%, fifty at least 94%.
      no-fee-claim          the reply did not state "no extra cost"
      receipt-per-airline   the reply did not state "each airline"
      tool-scope-1          tool-permission v1: scored 0.50, needed 1.00
-     bulk-refund           tool-correctness v2: scored 0.40, needed 0.80
+     step-count-3          step-efficiency v2: scored 0.62, needed 0.75
      interac-offer         scored 2 of 10: the agent named a Canadian service
      cash-country          scored 3 of 10: offered cash outside Canada
      escalation-missing    scored 1 of 10: no escalation path was given
 
-  Every requirement that failed, and what the scorer said about it. A scorer
-  that computes a number reports the number it got and the number it needed.
+  Every requirement that failed on all 5 runs, and what the scorer said about
+  it. A scorer that computes a number reports the number it got and the number
+  it needed.
 
-3  How quality was measured
+  3 requirements passed within 0.05 of their threshold: refund-window at 0.78
+  against 0.75, receipt-count at 0.52 against 0.50, and tone-check at 0.81
+  against 0.80.
+
+3  The requirements that gave different answers between runs
+------------------------------------------------------------
+
+  There were 5 varied requirements.
+
+     requirement             + passed   - failed   settled by   runs passed
+     ---------------------------------------------------------------------
+     refund-30d              - + - + +             judge        3 of 5
+     escalation-path         + + + - +             judge        4 of 5
+     partial-refund-split    - + - - +             judge        2 of 5
+     no-receipt-decline      + - + - +             comparison   3 of 5
+     duplicate-claim         - - - + -             comparison   1 of 5
+
+  Each mark is one run, in the order they ran.
+
+  A requirement settled by comparison that varies means the system is giving
+  different answers to the same question.
+
+4  How quality was measured
 ---------------------------
 
-                      # passed   x failed   ? unsettled
+             # passed   x failed   ~ varied   ? unsettled
 
-     specification node      ######################xxx?    24
-     scenario judge          #############xx????           18
-     required wording        ###########xx                 12
+     specification node      ####################xxx~~?    24
+     scenario judge          ############x~~????           18
+     required wording        ##########xx?                 12
      task completion                                        0
      tool permission         #####x                         6
-     tool correctness        #####x                         6
+     tool correctness        ####x~                         6
      argument correctness    ###?                           4
      turn faithfulness       ##?                            3
      citation faithfulness   #                              1
      turn relevancy          ##                             2
      plan quality                                           0
      plan adherence                                         0
-     step efficiency         ###?                           4
+     step efficiency         ###x                           4
 
   Quality measures are specific to the use case being executed. Counts reflect
-  the number of requirements a quality measure checked. Unsettled means the
+  the number of requirements a quality measure checked. Varied means the same
+  requirement got a different verdict on different runs. Unsettled means the
   judge was undecided or the run produced nothing.
 
-4  How the judge scored
+5  How the judge scored
 -----------------------
 
-     10  ##################                    3
-      9  ##############################        5
-      8  ########################              4
-     ..... passed, 8 and above ................... 12
-      7  ############                          2
-      6  ######                                1
-      5  ######                                1
-      4                                        0
-     ..... undecided, 4 to 7 ...................... 4
-      3  ######                                1
-      2  ######                                1
-      1                                        0
-     ..... failed, 3 and below .................... 2
+     10  ######################               18
+      9  ##############################       25
+      8  ######################               18
+     ..... passed, 8 and above ................... 61
+      7  ########                              7
+      6  ######                                5
+      5  ######                                5
+      4  ####                                  3
+     ..... undecided, 4 to 7 ..................... 20
+      3  #####                                 4
+      2  ####                                  3
+      1  ##                                    2
+     ..... failed, 3 and below .................... 9
 
   Models scored 18 requirements from 1 to 10, with 10 being very confident.
+  Every run is scored, so each requirement appears 5 times and there are 90
+  scores here.
+
   The judge agrees with a human reviewer 89-91% of the time on clear-cut
   replies and 53% of the time on borderline ones.
 
-5  What this run cannot tell you
+6  What this run cannot tell you
 --------------------------------
 
   These runs stopped before the system produced an answer to score.
@@ -124,31 +152,44 @@ twenty runs at least 86%, fifty at least 94%.
   This kit can show that the system answered correctly from a stated starting
   point. It cannot show that a user reaches that point unaided.
 
-6  What it cost
+7  What it cost
 ---------------
 
-     the system under test         70,000 in     4,000 out
-     the judge                      7,628 in       948 out
-     total                         77,628 in     4,948 out
+     the system under test         350,000 in    20,000 out
+     the judge                      38,140 in     4,740 out
+     total                         388,140 in    24,740 out
 
-  Tokens the system and the judge sent and received across all 80 runs.
+  Tokens the system and the judge sent and received across all 400 runs.
 
-     under 5s      ##########################   38
-     5 to 15s      #################            25
-     15 to 30s     #######                      10
-     30 to 45s     ####                          6
-     over 45s      #                             1
+     under 5s      ##########################  190
+     5 to 15s      #################           125
+     15 to 30s     #######                      52
+     30 to 45s     ####                         29
+     over 45s      #                             4
 
-  How long the system took to answer, over 80 runs. 7 runs came within 15
-  seconds of the 45 second timeout and 1 exceeded it, which is counted as no
+  How long the system took to answer, over 400 runs. 33 runs came within 15
+  seconds of the 45 second timeout and 4 exceeded it, which is counted as no
   reply. Runs were executed 4 at a time, so these times include waiting for a
   free lane.
+
+8  Against the last run
+-----------------------
+
+     improved      ##                                6
+     regressed     #                                 2
+     unchanged     ###########################      64
+
+  Compares this run with the run on 2026-08-04. Both used rubric
+  scenario-judge v3 and policy refund-desk v3. A requirement improved when it
+  moved up: failed to undecided, or undecided to passed. 8 requirements are
+  new since then and have nothing to compare against.
 ```
 
-Run each requirement more than once and the report gains two panels: the requirements
-that answered differently between runs, shown run by run, and a comparison against the
-previous run. Every figure is counted from the record named in the header, so the report
-cannot disagree with the evidence it came from.
+Panels appear only when they have something to say. A campaign that runs each
+requirement once prints neither the varied panel nor the comparison, because nothing
+can vary in one run and there is no baseline yet. Every figure is counted from the
+record named in the header, so the report cannot disagree with the evidence it came
+from.
 
 ## Metrics and measurements
 
