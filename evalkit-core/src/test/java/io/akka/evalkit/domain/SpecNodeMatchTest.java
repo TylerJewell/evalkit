@@ -47,10 +47,10 @@ class SpecNodeMatchTest {
 
         assertThat(outcome).isInstanceOfSatisfying(RunOutcome.Asserted.class, a -> {
             assertThat(a.passed()).isFalse();
-            assertThat(a.expectedNode()).isEqualTo("GenUC-17a");
-            assertThat(a.actualNode()).isEqualTo("GenUC-27");
+            assertThat(a.expected()).isEqualTo("GenUC-17a");
+            assertThat(a.actual()).isEqualTo("GenUC-27");
         });
-        assertThat(outcome.describe()).contains("expected GenUC-17a, reached GenUC-27");
+        assertThat(outcome.describe()).contains("expected GenUC-17a, found GenUC-27");
     }
 
     @Test

@@ -62,6 +62,27 @@ public final class Scoring {
      * the baseline transcripts on v3 first &mdash; which costs nothing but judge calls,
      * because {@link Transcript}s are kept.
      */
+    /**
+     * Compares two runs that each state the rules the system was given.
+     *
+     * <p><b>Refuses across policy versions, for the reason it refuses across rubric
+     * versions.</b> A rubric change moves the ruler; a policy change moves what was being
+     * measured. Either one turns a difference between two runs into a difference nobody
+     * can attribute, and a policy change is the easier of the two to make by accident,
+     * because it is a change to the system rather than to this kit.
+     */
+    public static Comparison compare(Policy baselinePolicy, List<Verdict> baseline,
+                                     Policy candidatePolicy, List<Verdict> candidate) {
+        if (!baselinePolicy.equals(candidatePolicy)) {
+            throw new IllegalArgumentException(
+                "cannot compare runs under different policies: "
+                    + baselinePolicy.label() + " and " + candidatePolicy.label()
+                    + " — the system was told different things, so a difference between "
+                    + "these runs is not a difference in how well it did");
+        }
+        return compare(baseline, candidate);
+    }
+
     public static Comparison compare(List<Verdict> baseline, List<Verdict> candidate) {
         var left = index(baseline);
         var right = index(candidate);

@@ -161,7 +161,7 @@ class ConcurrencyInvarianceTest {
             String id = completed.scenario().id();
             switch (completed.outcome()) {
                 case RunOutcome.Scored s -> assertThat(s.verdict().scenarioName()).isEqualTo(id);
-                case RunOutcome.Asserted a -> assertThat(a.expectedNode()).isEqualTo("node-" + id);
+                case RunOutcome.Asserted a -> assertThat(a.expected()).isEqualTo("node-" + id);
                 default -> throw new AssertionError(
                     "this corpus produces only scored and asserted rows, got " + completed.outcome());
             }

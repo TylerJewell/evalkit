@@ -29,7 +29,8 @@ public interface ScorerRouter {
      * Reads the scenario and sends it where its own expectation points.
      *
      * <p>A named node is left to the runner. A named metric routes to that metric.
-     * Anything left states its expectation in prose, which only a judge can read.
+     * Required phrases route to a comparison over the reply. Anything left states its
+     * expectation in prose, which only a judge can read.
      *
      * <p>A scenario naming a metric this campaign did not register produces
      * {@link RunOutcome.Unscoreable} at run time, because a scorer that cannot run
@@ -42,6 +43,10 @@ public interface ScorerRouter {
         var byRef = Map.copyOf(metrics);
         return scenario -> {
             if (scenario.specNode().isPresent()) return Optional.empty();
+
+            if (!scenario.requiredPhrases().isEmpty()) {
+                return Optional.of(ContainsAll.of(scenario.requiredPhrases()));
+            }
 
             if (scenario.metric().isPresent()) {
                 MetricRef ref = scenario.metric().orElseThrow();

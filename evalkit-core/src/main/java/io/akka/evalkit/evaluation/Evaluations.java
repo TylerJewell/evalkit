@@ -33,8 +33,8 @@ public final class Evaluations {
     public static final String METRIC_ID = "evalkit.metric.id";
     public static final String METRIC_VERSION = "evalkit.metric.version";
     public static final String THRESHOLD = "evalkit.threshold";
-    public static final String EXPECTED_NODE = "evalkit.node.expected";
-    public static final String ACTUAL_NODE = "evalkit.node.actual";
+    public static final String EXPECTED = "evalkit.compared.expected";
+    public static final String ACTUAL = "evalkit.compared.actual";
 
     private Evaluations() {}
 
@@ -59,8 +59,8 @@ public final class Evaluations {
     public static Evaluation of(RunOutcome.Asserted asserted) {
         return Evaluation.of(asserted.passed(), asserted.describe())
             .withAttribute(KIND, "asserted")
-            .withAttribute(EXPECTED_NODE, asserted.expectedNode())
-            .withAttribute(ACTUAL_NODE, asserted.actualNode());
+            .withAttribute(EXPECTED, asserted.expected())
+            .withAttribute(ACTUAL, asserted.actual());
     }
 
     /** A metric, with its value as the score and its threshold beside it. */

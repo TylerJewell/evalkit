@@ -25,8 +25,13 @@ public sealed interface RunOutcome {
      * function here: it either reached that node or it did not. Sending it to a judge
      * would buy a slightly random opinion about something with a right answer, and pay
      * for it. 510 of the 514 claim-flow scenarios in the corpus are this kind.
+     *
+     * <p>A node is one thing a run can be compared against and not the only one. Required
+     * text is another, and a state the run was meant to leave behind is a third, so the
+     * two fields hold whatever the comparison was against and whatever it found, phrased
+     * for a reader rather than as identifiers.
      */
-    record Asserted(boolean passed, String expectedNode, String actualNode)
+    record Asserted(boolean passed, String expected, String actual)
         implements RunOutcome {}
 
     /**
@@ -138,8 +143,8 @@ public sealed interface RunOutcome {
             case Scored s -> with(
                 s.verdict().band() + " (" + s.verdict().score() + "/10)", s.verdict().reason());
             case Asserted a -> a.passed()
-                ? "reached " + a.expectedNode()
-                : "expected " + a.expectedNode() + ", reached " + a.actualNode();
+                ? "matched " + a.expected()
+                : "expected " + a.expected() + ", found " + a.actual();
             case Measured m -> with("%s v%d: %.2f against %.2f".formatted(
                 m.metricId(), m.metricVersion(), m.value(), m.threshold()), m.reason());
             case NotReached n -> switch (n.cause()) {

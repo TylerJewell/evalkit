@@ -196,7 +196,7 @@ class RoutedCampaignTest {
                 new Scenario("x", Optional.of("GenUC-1"), Optional.of(LENGTH),
                     new Precursor.None(), "hi", "something"))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("both a specification node and a metric");
+            .hasMessageContaining("more than one expectation: a specification node and a metric");
     }
 
     @Test

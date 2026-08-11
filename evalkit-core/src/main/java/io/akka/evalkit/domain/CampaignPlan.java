@@ -10,7 +10,13 @@ import java.util.List;
  * path rather than seed past it. A campaign that discovers any of it at minute forty has
  * wasted forty minutes and a provider bill.
  */
-public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rubric rubric) {
+public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rubric rubric,
+                           java.util.Optional<Policy> policy) {
+
+    /** A campaign that does not state the rules the system was given. */
+    public CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rubric rubric) {
+        this(id, scenarios, lanes, rubric, java.util.Optional.empty());
+    }
 
     public CampaignPlan {
         if (id == null || id.isBlank()) throw new IllegalArgumentException("campaign id required");
@@ -18,6 +24,12 @@ public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rub
             throw new IllegalArgumentException("campaign " + id + " has no scenarios");
         }
         scenarios = List.copyOf(scenarios);
+        policy = policy == null ? java.util.Optional.empty() : policy;
+    }
+
+    /** The same campaign, recorded as having run under these rules. */
+    public CampaignPlan under(Policy stated) {
+        return new CampaignPlan(id, scenarios, lanes, rubric, java.util.Optional.of(stated));
     }
 
     /** Whether a plan may run, and why not. */

@@ -269,7 +269,7 @@ class CampaignRunnerTest {
         assertThat(result.report().failed()).isEqualTo(1);
         assertThat(result.report().asserted()).isEqualTo(1);
         assertThat(result.outcomes()).first().isInstanceOfSatisfying(RunOutcome.Asserted.class,
-            a -> assertThat(a.actualNode()).isEqualTo("GenUC-27"));
+            a -> assertThat(a.actual()).isEqualTo("GenUC-27"));
     }
 
     @Test
