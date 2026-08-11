@@ -17,6 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("RunSummary · every family a campaign produced reaches the page")
 class RenderingCoverageTest {
 
+    private static final RunSummary.Identity IDENTITY = new RunSummary.Identity(
+        "Refund conformance test", "CH-2026-08-05-002", "16f0085");
+
     private static final RunSummary.Coverage COVERAGE = new RunSummary.Coverage(
         List.of(new RunSummary.Journey("refunds", 40)), List.of());
 
@@ -42,7 +45,8 @@ class RenderingCoverageTest {
     }
 
     private static String render(CampaignReport report) {
-        return flat(RunSummary.results(report, COVERAGE, List.of(), 45, "scenarios.csv", null));
+        return flat(RunSummary.results(IDENTITY, report, COVERAGE, List.of(), 45,
+            "scenarios.csv", null));
     }
 
     @Test
@@ -104,7 +108,7 @@ class RenderingCoverageTest {
             new RunSummary.Finding("GenUC-16a.3", "expected GenUC-16a.3, reached GenUC-17a"),
             new RunSummary.Finding("refund-30d", "tool-permission v1: 0.50 against 1.00"));
 
-        var text = flat(RunSummary.results(everyFamily(), COVERAGE, findings, 45,
+        var text = flat(RunSummary.results(IDENTITY, everyFamily(), COVERAGE, findings, 45,
             "scenarios.csv", null));
 
         assertThat(text).contains("GenUC-16a.3").contains("reached GenUC-17a");
@@ -125,7 +129,7 @@ class RenderingCoverageTest {
             new RunOutcome.Unscoreable("the content filter refused"));
 
         for (RunOutcome outcome : everyVariant) {
-            var text = flat(RunSummary.results(everyFamily(), COVERAGE,
+            var text = flat(RunSummary.results(IDENTITY, everyFamily(), COVERAGE,
                 List.of(new RunSummary.Finding("req", outcome.describe())), 45,
                 "scenarios.csv", null));
 
@@ -144,7 +148,7 @@ class RenderingCoverageTest {
             new RunSummary.Finding("r3", "NO_MATCH (3/10) under scenario-judge v2"),
             new RunSummary.Finding("r4", "unscoreable — the content filter refused"));
 
-        var text = flat(RunSummary.results(everyFamily(), COVERAGE, findings, 45,
+        var text = flat(RunSummary.results(IDENTITY, everyFamily(), COVERAGE, findings, 45,
             "findings.csv", null));
 
         assertThat(text).contains("r1").contains("r2").contains("r3");
@@ -159,10 +163,10 @@ class RenderingCoverageTest {
         var findings = List.of(new RunSummary.Finding("GenUC-16a.3",
             "tool-permission v1: 0.50 against 1.00"));
 
-        RunSummary.results(everyFamily(), COVERAGE, findings, 45, "scenarios.csv", null)
+        RunSummary.results(IDENTITY, everyFamily(), COVERAGE, findings, 45, "scenarios.csv", null)
             .lines()
             .forEach(line -> assertThat(line.length())
-                .as("line runs past the rule: " + line)
-                .isLessThanOrEqualTo(72));
+                .as("line runs past the frame: " + line)
+                .isLessThanOrEqualTo(80));
     }
 }

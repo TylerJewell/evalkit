@@ -23,11 +23,14 @@ import java.util.Map;
  */
 public final class RunSummary {
 
-    /** Width of the rule, chosen to survive a Maven log prefix in an 80-column terminal. */
-    private static final int WIDTH = 72;
+    /** Prose wraps inside this, chosen so a line survives an 80-column terminal. */
+    private static final int WIDTH = 80;
 
-    /** Longest bar, in characters. */
-    private static final int BAR = 34;
+    /** Width of the counted tables, held narrower than the prose so the columns read as one. */
+    private static final int TABLE = 72;
+
+    /** Left column of every counted table, wide enough for the longest label. */
+    private static final int LABEL = 28;
 
     private RunSummary() {}
 
@@ -133,11 +136,23 @@ public final class RunSummary {
                                  JudgeProfile judge, Map<String, String> fixtureDescriptions,
                                  Map<String, Integer> fixtureUse, String scenarioFile,
                                  Estimate estimate) {
+        return opening(identity, coverage, checkedByRules, judgedByModel, judge,
+            fixtureDescriptions, fixtureUse, scenarioFile, estimate,
+            java.util.Optional.empty());
+    }
+
+    /**
+     * @param policy the rules the system was given, when the campaign states them. Printed
+     *               because two runs under different rules are not comparable, and a
+     *               reader cannot see that from the numbers
+     */
+    public static String opening(Identity identity, Coverage coverage,
+                                 int checkedByRules, int judgedByModel,
+                                 JudgeProfile judge, Map<String, String> fixtureDescriptions,
+                                 Map<String, Integer> fixtureUse, String scenarioFile,
+                                 Estimate estimate, java.util.Optional<Policy> policy) {
         var out = new StringBuilder();
-        rule(out);
-        line(out, identity.title() + "    run " + identity.runReference()
-            + "    system " + identity.systemVersion());
-        rule(out);
+        heading(out, identity);
 
         int total = coverage.testedRequirements();
         para(out, "This run tests " + total + " requirements: "
@@ -171,6 +186,13 @@ public final class RunSummary {
             + ", unchanged since " + judge.unchangedSince() + ". Full text in "
             + judge.rubricPath() + ".");
 
+        policy.ifPresent(p -> {
+            blank(out);
+            para(out, "The system ran under policy " + p.label() + ". A result is only "
+                + "comparable with another run under the same policy: different rules "
+                + "mean the system was asked to do a different thing.");
+        });
+
         blank(out);
         para(out, "Each test starts part-way through a conversation rather than at the "
             + "beginning. Before sending its message, the harness puts the system into a "
@@ -198,21 +220,17 @@ public final class RunSummary {
                 + "never more.");
         }
 
-        blank(out);
-        para(out, "This evaluation kit can show that the system answered correctly from a "
-            + "stated starting point, but it doesn't prove that a user can reach that "
-            + "point unaided.");
-        rule(out);
+        limit(out);
         return out.toString();
     }
 
     /** Printed when the run finishes. */
-    public static String results(CampaignReport report, Coverage coverage,
+    public static String results(Identity identity, CampaignReport report, Coverage coverage,
                                  List<Finding> findings, int replyTimeoutSeconds,
                                  String findingsFile, Spend spend) {
         var out = new StringBuilder();
         int total = report.total();
-        rule(out);
+        heading(out, identity);
         para(out, report.passed() + " of " + total + " requirements behaved as specified, "
             + report.failed() + " did not, " + report.review()
             + " were too borderline to call and " + report.withoutEvidence()
@@ -224,20 +242,20 @@ public final class RunSummary {
         // against a threshold, so a figure in either column's undecided row would be a
         // defect in this kit rather than a finding about the system -- which is only
         // checkable if the three are printed apart.
-        line(out, "  " + pad("", 27) + rightText("checked by rules", 17)
+        line(out, "  " + pad("", LABEL) + rightText("checked by rules", 17)
             + rightText("measured", 9) + rightText("judged", 9) + rightText("total", 7));
         split(out, "as specified", report.assertedPassed(), report.measuredPassed(),
             report.scoredPassed());
         split(out, "did not", report.assertedFailed(), report.measuredFailed(),
             report.scoredFailed());
-        line(out, "  " + pad("undecided", 27) + rightText("-", 17) + rightText("-", 9)
+        line(out, "  " + pad("undecided", LABEL) + rightText("-", 17) + rightText("-", 9)
             + right(report.review(), 9) + right(report.review(), 7));
-        line(out, "  " + pad("no result", 27) + rightText("", 17) + rightText("", 9)
+        line(out, "  " + pad("no result", LABEL) + rightText("", 17) + rightText("", 9)
             + rightText("", 9) + right(report.withoutEvidence(), 7));
-        sub(out, "never reached the question", report.setupFailed(), total);
-        sub(out, "no reply within " + replyTimeoutSeconds + " seconds", report.noReply(), total);
-        sub(out, "answer not assessed", report.unscoreable(), total);
-        sub(out, "the scoring itself failed", report.scorerFailed(), total);
+        sub(out, "never reached the question", report.setupFailed());
+        sub(out, "no reply within " + replyTimeoutSeconds + " seconds", report.noReply());
+        sub(out, "answer not assessed", report.unscoreable());
+        sub(out, "the scoring itself failed", report.scorerFailed());
 
         blank(out);
         para(out, explainNonResults(report, replyTimeoutSeconds));
@@ -282,7 +300,7 @@ public final class RunSummary {
             blank(out);
             para(out, capitalise(names(coverage.excluded())) + " remain untested.");
         }
-        rule(out);
+        limit(out);
         return out.toString();
     }
 
@@ -309,41 +327,41 @@ public final class RunSummary {
     // ---- layout ----
 
     /**
-     * A count above zero always draws at least one block.
+     * One row across the three families, with their total.
      *
-     * <p>Twelve findings in five hundred rounds to nothing at this width. A row that
-     * disappears because it is small is the failure this summary exists to prevent.
+     * <p>A campaign that ran no metrics prints a zero in the measured column rather than
+     * dropping it, so the column a reader looks for is in the same place on every report.
      */
-    static int blocks(int count, int total) {
-        if (count <= 0 || total <= 0) return 0;
-        return Math.max(1, (int) Math.round((double) count / total * BAR));
-    }
-
-    /** One row of the decision-method table, with its own total. */
-    /**
-      * One row across the three families, with their total.
-      *
-      * <p>A campaign that ran no metrics prints a zero in the measured column rather than
-      * dropping it, so the column a reader looks for is in the same place on every report.
-      */
     private static void split(StringBuilder out, String label,
                               int byRules, int measured, int byModel) {
-        line(out, "  " + pad(label, 27) + right(byRules, 17) + right(measured, 9)
+        line(out, "  " + pad(label, LABEL) + right(byRules, 17) + right(measured, 9)
             + right(byModel, 9) + right(byRules + measured + byModel, 7));
     }
 
-    private static void bar(StringBuilder out, String label, int count, int total) {
-        line(out, "  " + pad(label, 27) + pad("#".repeat(blocks(count, total)), BAR)
-            + right(count, 5));
+    /**
+     * One cause of a run producing nothing, indented under the count it decomposes.
+     *
+     * <p>The count sits in the total column rather than beside its label, so the four
+     * causes and the figure they add up to can be read down a single edge.
+     */
+    private static void sub(StringBuilder out, String label, int count) {
+        String left = "    " + label;
+        line(out, left + right(count, TABLE - left.length()));
     }
 
-    private static void sub(StringBuilder out, String label, int count, int total) {
-        line(out, "    " + pad(label, 29) + pad("#".repeat(blocks(count, total)), BAR - 4)
-            + right(count, 5));
+    /** What the kit cannot show, which both blocks close on. */
+    private static void limit(StringBuilder out) {
+        blank(out);
+        para(out, "This evaluation kit can show that the system answered correctly from a "
+            + "stated starting point, but it doesn't prove that a user can reach that "
+            + "point unaided.");
     }
 
-    private static void rule(StringBuilder out) {
-        out.append("-".repeat(WIDTH)).append('\n');
+    /** Names the run, so a block pasted on its own still says which run it describes. */
+    private static void heading(StringBuilder out, Identity identity) {
+        line(out, identity.title() + "    run " + identity.runReference()
+            + "    system " + identity.systemVersion());
+        blank(out);
     }
 
     private static void blank(StringBuilder out) {
@@ -351,7 +369,7 @@ public final class RunSummary {
     }
 
     private static void line(StringBuilder out, String text) {
-        out.append(' ').append(text).append('\n');
+        out.append(text).append('\n');
     }
 
     /**

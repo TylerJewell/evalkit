@@ -66,6 +66,12 @@ both change what a previously recorded score means.
 
 ### Changed
 
+- `RunSummary` renders the layout the README publishes. Both blocks open on the run's
+  identity and close on what the kit cannot show, prose wraps at 78 columns against a
+  72-column table, and the rules, the indent and the histogram bars beside each
+  no-result cause are gone: the counts sit in the total column instead, so the four
+  causes and the figure they sum to read down one edge. `RunSummary.results` takes an
+  `Identity`, so a results block pasted on its own still names the run it describes.
 - `PlanQuality` and `PlanAdherence` read the plan from the reasoning the run's model
   calls carried. Both metrics shipped returning `Unscoreable` on every run because
   nothing recorded a plan. Both now score a plan whenever the provider returned

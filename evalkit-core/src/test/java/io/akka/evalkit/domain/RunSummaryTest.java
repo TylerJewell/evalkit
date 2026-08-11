@@ -61,7 +61,7 @@ class RunSummaryTest {
     }
 
     private static String results() {
-        return RunSummary.results(report(), COVERAGE, List.of(
+        return RunSummary.results(IDENTITY, report(), COVERAGE, List.of(
             new RunSummary.Finding("GenUC-17b",
                 "American customers were offered Interac, a Canadian service"),
             new RunSummary.Finding("SoC-03e",
@@ -176,13 +176,40 @@ class RunSummaryTest {
     // ---- layout rules ----
 
     @Test
-    @DisplayName("a count above zero always draws at least one block")
-    void smallCountsStayVisible() {
-        // 12 of 554 rounds to nothing at this width. A finding that disappears because
-        // it is small is exactly what this summary exists to prevent.
-        assertThat(RunSummary.blocks(12, 554)).isEqualTo(1);
-        assertThat(RunSummary.blocks(1, 100000)).isEqualTo(1);
-        assertThat(RunSummary.blocks(0, 554)).isZero();
+    @DisplayName("the results block renders as the README publishes it")
+    void resultsMatchThePublishedLayout() {
+        // The layout is the deliverable, not an incidental of the renderer: a reader who
+        // pastes this into a ticket is quoting columns. Asserted whole, so a change to
+        // any width, indent or alignment has to be a change to the published format too.
+        var report = new CampaignReport(63, 4, 9, 4, 0, 0, 58, 52, 0, 0, 3, 1);
+        var spend = new RunSummary.Spend(new Tokens(350_000, 20_000),
+                                         new Tokens(38_140, 4_740), 0);
+        var identity = new RunSummary.Identity(
+            "Refund policy evaluation", "2026-08-08T09:14Z", "claims-svc 4.2.0");
+        var refunds = new RunSummary.Coverage(
+            List.of(new RunSummary.Journey("refunds", 80)), List.of());
+
+        var text = RunSummary.results(identity, report, refunds, List.of(), 45, "x.csv", spend);
+
+        assertThat(text).startsWith("""
+            Refund policy evaluation    run 2026-08-08T09:14Z    system claims-svc 4.2.0
+
+            63 of 80 requirements behaved as specified, 9 did not, 4 were too borderline
+            to call and 4 produced no result.
+
+                                           checked by rules measured   judged  total
+              as specified                               52        0       11     63
+              did not                                     6        0        3      9
+              undecided                                   -        -        4      4
+              no result                                                            4
+                never reached the question                                         3
+                no reply within 45 seconds                                         1
+                answer not assessed                                                0
+            """);
+        assertThat(text).endsWith("""
+            This evaluation kit can show that the system answered correctly from a stated
+            starting point, but it doesn't prove that a user can reach that point unaided.
+            """);
     }
 
     @Test
@@ -191,8 +218,8 @@ class RunSummaryTest {
         // Build output is read in an 80-column terminal, often behind a Maven prefix.
         for (String line : (opening() + results()).split("\n")) {
             assertThat(line.length())
-                .as("line runs past the rule: %s", line)
-                .isLessThanOrEqualTo(72);
+                .as("line runs past the frame: %s", line)
+                .isLessThanOrEqualTo(80);
         }
     }
 
@@ -210,7 +237,7 @@ class RunSummaryTest {
     @DisplayName("a clean run says so rather than printing an empty breakdown")
     void cleanRun() {
         var clean = new CampaignReport(554, 0, 0, 0, 0, 0, 510, 510, 0, 0, 0, 0);
-        var text = flat(RunSummary.results(clean, COVERAGE, List.of(), 90, "x.csv", SPEND));
+        var text = flat(RunSummary.results(IDENTITY, clean, COVERAGE, List.of(), 90, "x.csv", SPEND));
 
         assertThat(text).contains("Every test produced a result.");
         assertThat(text).doesNotContain("reports no overall pass rate");
@@ -242,7 +269,8 @@ class RunSummaryTest {
     @DisplayName("an unaccounted model call makes the total a floor, not a measurement")
     void unaccountedCallsAreVisible() {
         var partial = new RunSummary.Spend(new Tokens(1000, 200), new Tokens(500, 100), 3);
-        var text = flat(RunSummary.results(report(), COVERAGE, List.of(), 90, "x.csv", partial));
+        var text = flat(RunSummary.results(IDENTITY, report(), COVERAGE, List.of(), 90, "x.csv",
+            partial));
 
         assertThat(text).contains("three model replies carried no usage figure");
         assertThat(text).contains("floor rather than a measurement");
