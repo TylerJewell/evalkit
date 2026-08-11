@@ -8,7 +8,8 @@
 
 [Documentation](docs/site/evalkit/) · [Reporting sample](#reporting-sample) ·
 [Metrics](#metrics-and-measurements) · [Quickstart](#quickstart) ·
-[Works with](#works-with) · [Akka Verify](#akka-verify) ·
+[Works with](#works-with) · [Command line](#proposed-command-line) ·
+[Akka Verify](#akka-verify) ·
 [Contributing](CONTRIBUTING.md)
 
 Akka Evalkit is a simple-to-use, open-source LLM evaluation framework, for evaluating large-language model systems. It is similar to Pytest and DeepEval but specialized for unit testing LLM apps and agentic systems authored in Java. Evalkit incorporates the latest research to run evals via metrics such as G-Eval, task completion, answer relevancy, and  hallucinations, which uses LLM-as-a-judge and other NLP models that run locally on your machine.
@@ -30,7 +31,7 @@ Refund policy evaluation
   run      2026-08-11T09:14Z           system   claims-svc 4.2.0
   rules    refund-desk v3              rubric   scenario-judge v3
   scope    80 requirements, 400 runs
-  record   target/evalkit/refund-policy-20260811T0914Z.jsonl
+  record   target/evalkit/refund-policy-20260811T0914Z.md
 --------------------------------------------------------------------------
 
 1  What the run found
@@ -422,6 +423,72 @@ Every run leaves a tamper-evident evidence record in the form an auditor or regu
 accepts, mapped against the controls a risk survey of 190 regulations identifies for your
 industry. Verify governs agents built on Akka and agents built elsewhere, reading a
 third-party agent's traces over OpenTelemetry.
+
+## Proposed command line
+
+None of this is built. The shape is recorded here to be argued with first.
+
+`akka init` scaffolds the eval project structure: `src/eval` as a source root, the `eval`
+Maven profile that keeps campaigns off the build that runs on every commit, a starter
+dataset, and `target/evalkit` for records. Every command below acts on a project that
+already has one. evalkit ships inside the SDK, and no separate install stands between a
+service and its evaluations.
+
+| Command | What it does |
+|---|---|
+| `akka eval run` | Runs a campaign through the project's own build |
+| `akka eval check` | Refuses a dataset before it costs anything |
+| `akka eval report <record>` | Renders the report from a record |
+| `akka eval diff <base> <candidate>` | Reports what changed between two runs |
+| `akka eval rescore <record>` | Scores recorded interactions under a newer rubric |
+| `akka eval list` | Records under `target/evalkit`, newest first |
+
+`run` reaches the service and `rescore` reaches a judge. `check`, `report`, `diff` and
+`list` read files.
+
+`run` passes `--repeats`, `--lanes` and `--tag` through to the campaign, and
+`--only-failing <record>` runs the requirements that failed or varied in an earlier one.
+A varied requirement is the one most worth asking again.
+
+### What a run leaves behind
+
+A record is markdown: a block of what the run was, then one row per requirement, sorted by
+id.
+
+```markdown
+# Run
+
+- id: refund-policy-20260811T0914Z
+- system: claims-svc 4.2.0
+- rules: refund-desk v3
+- rubric: scenario-judge v3
+- repeats: 5
+
+## Requirements
+
+| requirement | measure | verdict | runs | passed |
+|---|---|---|---|---|
+| escalation-path | scenario judge | varied | +++-+ | 4 of 5 |
+| no-fee-claim | required wording | passed | +++++ | 5 of 5 |
+| refund-14d | specification node | failed | ----- | 0 of 5 |
+```
+
+One requirement per line and a stable order means `diff` reads it the way a code review
+reads a patch. `akka eval diff` compares the rows and reports the run's own details
+separately, because the id, the timestamp and the token counts differ on every run and
+would bury three lines of signal under eight of noise. Two runs scored under different
+rubric or policy versions are refused.
+
+### Exit codes
+
+| Code | Means |
+|---|---|
+| 0 | every requirement passed |
+| 100 | a requirement failed or varied |
+| 1 | the dataset was refused, or evalkit broke |
+
+A finding about the service and a defect in this kit leave with different codes, so a build
+tells them apart.
 
 ## Project status
 
