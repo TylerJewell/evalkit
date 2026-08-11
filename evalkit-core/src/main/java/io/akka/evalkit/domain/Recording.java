@@ -29,12 +29,19 @@ import java.util.Optional;
  *                    than anything the model did
  */
 public record Recording(Transcript transcript, InteractionRecord interaction,
-                        Optional<String> node) {
+                        Optional<String> node, java.util.Map<String, String> endState) {
+
+    /** A recording of a target that reports no state of its own. */
+    public Recording(Transcript transcript, InteractionRecord interaction,
+                     Optional<String> node) {
+        this(transcript, interaction, node, java.util.Map.of());
+    }
 
     public Recording {
         Objects.requireNonNull(transcript, "transcript");
         Objects.requireNonNull(interaction, "interaction");
         node = node == null ? Optional.empty() : node;
+        endState = endState == null ? java.util.Map.of() : java.util.Map.copyOf(endState);
     }
 
     /** A recording of a target that reported its answer and nothing else. */

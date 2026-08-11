@@ -136,27 +136,19 @@ public interface SystemUnderTest {
     Map<String, String> fixtures();
 
     /**
-     * Tokens the system under test spent answering, when it can account for them.
+     * What the run changed, for scenarios that score the state rather than the reply.
      *
-     * <p>Asked once after the run rather than per turn: a target usually learns its own
-     * usage from a session or an interaction log, which is cheaper to read whole than to
-     * sample between scenarios.
+     * <p>An agent that says the right thing and does the wrong thing passes every check
+     * that reads only what it said. A target that can see its own state reports whatever
+     * it can, and a scenario names the keys it cares about.
      *
-     * <p>Defaults to nothing spent. A target that cannot see its own model calls should
-     * leave it, and the report will say the figure is a floor rather than quietly
-     * present zero as a measurement.
+     * <p>Empty means the target cannot see its state, and a scenario scoring one yields
+     * {@link RunOutcome.Unscoreable} rather than a failure.
      */
-    /**
-     * Specification nodes this target can emit, when it knows them.
-     *
-     * <p>An assertion against a node the target cannot produce fails for every input on
-     * every run, which reads as a defect in the system and is a defect in the campaign.
-     * Declaring the set lets that be refused before the run instead of discovered after
-     * it &mdash; the same argument as {@link #fixtures()}.
-     *
-     * <p>Empty means "unknown", not "none": a target that cannot enumerate its nodes is
-     * not checked rather than being refused outright.
-     */
+    default java.util.Map<String, String> stateAfter(String sessionId) {
+        return java.util.Map.of();
+    }
+
     /**
      * Tools this target can be asked to break, for scenarios that test recovery.
      *
@@ -168,10 +160,32 @@ public interface SystemUnderTest {
         return java.util.Set.of();
     }
 
+    /**
+     * Specification nodes this target can emit, when it knows them.
+     *
+     * <p>An assertion against a node the target cannot produce fails for every input on
+     * every run, which reads as a defect in the system and is a defect in the campaign.
+     * Declaring the set lets that be refused before the run instead of discovered after
+     * it &mdash; the same argument as {@link #fixtures()}.
+     *
+     * <p>Empty means "unknown", not "none": a target that cannot enumerate its nodes is
+     * not checked rather than being refused outright.
+     */
     default java.util.Set<String> emittableNodes() {
         return java.util.Set.of();
     }
 
+    /**
+     * Tokens the system under test spent answering, when it can account for them.
+     *
+     * <p>Asked once after the run rather than per turn: a target usually learns its own
+     * usage from a session or an interaction log, which is cheaper to read whole than to
+     * sample between scenarios.
+     *
+     * <p>Defaults to nothing spent. A target that cannot see its own model calls should
+     * leave it, and the report will say the figure is a floor rather than quietly
+     * present zero as a measurement.
+     */
     default Accounting spend() {
         return new Accounting(Tokens.NONE, 1);
     }

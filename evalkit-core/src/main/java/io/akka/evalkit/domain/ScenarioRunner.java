@@ -85,7 +85,10 @@ public final class ScenarioRunner {
                 ready.sessionId(), reply.systemMessage(), scenario.gradedTurn(), calls,
                 reply.latency(), reply.failure()),
             scenario.id());
-        return new Execution.Produced(new Recording(transcript, interaction, reply.node()));
+        // Read after the graded turn, so it is the state the run left behind rather than
+        // the state it started from.
+        return new Execution.Produced(new Recording(transcript, interaction, reply.node(),
+            target.stateAfter(ready.sessionId())));
     }
 
     /**
