@@ -113,7 +113,68 @@ public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rub
             reasons.add("no scenarios to run");
         }
 
+        reasons.addAll(corpusDefects());
+
         return reasons.isEmpty() ? new Check.Ready(this) : new Check.Refused(reasons);
+    }
+
+    /**
+     * Defects in the corpus rather than in the target.
+     *
+     * <p>Every published benchmark that has audited its own tasks has found some of
+     * these. They are checked here because each one produces a result that reads as a
+     * finding about the system: a duplicated id counts one requirement twice, a phrase
+     * the scenario itself contradicts fails on every run for every service, and a
+     * scenario that expects nothing passes whatever the system says.
+     */
+    private List<String> corpusDefects() {
+        var reasons = new java.util.ArrayList<String>();
+
+        // Two rows for one requirement. Every panel counts it twice, and the second
+        // result silently replaces the first wherever results are keyed by id.
+        var seen = new java.util.HashSet<String>();
+        var duplicated = scenarios.stream()
+            .map(Scenario::id)
+            .filter(id -> !seen.add(id))
+            .distinct()
+            .sorted()
+            .toList();
+        if (!duplicated.isEmpty()) {
+            reasons.add("two scenarios share the ids " + duplicated
+                + "; each would be counted twice");
+        }
+
+        // A phrase the scenario's own expected outcome contradicts cannot be satisfied by
+        // any reply, so it fails on every run and reads as a service that never complies.
+        var contradictory = scenarios.stream()
+            .filter(s -> !s.requiredPhrases().isEmpty())
+            .filter(s -> s.expectedOutcome().toLowerCase(java.util.Locale.ROOT)
+                .contains("does not") || s.expectedOutcome()
+                .toLowerCase(java.util.Locale.ROOT).contains("must not"))
+            .filter(s -> s.requiredPhrases().stream().anyMatch(phrase ->
+                s.expectedOutcome().toLowerCase(java.util.Locale.ROOT)
+                    .contains("not " + phrase.toLowerCase(java.util.Locale.ROOT))))
+            .map(Scenario::id)
+            .sorted()
+            .toList();
+        if (!contradictory.isEmpty()) {
+            reasons.add("scenarios " + contradictory + " require wording their own expected "
+                + "outcome says must not appear; no reply satisfies both");
+        }
+
+        // A scenario naming a node it also says nothing about is the shape a corpus takes
+        // when a template was filled in halfway.
+        var placeholder = scenarios.stream()
+            .filter(s -> s.gradedTurn().equals(s.expectedOutcome()))
+            .map(Scenario::id)
+            .sorted()
+            .toList();
+        if (!placeholder.isEmpty()) {
+            reasons.add("scenarios " + placeholder + " expect back exactly what they said; "
+                + "an unfilled template passes or fails for reasons nobody chose");
+        }
+
+        return reasons;
     }
 
     /**
