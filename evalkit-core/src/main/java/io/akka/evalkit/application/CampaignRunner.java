@@ -38,13 +38,51 @@ public final class CampaignRunner {
         RunOutcome score(Transcript transcript, Rubric rubric);
     }
 
+    /**
+     * What a campaign produced.
+     *
+     * <p>{@code completed} holds one row per run and {@code requirements} groups those rows
+     * by the scenario that produced them. The two count different things once a campaign
+     * repeats: a corpus of 80 scenarios run five times each is 400 completed rows and 80
+     * requirements. {@link CampaignReport} counts rows, and the report a reader sees is
+     * rendered from the requirements, so a flaky scenario is one varied requirement rather
+     * than a mixture of passes and failures.
+     */
     public record Result(CampaignReport report, Lanes.Utilisation utilisation,
-                         List<Completed> completed, List<String> notes) {
+                         List<Completed> completed,
+                         List<io.akka.evalkit.domain.RequirementResult> requirements,
+                         List<String> notes) {
 
         /** The outcomes alone, for callers that need no scenario. */
         public List<RunOutcome> outcomes() {
             return completed.stream().map(Completed::outcome).toList();
         }
+    }
+
+    /**
+     * The runs of each scenario, gathered back into one requirement.
+     *
+     * <p>Grouped by scenario id and ordered by the plan, because workers append as they
+     * finish: reading the completion order as the run order would put a requirement's
+     * marks in whatever sequence the lanes happened to produce.
+     */
+    private static List<io.akka.evalkit.domain.RequirementResult> requirements(
+            CampaignPlan plan, List<Completed> completed) {
+        var byScenario = new java.util.LinkedHashMap<String, List<Completed>>();
+        for (Scenario scenario : plan.scenarios()) byScenario.put(scenario.id(), new ArrayList<>());
+        for (Completed row : completed) {
+            byScenario.computeIfAbsent(row.scenario().id(), ignored -> new ArrayList<>()).add(row);
+        }
+        return byScenario.entrySet().stream()
+            .filter(entry -> !entry.getValue().isEmpty())
+            .map(entry -> new io.akka.evalkit.domain.RequirementResult(
+                entry.getValue().get(0).scenario(),
+                entry.getValue().stream()
+                    .map(row -> new io.akka.evalkit.domain.RequirementResult.Run(
+                        row.outcome(),
+                        row.recording().flatMap(io.akka.evalkit.domain.Recording::latency)))
+                    .toList()))
+            .toList();
     }
 
     private CampaignRunner() {}
@@ -114,7 +152,12 @@ public final class CampaignRunner {
 
         long began = System.nanoTime();
         try (var pool = Executors.newFixedThreadPool(plan.lanes().configured())) {
+            // Each scenario is submitted once per repeat. Repeats are separate units of
+            // work rather than a loop inside one, so a slow scenario's runs spread across
+            // lanes instead of holding one lane for all of them.
             List<Callable<Void>> work = plan.scenarios().stream()
+                .flatMap(scenario -> java.util.stream.IntStream.range(0, plan.repeats())
+                    .mapToObj(ignored -> scenario))
                 .map(scenario -> (Callable<Void>) () -> {
                     long start = System.nanoTime();
                     try {
@@ -143,14 +186,15 @@ public final class CampaignRunner {
         var wallClock = Duration.ofNanos(System.nanoTime() - began);
 
         var snapshot = List.copyOf(completed);
-        if (snapshot.size() != plan.scenarios().size()) {
+        if (snapshot.size() != plan.runs()) {
             throw new IllegalStateException("campaign " + plan.id() + " produced "
-                + snapshot.size() + " outcomes for " + plan.scenarios().size() + " scenarios");
+                + snapshot.size() + " outcomes for " + plan.runs() + " runs");
         }
         var outcomes = snapshot.stream().map(Completed::outcome).toList();
         var report = CampaignReport.of(outcomes, snapshot.stream().map(Completed::precursor).toList());
         var utilisation = plan.lanes().over(Duration.ofNanos(busy.get()), wallClock, outcomes.size());
-        return new Result(report, utilisation, snapshot, notes(report, utilisation));
+        return new Result(report, utilisation, snapshot,
+            requirements(plan, snapshot), notes(report, utilisation));
     }
 
     private static Ran runOne(Scenario scenario, SystemUnderTest target,

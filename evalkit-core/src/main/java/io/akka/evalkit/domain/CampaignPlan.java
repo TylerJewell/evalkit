@@ -11,11 +11,16 @@ import java.util.List;
  * wasted forty minutes and a provider bill.
  */
 public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rubric rubric,
-                           java.util.Optional<Policy> policy) {
+                           java.util.Optional<Policy> policy, int repeats) {
 
     /** A campaign that does not state the rules the system was given. */
     public CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rubric rubric) {
-        this(id, scenarios, lanes, rubric, java.util.Optional.empty());
+        this(id, scenarios, lanes, rubric, java.util.Optional.empty(), 1);
+    }
+
+    public CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rubric rubric,
+                        java.util.Optional<Policy> policy) {
+        this(id, scenarios, lanes, rubric, policy, 1);
     }
 
     public CampaignPlan {
@@ -23,13 +28,32 @@ public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rub
         if (scenarios == null || scenarios.isEmpty()) {
             throw new IllegalArgumentException("campaign " + id + " has no scenarios");
         }
+        if (repeats < 1) throw new IllegalArgumentException("a campaign runs each scenario once");
         scenarios = List.copyOf(scenarios);
         policy = policy == null ? java.util.Optional.empty() : policy;
     }
 
     /** The same campaign, recorded as having run under these rules. */
     public CampaignPlan under(Policy stated) {
-        return new CampaignPlan(id, scenarios, lanes, rubric, java.util.Optional.of(stated));
+        return new CampaignPlan(id, scenarios, lanes, rubric, java.util.Optional.of(stated),
+            repeats);
+    }
+
+    /**
+     * The same campaign with each scenario run this many times.
+     *
+     * <p>One run cannot tell a requirement the system meets from one it happened to meet:
+     * a requirement the system handles eight times in ten still passes five runs about a
+     * third of the time. Repeating costs provider spend in proportion, and the report says
+     * what the count bought.
+     */
+    public CampaignPlan repeating(int times) {
+        return new CampaignPlan(id, scenarios, lanes, rubric, policy, times);
+    }
+
+    /** Runs this campaign will execute, which is what it is billed for. */
+    public int runs() {
+        return scenarios.size() * repeats;
     }
 
     /** Whether a plan may run, and why not. */

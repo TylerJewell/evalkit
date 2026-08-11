@@ -174,9 +174,9 @@ public final class Panels {
     }
 
     /** A fixed-width run strip, so the column is the same width at 5 runs and at 500. */
-    record Strip(String marks, int slice) {}
+    public record Strip(String marks, int slice) {}
 
-    static Strip strip(RequirementResult requirement) {
+    public static Strip strip(RequirementResult requirement) {
         var runs = requirement.runs();
         int slice = Math.max(1, (runs.size() + STRIP - 1) / STRIP);
         var marks = new ArrayList<String>();
