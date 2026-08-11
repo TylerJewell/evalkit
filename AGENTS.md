@@ -9,7 +9,6 @@ different assistant reads the same files.
 | File | Contents |
 |---|---|
 | `CLAUDE.md` | Module boundary, load-bearing rules, working style, build commands. |
-| `docs/design-history.md` | The incident behind each rule. Read before changing anything the rules cover. |
 | `conventions/prose.md` | Prose rules for documentation, specifications, Javadoc and commit messages. |
 | `docs/specs/` | Specifications and design documents, rendered as HTML. |
 | `docs/site/evalkit/` | Reference documentation in the doc.akka.io markdown format. |

@@ -16,10 +16,8 @@ finds something.
 second test that fails when an entry outlives its cause. Wiring something up
 removes its entry in the same change.
 
-`docs/design-history.md` records what went wrong before the rules in this file
-were written.
-Read it before changing anything the rules cover. The incident is more
-persuasive than the rule.
+The rules above were written after incidents. That record is kept outside this
+repository, so ask before changing a rule that reads as arbitrary.
 
 ## Opening an issue
 
@@ -59,8 +57,8 @@ branch publishes no artifacts, so the SDK is built locally until it ships.
    both URLs as resolvers in `project/plugins.sbt` and in `build.sbt`, then
    `publishM2` the `akka-javasdk`, `akka-javasdk-parent`, `akka-javasdk-testkit`,
    `akka-javasdk-validations`, `akka-javasdk-annotation-processor` and
-   `akka-javasdk-enforcer` projects. The sbt project ids are those names, not the
-   `lazy val` names in `build.sbt`. Pass the version, because the pin carries a
+   `akka-javasdk-enforcer` projects. The sbt project ids are those
+   names. `build.sbt` declares them under different `lazy val` names. Pass the version, because the pin carries a
    suffix a clean checkout does not reproduce:
 
    ```
@@ -73,7 +71,7 @@ Step 4 needs both resolver locations. sbt resolves a build's plugins before it
 reads any global resolver file, so a resolver declared anywhere else leaves the
 plugins unresolved.
 
-**Clone, rather than a worktree.** The SDK build reads its version from git
+**The checkout has to be a clone.** The SDK build reads its version from git
 through jgit, which cannot open the object database through a linked worktree's
 `.git` file and fails with `MissingObjectException`. On Windows the checkout also
 needs `core.longpaths`, and a short root such as `C:\sdk-gov`, because some paths

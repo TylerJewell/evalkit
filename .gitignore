@@ -6,3 +6,6 @@ target/
 # Rendered reports and recorded transcripts. A corpus is production data.
 evalkit-*/target/
 **/target/evalkit/
+
+# Kept out of the published repository: the incident record behind the rules.
+docs/design-history.md

@@ -4,8 +4,9 @@ An evaluation harness for conversational services. Put the system in a known sta
 say one thing to it, score what came back, and report what the run is **not** allowed
 to claim.
 
-Read `docs/design-history.md` before changing anything load-bearing. Most rules here
-exist because something went wrong, and the incident is more persuasive than the rule.
+Read `docs/design-history.md` before changing anything load-bearing, when the working
+copy has it. It is kept out of the published repository. Most rules here exist because
+something went wrong, and the incident is more persuasive than the rule.
 
 ---
 

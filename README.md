@@ -386,9 +386,9 @@ Our return window is 30 days, so this order sits outside it.
 - output: 38
 ````
 
-An interaction is identified by its `id` field and not by its filename, so tidying a corpus
-does not orphan the evaluations that name it. Two files claiming one id are refused when the
-corpus opens.
+An interaction is identified by its `id` field, so renaming a file while tidying a corpus
+leaves every evaluation that names the interaction intact. Two files claiming one id are
+refused when the corpus opens.
 
 ## Works with
 
@@ -406,18 +406,22 @@ step that produced it.
 
 ## Akka Verify
 
-A corpus tells you how a service behaved on the cases someone thought to write.
-[Akka Verify](https://akka.io/platform/verify) runs the same evaluations against live
-traffic, continuously, and governs what an agent may do while it does it.
+[Akka Verify](https://akka.io/platform/verify) is continuous evaluation and governance for
+agentic AI.
+
+A corpus tells you how a service behaved on the cases someone thought to write. Verify runs
+the same evaluations against live traffic, continuously, and governs what an agent may do
+while it does it.
 
 A campaign's results import into Verify directly, and the metric and rubric versions carry
 across, so a score recorded in CI and a score recorded in production are one measurement.
 Verify adds what a corpus cannot. Policies allow, block or report. Guardrails act inline.
-Sanitizers redact and mask. Escalations put a person in the loop.
+Sanitizers redact, mask and reshape. Escalations put a person in the loop.
 
-Every run leaves a tamper-evident evidence record, mapped against the regulations that
-apply to your industry, in the form an auditor or regulator accepts. Verify governs agents
-built on Akka and agents built elsewhere.
+Every run leaves a tamper-evident evidence record in the form an auditor or regulator
+accepts, mapped against the controls a risk survey of 190 regulations identifies for your
+industry. Verify governs agents built on Akka and agents built elsewhere, reading a
+third-party agent's traces over OpenTelemetry.
 
 ## Project status
 
@@ -444,7 +448,6 @@ so Java 21 alone no longer builds it.
 
 - [Reference documentation](docs/site/evalkit/)
 - [Design documents and the DeepEval comparison](docs/specs/)
-- [Design history](docs/design-history.md), which records what went wrong before the rules were written
 
 ## Contributing
 
