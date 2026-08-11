@@ -16,7 +16,7 @@ import java.util.Optional;
  * neither: {@link #prepare} accepts nothing but {@link Precursor.Fixture} naming a recorded
  * interaction, and {@link #submit} returns what that interaction already said.
  *
- * <p>A campaign over this target reports on runs evalkit did not execute, so a corpus scored
+ * <p>A campaign over this target reports on runs evalkit did not execute, so a dataset scored
  * in CI and traffic scored in production reach the same report through the same metrics.
  *
  * <p><b>Nothing here proves reachability.</b> Every run is a recorded starting point, so

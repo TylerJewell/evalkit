@@ -237,7 +237,7 @@
 │   ├── test/java/…       <i>unit and integration tests, run on every commit</i>
 │   └── <b>eval/</b>
 │       ├── java/com/acme/evalkit/
-│       │   ├── <b>dataset/</b>    <i>ScenarioSource implementations, corpus loaders</i>
+│       │   ├── <b>dataset/</b>    <i>ScenarioSource implementations, dataset loaders</i>
 │       │   ├── <b>runner/</b>     <i>SystemUnderTest adapter, fixtures, lane configuration</i>
 │       │   ├── <b>scorer/</b>
 │       │   │   ├── <b>deterministic/</b>  <i>node match, exact match, schema, tool-call assertions</i>
@@ -359,8 +359,8 @@ metric = DAGMetric(name="Correctness",
         <p>Editing a <code>criteria=</code> string in DeepEval changes what every subsequent score means, and nothing records that the change happened. Scores taken before and after the edit are not commensurable and look identical in a report.</p>
         <p>evalkit loads <code>Rubric(id, version, prompt)</code> from <code>resources/rubrics/</code>, stamps the id and version onto every <code>Verdict</code>, and throws from <code>Scoring.compare</code> when two verdict sets carry different rubric versions. Comparing across versions attributes a change in the rubric to the service being measured.</p>
 
-        <h3>A continuous score invites an average the corpus does not support</h3>
-        <p>Identical runs of this corpus scored 7, 8, 9 and 10 on the same as-specified scenarios. Measured agreement between the judge and an independent reviewer is 89 to 91 percent on clear-cut replies and 53 percent on borderline ones. A mean over scores that unstable describes the judge.</p>
+        <h3>A continuous score invites an average the dataset does not support</h3>
+        <p>Identical runs of this dataset scored 7, 8, 9 and 10 on the same as-specified scenarios. Measured agreement between the judge and an independent reviewer is 89 to 91 percent on clear-cut replies and 53 percent on borderline ones. A mean over scores that unstable describes the judge.</p>
         <p><code>Scoring</code> works in bands and reports movement between them. The middle band counts as undecided, because at 53 percent agreement a pass would be an invented result.</p>
 
         <h3>A DeepEval run spends before it discovers an unsatisfiable case</h3>
@@ -381,7 +381,7 @@ metric = DAGMetric(name="Correctness",
         <p><code>CampaignWorkflow</code> runs in waves against a cursor and folds counts into workflow state at each transition. A restart loses at most one wave, and the wave size is a parameter. DeepEval's recovery mechanism is a JSON cache whose <code>use_cache</code> flag defaults to off. A six-hour run terminated at minute 200 is a six-hour run repeated.</p>
 
         <h3>A fixture seeds the state that a replay spends 22 messages to produce</h3>
-        <p>Of 2,365 recorded scenarios, 502 carry setup, and the claim corpora run to a median of 22 messages against a single graded exchange. An evaluation harness outside the service walks those turns through the front door. evalkit, co-located with the service, writes the state into the entity that owns it. <code>Precursor.Replay</code> remains in the kit because a walked path is the only evidence that the state is reachable, and <code>CampaignReport</code> counts walked runs separately so a seeded campaign cannot claim reachability it never tested.</p>
+        <p>Of 2,365 recorded scenarios, 502 carry setup, and the claim datasets run to a median of 22 messages against a single graded exchange. An evaluation harness outside the service walks those turns through the front door. evalkit, co-located with the service, writes the state into the entity that owns it. <code>Precursor.Replay</code> remains in the kit because a walked path is the only evidence that the state is reachable, and <code>CampaignReport</code> counts walked runs separately so a seeded campaign cannot claim reachability it never tested.</p>
 
         <h3>The report separates configured lanes from sustained lanes</h3>
         <p><code>Lanes.Utilisation</code> reports mean concurrent calls in flight against the configured lane count, and states which of the two was the constraint. DeepEval exposes <code>max_concurrent</code> and <code>throttle_value</code> and reports neither figure. A campaign that requested 64 lanes and sustained 9 under provider throttling produces the same DeepEval output as one that sustained 64, and the two require opposite remedies.</p>
@@ -393,8 +393,8 @@ metric = DAGMetric(name="Correctness",
         <h3>Calibration becomes a gate on the campaign</h3>
         <p><code>JudgeCalibrationTest</code> exists as a test today. As a durable component it re-measures the judge against a held-out human-labelled set, stores the agreement figure, and refuses a campaign whose judge has drifted below a stated threshold. DeepEval holds no state between runs, so it cannot compare a judge's agreement today against its agreement last month. The figure answers the question a reader of any eval report should ask about the judge and cannot answer from the report itself.</p>
 
-        <h3>Live interactions can be scored on the same types as a corpus</h3>
-        <p>DeepEval runs before deployment and provides no production feedback loop or drift detection. Akka logs every agent interaction. A Consumer samples real interactions into <code>Transcript</code> records, a Workflow judges them off the request path, a View projects band distribution over time, and a Timer schedules the campaign. <code>Transcript</code> already carries no field that distinguishes a recorded corpus from live traffic.</p>
+        <h3>Live interactions can be scored on the same types as a dataset</h3>
+        <p>DeepEval runs before deployment and provides no production feedback loop or drift detection. Akka logs every agent interaction. A Consumer samples real interactions into <code>Transcript</code> records, a Workflow judges them off the request path, a View projects band distribution over time, and a Timer schedules the campaign. <code>Transcript</code> already carries no field that distinguishes a recorded dataset from live traffic.</p>
 
         <h3>A decision graph expressed as a Workflow retries one branch point</h3>
         <p>The DeepEval DAG metric evaluates inside a single metric call. The same graph expressed as an Akka Workflow gets per-node retry, per-node tracing and independent step timeouts, so a branch point that stalls does not discard the branches already resolved. Four node types also map onto a sealed interface with an exhaustive switch.</p>
@@ -490,7 +490,7 @@ class RefundPolicyEval {
             <tr>
               <td class="lbl">Dataset format</td>
               <td class="rival">A golden and dataset JSONL shape used across the Python ecosystem.</td>
-              <td class="akka">Take as an importer. An existing corpus transfers without a rewrite.</td>
+              <td class="akka">Take as an importer. An existing dataset transfers without a rewrite.</td>
             </tr>
             <tr>
               <td class="lbl">G-Eval</td>
@@ -535,10 +535,10 @@ class RefundPolicyEval {
 
         <p>One language comparison is worth a controlled test and no headline. Against a self-hosted or high-limit endpoint, where the provider is not the constraint, CPython's event loop and JSON handling become measurable while JVM virtual threads stay off the request path. That test states its endpoint and its concurrency and claims nothing beyond them.</p>
 
-        <p>The figures below are estimates derived from DeepEval's documented metric shapes and from corpus statistics recorded in this repository. The estimates stand until the protocol runs.</p>
+        <p>The figures below are estimates derived from DeepEval's documented metric shapes and from dataset statistics recorded in this repository. The estimates stand until the protocol runs.</p>
 
         <div class="table-wrap"><table>
-          <thead><tr><th>Measure, on the 514-scenario claim-flow corpus</th><th class="rival-col">DeepEval</th><th class="akka-col">evalkit</th></tr></thead>
+          <thead><tr><th>Measure, on the 514-scenario claim-flow dataset</th><th class="rival-col">DeepEval</th><th class="akka-col">evalkit</th></tr></thead>
           <tbody>
             <tr>
               <td class="lbl">Judge calls</td>
@@ -577,7 +577,7 @@ class RefundPolicyEval {
         <h3>Benchmark protocol</h3>
         <ol class="protocol">
           <li>
-            <h3>Fix the corpus, the target and the provider</h3>
+            <h3>Fix the dataset, the target and the provider</h3>
             <p>Run both harnesses over the same scenarios against the same service on the same model. Publish the provider and the account rate limit. A throughput figure without them cannot be interpreted.</p>
           </li>
           <li>
@@ -590,11 +590,11 @@ class RefundPolicyEval {
           </li>
           <li>
             <h3>Measure recovery and refusal directly</h3>
-            <p>Terminate both runs at the same scenario and count the work repeated. Point both at a corpus the target cannot satisfy and record the time to the first refusal.</p>
+            <p>Terminate both runs at the same scenario and count the work repeated. Point both at a dataset the target cannot satisfy and record the time to the first refusal.</p>
           </li>
           <li>
             <h3>State what the protocol does not establish</h3>
-            <p>The protocol measures cost and recovery for one corpus against one target. The protocol establishes nothing about which kit scores more accurately, which is a calibration question against human labels and a separate exercise.</p>
+            <p>The protocol measures cost and recovery for one dataset against one target. The protocol establishes nothing about which kit scores more accurately, which is a calibration question against human labels and a separate exercise.</p>
           </li>
         </ol>
       </section>
@@ -602,9 +602,9 @@ class RefundPolicyEval {
       <!-- ================= 8 ================= -->
       <section id="limits">
         <h2 class="sec">The figures here are estimates until the protocol runs</h2>
-        <p class="answer">DeepEval's behaviour in this analysis is read from its published documentation and README. No run against this corpus was made. The call counts in section 7 are derived from documented metric shapes and from corpus statistics in this repository. Quote them as estimates.</p>
+        <p class="answer">DeepEval's behaviour in this analysis is read from its published documentation and README. No run against this dataset was made. The call counts in section 7 are derived from documented metric shapes and from dataset statistics in this repository. Quote them as estimates.</p>
 
-        <p>Nothing here establishes that either kit judges more accurately. Every difference argued above concerns cost, recovery, and which numbers a report prints. Accuracy is measured against human labels, and the figure for this corpus remains 89 to 91 percent agreement on clear-cut replies and 53 percent on borderline ones. A judge panel is proposed to improve the second figure and has not been measured.</p>
+        <p>Nothing here establishes that either kit judges more accurately. Every difference argued above concerns cost, recovery, and which numbers a report prints. Accuracy is measured against human labels, and the figure for this dataset remains 89 to 91 percent agreement on clear-cut replies and 53 percent on borderline ones. A judge panel is proposed to improve the second figure and has not been measured.</p>
 
         <p>The adoption difference is real and none of this addresses it. DeepEval has the Python framework integrations, the tutorials and the download volume. evalkit returns <code>Scored</code>, <code>Asserted</code>, <code>NotReached</code> or <code>Unscoreable</code> where DeepEval returns a float, and throws on a comparison across rubric versions where DeepEval permits one.</p>
       </section>

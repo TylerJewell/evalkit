@@ -24,7 +24,7 @@ public sealed interface RunOutcome {
      * <p>A scenario naming a specification node is exercising a decision that is a pure
      * function here: it either reached that node or it did not. Sending it to a judge
      * would buy a slightly random opinion about something with a right answer, and pay
-     * for it. 510 of the 514 claim-flow scenarios in the corpus are this kind.
+     * for it. 510 of the 514 claim-flow scenarios in the dataset are this kind.
      *
      * <p>A node is one thing a run can be compared against and not the only one. Required
      * text is another, and a state the run was meant to leave behind is a third, so the
@@ -101,7 +101,7 @@ public sealed interface RunOutcome {
      *
      * <p>Neither counts toward a pass rate. They are separated so that a campaign whose
      * unscored runs are all this variant is recognisable as a broken campaign rather than a
-     * difficult corpus.
+     * difficult dataset.
      */
     record ScorerFailed(String reason) implements RunOutcome {}
 

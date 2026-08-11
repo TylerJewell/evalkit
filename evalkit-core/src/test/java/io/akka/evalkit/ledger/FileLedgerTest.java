@@ -24,13 +24,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * A corpus on disk, recorded once and scored again.
+ * A dataset on disk, recorded once and scored again.
  *
- * <p>The run that produces a corpus costs provider spend. Every run after it reads the files
+ * <p>The run that produces a dataset costs provider spend. Every run after it reads the files
  * and costs nothing, which is what lets a rubric change be measured against traffic that has
  * already happened.
  */
-@DisplayName("FileLedger · a corpus of recorded interactions on disk")
+@DisplayName("FileLedger · a dataset of recorded interactions on disk")
 class FileLedgerTest {
 
     /** A service that answers once per call, counting how often it was reached. */
@@ -66,21 +66,21 @@ class FileLedgerTest {
 
     @Test
     @DisplayName("a campaign's interactions are saved and read back without the service")
-    void aCorpusIsRecordedOnceAndScoredAgain(@TempDir Path corpusDirectory) {
+    void aDatasetIsRecordedOnceAndScoredAgain(@TempDir Path datasetDirectory) {
         var service = new CountingService();
         var first = CampaignRunner.run(plan(), service,
             ScorerRouter.judgingEverything(recording -> new RunOutcome.Unscoreable("not judged")));
 
-        var corpus = FileLedger.open(corpusDirectory);
+        var dataset = FileLedger.open(datasetDirectory);
         first.completed().forEach(completed ->
-            completed.recording().ifPresent(recording -> corpus.save(recording.interaction())));
+            completed.recording().ifPresent(recording -> dataset.save(recording.interaction())));
 
         assertThat(service.calls.get()).isEqualTo(1);
-        assertThat(corpus.ids()).containsExactly("refund-timing");
+        assertThat(dataset.ids()).containsExactly("refund-timing");
 
         // The second campaign reads the files. The service is never reached again.
-        var recorded = new RecordedInteractions(FileLedger.open(corpusDirectory),
-            corpus.fixtures());
+        var recorded = new RecordedInteractions(FileLedger.open(datasetDirectory),
+            dataset.fixtures());
         var replayed = CampaignRunner.run(
             new CampaignPlan("refund-policy-rescored",
                 List.of(new Scenario("refund-timing", Optional.empty(),
@@ -98,14 +98,14 @@ class FileLedgerTest {
 
     @Test
     @DisplayName("a saved interaction keeps its tools and its answer")
-    void aSavedInteractionKeepsWhatTheRunDid(@TempDir Path corpusDirectory) {
+    void aSavedInteractionKeepsWhatTheRunDid(@TempDir Path datasetDirectory) {
         var result = CampaignRunner.run(plan(), new CountingService(),
             ScorerRouter.judgingEverything(recording -> new RunOutcome.Unscoreable("not judged")));
-        var corpus = FileLedger.open(corpusDirectory);
+        var dataset = FileLedger.open(datasetDirectory);
         result.completed().forEach(completed ->
-            completed.recording().ifPresent(recording -> corpus.save(recording.interaction())));
+            completed.recording().ifPresent(recording -> dataset.save(recording.interaction())));
 
-        var reopened = FileLedger.open(corpusDirectory);
+        var reopened = FileLedger.open(datasetDirectory);
         var record = reopened.getInteraction("refund-timing");
 
         assertThat(record.finalResponseText()).isEqualTo("the refund takes 30 days");
@@ -122,51 +122,51 @@ class FileLedgerTest {
      */
     @Test
     @DisplayName("two files claiming one interaction id are refused")
-    void aDuplicateIdIsRefused(@TempDir Path corpusDirectory) throws Exception {
+    void aDuplicateIdIsRefused(@TempDir Path datasetDirectory) throws Exception {
         var built = Interactions.identified(
             Interactions.of("session-1", "", "hello", List.of(), Optional.empty(), Optional.empty()),
             "refund-timing");
-        Files.writeString(corpusDirectory.resolve("one.md"), InteractionMarkdown.render(built));
-        Files.writeString(corpusDirectory.resolve("two.md"), InteractionMarkdown.render(built));
+        Files.writeString(datasetDirectory.resolve("one.md"), InteractionMarkdown.render(built));
+        Files.writeString(datasetDirectory.resolve("two.md"), InteractionMarkdown.render(built));
 
-        assertThatThrownBy(() -> FileLedger.open(corpusDirectory))
+        assertThatThrownBy(() -> FileLedger.open(datasetDirectory))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("refund-timing");
     }
 
     @Test
     @DisplayName("an entry naming no interaction id is refused")
-    void anEntryWithNoIdIsRefused(@TempDir Path corpusDirectory) throws Exception {
-        Files.writeString(corpusDirectory.resolve("nameless.md"),
+    void anEntryWithNoIdIsRefused(@TempDir Path datasetDirectory) throws Exception {
+        Files.writeString(datasetDirectory.resolve("nameless.md"),
             "# Interaction\n\n## User\n\nhello\n");
 
-        assertThatThrownBy(() -> FileLedger.open(corpusDirectory))
+        assertThatThrownBy(() -> FileLedger.open(datasetDirectory))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("names no interaction id");
     }
 
     @Test
     @DisplayName("renaming the file does not rename the interaction")
-    void theIdSurvivesARename(@TempDir Path corpusDirectory) throws Exception {
+    void theIdSurvivesARename(@TempDir Path datasetDirectory) throws Exception {
         var built = Interactions.identified(
             Interactions.of("session-1", "", "hello", List.of(), Optional.empty(), Optional.empty()),
             "refund-timing");
-        var corpus = FileLedger.open(corpusDirectory);
-        Path written = corpus.save(built);
-        Files.move(written, corpusDirectory.resolve("renamed-by-a-tidy-up.md"));
+        var dataset = FileLedger.open(datasetDirectory);
+        Path written = dataset.save(built);
+        Files.move(written, datasetDirectory.resolve("renamed-by-a-tidy-up.md"));
 
-        var reopened = FileLedger.open(corpusDirectory);
+        var reopened = FileLedger.open(datasetDirectory);
 
         assertThat(reopened.ids()).containsExactly("refund-timing");
         assertThat(reopened.getInteraction("refund-timing").inputText()).isEqualTo("hello");
     }
 
     @Test
-    @DisplayName("an interaction the corpus does not hold is named in the failure")
-    void anAbsentInteractionIsNamed(@TempDir Path corpusDirectory) {
-        var corpus = FileLedger.open(corpusDirectory);
+    @DisplayName("an interaction the dataset does not hold is named in the failure")
+    void anAbsentInteractionIsNamed(@TempDir Path datasetDirectory) {
+        var dataset = FileLedger.open(datasetDirectory);
 
-        assertThatThrownBy(() -> corpus.getInteraction("nothing-here"))
+        assertThatThrownBy(() -> dataset.getInteraction("nothing-here"))
             .isInstanceOf(java.util.NoSuchElementException.class)
             .hasMessageContaining("nothing-here");
     }

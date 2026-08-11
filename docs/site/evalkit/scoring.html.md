@@ -30,7 +30,7 @@ Three scorer families exist, and each is defined by what settles the result.
 
 Every scenario is routed before any call goes out. A scenario that names a specification node
 is exercising a decision with a right answer, and sending it to a model buys a slightly
-random opinion and pays for it. In one recorded corpus, 510 of 514 scenarios named a node.
+random opinion and pays for it. In one recorded dataset, 510 of 514 scenarios named a node.
 
 ## <a href="about:blank#_the_scorer_interface"></a> The scorer interface
 
@@ -108,7 +108,7 @@ record Measured(String metricId, int metricVersion,
 The reason is empty for a metric that counts, and carries a sentence for a metric whose
 score came from a model.
 
-|  | A tuned threshold moves a score without the service changing. One corpus in this project's history scored 23, 17 and 19 out of 40 across three passes at a text-extraction heuristic while the service never changed. `Measured` carries a metric id and version for that reason, and `Scoring.compare` refuses to compare results produced under different metric versions. |
+|  | A tuned threshold moves a score without the service changing. One dataset in this project's history scored 23, 17 and 19 out of 40 across three passes at a text-extraction heuristic while the service never changed. `Measured` carries a metric id and version for that reason, and `Scoring.compare` refuses to compare results produced under different metric versions. |
 
 ## <a href="about:blank#_judgement"></a> Judgement
 
@@ -134,7 +134,7 @@ conversations.
 
 ### <a href="about:blank#_bands_carry_the_result"></a> Bands carry the result
 
-`Scoring` works in bands and reports movement between them. Identical runs of one corpus
+`Scoring` works in bands and reports movement between them. Identical runs of one dataset
 scored 7, 8, 9 and 10 on the same as-specified scenarios, so an average of the raw scores
 describes the judge. The middle band counts as undecided, because measured agreement with an
 independent reviewer is 89 to 91 percent on clear-cut replies and 53 percent on borderline

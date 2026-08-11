@@ -15,9 +15,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The markdown a recorded corpus is stored as.
+ * The markdown a recorded dataset is stored as.
  *
- * <p>A corpus is edited by hand for years after the run that produced it, so the round trip
+ * <p>A dataset is edited by hand for years after the run that produced it, so the round trip
  * has to survive a person rewriting a transcript in place.
  */
 @DisplayName("InteractionMarkdown · a recorded interaction a person can edit")

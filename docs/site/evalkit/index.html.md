@@ -39,7 +39,7 @@ evalkit covers these tasks:
   tests. A decision with a right answer needs no evaluation.
 - **Watching production quality continuously**, use an
   [evaluator agent](../../sdk/agents/llm_eval.html) called from a Consumer. evalkit runs
-  campaigns against a corpus.
+  campaigns against a dataset.
 
 ### <a href="about:blank#_the_system_under_test"></a> The system under test
 
@@ -123,14 +123,14 @@ A campaign needs scenarios, a target, and a router that decides how each scenari
 settled.
 
 ```java
-var corpus = List.of(
+var dataset = List.of(
   new Scenario("refund-30d",
     Optional.of("REFUND-004"),                                  // (1)
     Precursor.Fixture.named("authenticated-claim-open"),
     "What if these shoes don't fit?",
     "a 30-day full refund at no extra cost"));
 
-var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(4), rubric); // (2)
+var plan = new CampaignPlan("refund-policy", dataset, Lanes.of(4), rubric); // (2)
 
 if (plan.check(target) instanceof CampaignPlan.Check.Refused refused) { // (3)
   throw new IllegalStateException(String.join("; ", refused.reasons()));

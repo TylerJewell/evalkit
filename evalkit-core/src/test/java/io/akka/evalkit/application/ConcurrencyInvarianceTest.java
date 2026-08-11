@@ -103,7 +103,7 @@ class ConcurrencyInvarianceTest {
             Precursor.Fixture.named("ready"), id, "reaches node-" + id);
     }
 
-    private static List<Scenario> corpus(int size) {
+    private static List<Scenario> dataset(int size) {
         var out = new ArrayList<Scenario>();
         for (int i = 0; i < size; i++) {
             out.add(i % 2 == 0 ? judged("s" + i) : asserted("s" + i));
@@ -121,7 +121,7 @@ class ConcurrencyInvarianceTest {
     @ValueSource(ints = {2, 4, 8, 16, 64})
     @DisplayName("the report does not move with the lane count")
     void theReportIsInvariantAcrossLanes(int lanes) {
-        var scenarios = corpus(200);
+        var scenarios = dataset(200);
 
         var sequential = runAt(1, scenarios);
         var parallel = runAt(lanes, scenarios);
@@ -134,7 +134,7 @@ class ConcurrencyInvarianceTest {
     @Test
     @DisplayName("every scenario produces exactly one row")
     void everyScenarioProducesOneRow() {
-        var scenarios = corpus(400);
+        var scenarios = dataset(400);
         var plan = new CampaignPlan("invariance", scenarios, Lanes.of(16), RUBRIC);
 
         var result = CampaignRunner.run(plan, new Target(true),
@@ -148,7 +148,7 @@ class ConcurrencyInvarianceTest {
     @Test
     @DisplayName("each outcome belongs to the scenario it is filed against")
     void outcomesStayWithTheirScenario() {
-        var scenarios = corpus(400);
+        var scenarios = dataset(400);
         var plan = new CampaignPlan("invariance", scenarios, Lanes.of(16), RUBRIC);
 
         var result = CampaignRunner.run(plan, new Target(true),
@@ -163,7 +163,7 @@ class ConcurrencyInvarianceTest {
                 case RunOutcome.Scored s -> assertThat(s.verdict().scenarioName()).isEqualTo(id);
                 case RunOutcome.Asserted a -> assertThat(a.expected()).isEqualTo("node-" + id);
                 default -> throw new AssertionError(
-                    "this corpus produces only scored and asserted rows, got " + completed.outcome());
+                    "this dataset produces only scored and asserted rows, got " + completed.outcome());
             }
         }
     }
@@ -171,7 +171,7 @@ class ConcurrencyInvarianceTest {
     @Test
     @DisplayName("a scorer that throws costs its own row and no other")
     void aThrowingScorerLosesNothing() {
-        var scenarios = corpus(400);
+        var scenarios = dataset(400);
         var plan = new CampaignPlan("invariance", scenarios, Lanes.of(16), RUBRIC);
 
         var result = CampaignRunner.run(plan, new Target(true),
@@ -188,7 +188,7 @@ class ConcurrencyInvarianceTest {
     @Test
     @DisplayName("running the same campaign twice produces the same report")
     void theSameCampaignRepeats() {
-        var scenarios = corpus(200);
+        var scenarios = dataset(200);
 
         assertThat(runAt(8, scenarios)).isEqualTo(runAt(8, scenarios));
     }

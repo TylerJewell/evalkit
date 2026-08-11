@@ -7,7 +7,7 @@ import java.util.Map;
  * How the system under test is put into the state a scenario assumes.
  *
  * <p>A scenario testing a conversation's first turn is the exception. Of the 2,365
- * scenarios in the reference corpus, 502 carry recorded setup, and the claim corpora run
+ * scenarios in the reference dataset, 502 carry recorded setup, and the claim datasets run
  * to a median of 22 messages before the graded exchange. Every setup turn costs a model
  * call, adds latency, and can fail before the graded turn is reached.
  *

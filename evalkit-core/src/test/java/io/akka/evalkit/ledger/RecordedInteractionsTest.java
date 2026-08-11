@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Scoring runs evalkit did not execute.
  *
- * <p>A campaign over this target reads what the platform recorded, so a corpus scored in a
+ * <p>A campaign over this target reads what the platform recorded, so a dataset scored in a
  * build and traffic scored in production reach the same report through the same metrics.
  */
 @DisplayName("RecordedInteractions · a campaign over interactions the platform recorded")

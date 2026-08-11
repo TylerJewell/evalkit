@@ -14,7 +14,7 @@ import java.util.TreeMap;
  * <p><b>Any route that arrives is a correct route.</b> The expected state names what must
  * be true at the end, never the calls that must have produced it. A scenario that pinned
  * the sequence would fail an agent that reached the same place by a better path, and
- * turn every refactor of the service into a corpus rewrite. Where the sequence genuinely
+ * turn every refactor of the service into a dataset rewrite. Where the sequence genuinely
  * is the requirement, {@link io.akka.evalkit.metric.ToolCorrectness} is the metric that
  * says so.
  *

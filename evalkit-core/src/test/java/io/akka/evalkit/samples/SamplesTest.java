@@ -21,7 +21,7 @@ class SamplesTest {
 
     private static final Rubric RUBRIC = Rubric.load("scenario-judge", 3);
 
-    /** A target that can do everything the samples ask for, so only the corpus is checked. */
+    /** A target that can do everything the samples ask for, so only the dataset is checked. */
     private record Capable(Samples.Domain domain) implements SystemUnderTest {
         @Override
         public Prepared prepare(Precursor precursor) {
@@ -45,14 +45,14 @@ class SamplesTest {
     }
 
     @Test
-    @DisplayName("every sample corpus passes the pre-flight it ships with")
+    @DisplayName("every sample dataset passes the pre-flight it ships with")
     void everyDomainIsRunnable() {
         for (Samples.Domain domain : Samples.all()) {
             var plan = new CampaignPlan(domain.id(), domain.scenarios(), Lanes.of(2), RUBRIC)
                 .under(domain.policy());
 
             assertThat(plan.check(new Capable(domain)))
-                .as("%s refuses its own corpus", domain.id())
+                .as("%s refuses its own dataset", domain.id())
                 .isInstanceOf(CampaignPlan.Check.Ready.class);
         }
     }
@@ -72,7 +72,7 @@ class SamplesTest {
     }
 
     @Test
-    @DisplayName("the corpora show a broken tool and a walked path, not only seeded states")
+    @DisplayName("the datasets show a broken tool and a walked path, not only seeded states")
     void theHardShapesAreShown() {
         var precursors = Samples.all().stream()
             .flatMap(d -> d.scenarios().stream())

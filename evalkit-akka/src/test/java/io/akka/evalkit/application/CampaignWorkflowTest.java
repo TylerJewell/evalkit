@@ -61,7 +61,7 @@ class CampaignWorkflowTest extends TestKitSupport {
     }
 
     @Test
-    @DisplayName("the corpus is read a page at a time, never whole")
+    @DisplayName("the dataset is read a page at a time, never whole")
     void pagesRatherThanLoads() {
         // Workflow state is serialised on every transition. Carrying five thousand
         // scenarios through each one would cost more than running them.
@@ -85,8 +85,8 @@ class CampaignWorkflowTest extends TestKitSupport {
     }
 
     @Test
-    @DisplayName("a wave larger than the corpus is one wave, not an error")
-    void waveLargerThanCorpus() {
+    @DisplayName("a wave larger than the dataset is one wave, not an error")
+    void waveLargerThanDataset() {
         var state = start(campaign(3), 4, 500);
 
         assertThat(state.tally().judged()).isEqualTo(3);

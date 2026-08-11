@@ -241,7 +241,7 @@ A case names the requirement it exercises. `REFUND-004` below is one, and naming
 evalkit settle the case without paying for a model.
 
 ```java
-var corpus = List.of(
+var dataset = List.of(
     new Scenario("refund-outside-window",
         Optional.of("REFUND-004"),
         Precursor.replay("I want a refund", "order 4417"),
@@ -249,10 +249,10 @@ var corpus = List.of(
         "Refuses, and states the 30-day window"));
 ```
 
-Run the corpus against your service and print the result.
+Run the dataset against your service and print the result.
 
 ```java
-var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(8),
+var plan = new CampaignPlan("refund-policy", dataset, Lanes.of(8),
                             Rubric.load("scenario-judge", 3));
 
 var result = CampaignRunner.run(plan, target, router);
@@ -284,7 +284,7 @@ compiles under a Maven profile and stays off the build that runs on every commit
 │   ├── test/java/…       unit and integration tests, run on every commit
 │   └── eval/
 │       ├── java/com/acme/evalkit/
-│       │   ├── dataset/    ScenarioSource implementations, corpus loaders
+│       │   ├── dataset/    ScenarioSource implementations, dataset loaders
 │       │   ├── runner/     SystemUnderTest adapter, fixtures, lane configuration
 │       │   ├── scorer/
 │       │   │   ├── deterministic/  node match, exact match, schema, tool-call assertions
@@ -333,12 +333,12 @@ campaign scores those files under a new rubric without reaching the service agai
 
 ```java
 // after a campaign, write down what it recorded
-var corpus = FileLedger.open(Path.of("src/eval/resources/datasets"));
+var dataset = FileLedger.open(Path.of("src/eval/resources/datasets"));
 result.completed().forEach(completed ->
-    completed.recording().ifPresent(recording -> corpus.save(recording.interaction())));
+    completed.recording().ifPresent(recording -> dataset.save(recording.interaction())));
 
 // any time later, score those files instead of a service
-var rescored = CampaignRunner.run(plan, new RecordedInteractions(corpus, corpus.fixtures()),
+var rescored = CampaignRunner.run(plan, new RecordedInteractions(dataset, dataset.fixtures()),
     router);
 ```
 
@@ -386,9 +386,9 @@ Our return window is 30 days, so this order sits outside it.
 - output: 38
 ````
 
-An interaction is identified by its `id` field, so renaming a file while tidying a corpus
+An interaction is identified by its `id` field, so renaming a file while tidying a dataset
 leaves every evaluation that names the interaction intact. Two files claiming one id are
-refused when the corpus opens.
+refused when the dataset opens.
 
 ## Works with
 

@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>The sealed interface guarantees every switch handles a new variant. It guarantees
  * nothing about whether a campaign can reach one, whether the report counts it, or whether
- * the summary prints it. This walks the permitted subclasses and fails when the corpus
+ * the summary prints it. This walks the permitted subclasses and fails when the dataset
  * below leaves one unreached.
  */
 @DisplayName("RunOutcome · every variant is reachable, counted and printed")

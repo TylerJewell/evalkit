@@ -81,7 +81,7 @@ class PanelsTest {
             "target/evalkit/refund-policy.jsonl");
     }
 
-    /** The same corpus with five runs each, so the varied panel has something to show. */
+    /** The same dataset with five runs each, so the varied panel has something to show. */
     private static RunRecord repeated(int repeats) {
         var requirements = new ArrayList<RequirementResult>();
         requirements.add(result(node("steady"), Duration.ofSeconds(2),

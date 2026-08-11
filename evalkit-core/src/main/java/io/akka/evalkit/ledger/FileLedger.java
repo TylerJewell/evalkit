@@ -22,7 +22,7 @@ import java.util.stream.Stream;
  * A {@link LedgerClient} over a directory of markdown interactions.
  *
  * <p>The Akka platform records an interaction to its own storage and serves it through the
- * same interface. This one reads {@code src/eval/resources/datasets}, so a corpus is a set of
+ * same interface. This one reads {@code src/eval/resources/datasets}, so a dataset is a set of
  * files a person edits and a reviewer reads in a pull request.
  *
  * <p><b>What this makes possible.</b> An interaction recorded once is scored again whenever a
@@ -38,7 +38,7 @@ import java.util.stream.Stream;
  */
 public final class FileLedger implements LedgerClient {
 
-    /** The extension a corpus entry carries. */
+    /** The extension a dataset entry carries. */
     public static final String EXTENSION = ".md";
 
     private final Path directory;
@@ -49,7 +49,7 @@ public final class FileLedger implements LedgerClient {
         this.directory = Objects.requireNonNull(directory, "directory");
     }
 
-    /** Opens the corpus in this directory, reading every markdown file under it. */
+    /** Opens the dataset in this directory, reading every markdown file under it. */
     public static FileLedger open(Path directory) {
         var ledger = new FileLedger(directory);
         ledger.reload();
@@ -67,7 +67,7 @@ public final class FileLedger implements LedgerClient {
                 .sorted()
                 .forEach(this::index);
         } catch (IOException e) {
-            throw new UncheckedIOException("cannot read the corpus at " + directory, e);
+            throw new UncheckedIOException("cannot read the dataset at " + directory, e);
         }
     }
 
@@ -95,12 +95,12 @@ public final class FileLedger implements LedgerClient {
         files.put(id, path);
     }
 
-    /** The interaction ids this corpus holds, in the order the files were read. */
+    /** The interaction ids this dataset holds, in the order the files were read. */
     public List<String> ids() {
         return List.copyOf(byId.keySet());
     }
 
-    /** The fixtures a {@link RecordedInteractions} target declares over this corpus. */
+    /** The fixtures a {@link RecordedInteractions} target declares over this dataset. */
     public Map<String, String> fixtures() {
         var out = new LinkedHashMap<String, String>();
         byId.forEach((id, record) -> out.put(id, describe(record)));
@@ -114,9 +114,9 @@ public final class FileLedger implements LedgerClient {
     }
 
     /**
-     * Writes an interaction into the corpus and indexes it.
+     * Writes an interaction into the dataset and indexes it.
      *
-     * <p>The file is named after the id, so a corpus lists in the order a reader would guess.
+     * <p>The file is named after the id, so a dataset lists in the order a reader would guess.
      * The id inside the file is what identifies it, and renaming the file changes nothing.
      */
     public Path save(InteractionRecord record) {
@@ -146,7 +146,7 @@ public final class FileLedger implements LedgerClient {
         var record = byId.get(interactionId);
         if (record == null) {
             throw new NoSuchElementException(
-                "the corpus at " + directory + " holds no interaction " + interactionId);
+                "the dataset at " + directory + " holds no interaction " + interactionId);
         }
         return record;
     }
@@ -159,13 +159,13 @@ public final class FileLedger implements LedgerClient {
     @Override
     public EvaluationRecord getEvaluation(String evaluationId) {
         throw new NoSuchElementException(
-            "a file corpus holds interactions and no evaluations: " + evaluationId);
+            "a file dataset holds interactions and no evaluations: " + evaluationId);
     }
 
     @Override
     public CompletionStage<EvaluationRecord> getEvaluationAsync(String evaluationId) {
         return CompletableFuture.failedFuture(
             new NoSuchElementException(
-                "a file corpus holds interactions and no evaluations: " + evaluationId));
+                "a file dataset holds interactions and no evaluations: " + evaluationId));
     }
 }

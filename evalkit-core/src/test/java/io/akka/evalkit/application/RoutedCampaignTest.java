@@ -149,7 +149,7 @@ class RoutedCampaignTest {
 
         CampaignRunner.run(plan, new Target(), router);
 
-        // Three of the four scenarios cost nothing. Routing is the whole reason a corpus
+        // Three of the four scenarios cost nothing. Routing is the whole reason a dataset
         // of several hundred is affordable.
         assertThat(judge.calls.get()).isEqualTo(1);
         assertThat(length.calls.get()).isEqualTo(1);

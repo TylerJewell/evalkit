@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Three worked corpora, for reading rather than for scoring.
+ * Three worked datasets, for reading rather than for scoring.
  *
  * <p>These exist to show what a scenario looks like for each kind of question this kit can
  * settle: a decision with one right answer, wording a policy requires, a tool an agent
@@ -23,7 +23,7 @@ import java.util.Optional;
  * exercise.
  *
  * <p>The structure &mdash; a versioned policy beside the scenarios, and a list of the
- * corpus's own known defects &mdash; follows tau-bench, which is MIT licensed and recorded
+ * dataset's own known defects &mdash; follows tau-bench, which is MIT licensed and recorded
  * in NOTICE. The scenarios are this project's own.
  */
 public final class Samples {

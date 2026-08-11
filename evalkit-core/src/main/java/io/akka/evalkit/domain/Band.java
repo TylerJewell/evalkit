@@ -58,7 +58,7 @@ public enum Band {
     /**
      * Whether a human has to look at this one.
      *
-     * <p>Re-scoring 493 recorded transcripts from the reference corpus on their own
+     * <p>Re-scoring 493 recorded transcripts from the reference dataset on their own
      * rubric agreed with the reference judge 91% of the time on {@code NO_MATCH}, 89% on
      * {@code FAITHFUL}, and <b>53% on {@code PARTIAL}</b>. Agreement at 53% is close to
      * chance, which the rubric's own wording invites: 4&ndash;7 is a four-point range with

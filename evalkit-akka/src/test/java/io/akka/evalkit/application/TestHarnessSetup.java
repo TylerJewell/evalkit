@@ -39,7 +39,7 @@ public class TestHarnessSetup implements ServiceSetup {
         /** Campaigns whose scenarios name a fixture the target does not have. */
         public static final Set<String> BAD_FIXTURE = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-        /** Pages served, so the test can prove the corpus was never loaded whole. */
+        /** Pages served, so the test can prove the dataset was never loaded whole. */
         public static final AtomicInteger PAGES = new AtomicInteger();
 
         @Override

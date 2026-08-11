@@ -101,7 +101,7 @@ public class ScenarioJudge extends Agent {
      * <p>Here rather than in the runner because the runner is the half of this kit that
      * has no runtime: it schedules lanes, counts outcomes and decides what a campaign may
      * claim, none of which needs an SDK. Knowing about an Agent would have put one in the
-     * dependency list of every project that only wanted to score a corpus.
+     * dependency list of every project that only wanted to score a dataset.
      */
     public static CampaignRunner.Judge asJudge(
             java.util.function.BiFunction<Transcript, Rubric, Result> invoke) {

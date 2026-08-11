@@ -28,11 +28,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * judges that disagree about the same transcripts produce two incomparable scales.
  *
  * <p><b>The run measures two things at once and cannot separate them.</b> The reference
- * corpus was scored with "GPT 5.5 or equivalent" and this scores with Gemini, so
+ * dataset was scored with "GPT 5.5 or equivalent" and this scores with Gemini, so
  * agreement means the rubric carries across models and this implementation is faithful to
  * it. Disagreement cannot tell those apart without a second run on the reference model.
  *
- * <p>Each line of the sample is a JSON object carrying {@code corpus},
+ * <p>Each line of the sample is a JSON object carrying {@code dataset},
  * {@code scenario_name}, the transcript fields, and {@code reference_score}.
  *
  * <p>Opt-in, because it costs money and calls a live model:
@@ -51,7 +51,7 @@ class JudgeCalibrationTest extends TestKitSupport {
     private static final Rubric RUBRIC = Rubric.load("scenario-judge", 2);
     private static final Rubric REASONED = Rubric.load("scenario-judge", 3);
 
-    record Sample(String corpus, String scenario, Transcript transcript, int reference) {}
+    record Sample(String dataset, String scenario, Transcript transcript, int reference) {}
 
     private record Scored(Sample sample, int ours) {
         Band ourBand() {
@@ -238,10 +238,10 @@ class JudgeCalibrationTest extends TestKitSupport {
         var out = Path.of(System.getProperty("calibration.sample"))
             .resolveSibling("calibration-v2-v3.csv");
         var lines = new ArrayList<String>();
-        lines.add("corpus,scenario,reference_score,v2_score,v3_score,v2_band,v3_band,same_band,v3_reason");
+        lines.add("dataset,scenario,reference_score,v2_score,v3_score,v2_band,v3_band,same_band,v3_reason");
         for (Compared c : compared) {
             lines.add("%s,\"%s\",%d,%d,%d,%s,%s,%s,\"%s\"".formatted(
-                c.sample().corpus(), c.sample().scenario().replace("\"", "'"),
+                c.sample().dataset(), c.sample().scenario().replace("\"", "'"),
                 c.sample().reference(), c.bare(), c.reasoned(),
                 c.bareBand(), c.reasonedBand(), c.bareBand() == c.reasonedBand(),
                 c.reason().replace("\"", "'").replace("\n", " ")));
@@ -270,7 +270,7 @@ class JudgeCalibrationTest extends TestKitSupport {
         int sameBand = 0;
         long absError = 0;
         var matrix = new EnumMap<Band, Map<Band, Integer>>(Band.class);
-        var perCorpus = new java.util.TreeMap<String, int[]>();   // [agreed, n]
+        var perDataset = new java.util.TreeMap<String, int[]>();   // [agreed, n]
 
         for (Scored s : scored) {
             int delta = Math.abs(s.ours() - s.sample().reference());
@@ -281,7 +281,7 @@ class JudgeCalibrationTest extends TestKitSupport {
             if (agree) sameBand++;
             matrix.computeIfAbsent(s.referenceBand(), k -> new EnumMap<>(Band.class))
                 .merge(s.ourBand(), 1, Integer::sum);
-            var c = perCorpus.computeIfAbsent(s.sample().corpus(), k -> new int[2]);
+            var c = perDataset.computeIfAbsent(s.sample().dataset(), k -> new int[2]);
             c[0] += agree ? 1 : 0;
             c[1]++;
         }
@@ -309,9 +309,9 @@ class JudgeCalibrationTest extends TestKitSupport {
                 row.getOrDefault(Band.FAITHFUL, 0));
         }
 
-        System.out.println("\nband agreement by corpus");
-        perCorpus.forEach((corpus, c) ->
-            System.out.printf("  %-24s %3d/%3d  %.0f%%%n", corpus, c[0], c[1],
+        System.out.println("\nband agreement by dataset");
+        perDataset.forEach((dataset, c) ->
+            System.out.printf("  %-24s %3d/%3d  %.0f%%%n", dataset, c[0], c[1],
                 100.0 * c[0] / c[1]));
 
         if (!failures.isEmpty()) {
@@ -322,10 +322,10 @@ class JudgeCalibrationTest extends TestKitSupport {
         var out = Path.of(System.getProperty("calibration.sample"))
             .resolveSibling("calibration.csv");
         var lines = new ArrayList<String>();
-        lines.add("corpus,scenario,reference_score,our_score,reference_band,our_band,agree");
+        lines.add("dataset,scenario,reference_score,our_score,reference_band,our_band,agree");
         for (Scored s : scored) {
             lines.add("%s,\"%s\",%d,%d,%s,%s,%s".formatted(
-                s.sample().corpus(), s.sample().scenario().replace("\"", "'"),
+                s.sample().dataset(), s.sample().scenario().replace("\"", "'"),
                 s.sample().reference(), s.ours(), s.referenceBand(), s.ourBand(),
                 s.ourBand() == s.referenceBand()));
         }
@@ -356,7 +356,7 @@ class JudgeCalibrationTest extends TestKitSupport {
                 throw new IllegalArgumentException(
                     path + " line " + (i + 1) + ": reference_score is missing or not a number");
             }
-            out.add(new Sample(node.path("corpus").asText(),
+            out.add(new Sample(node.path("dataset").asText(),
                 node.path("scenario_name").asText(), transcript,
                 (int) Math.round(score.asDouble())));
         }

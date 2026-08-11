@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class CalibrationSampleTest {
 
     private static final String TRANSCRIPT = """
-        "corpus": "claims", "scenario_name": "refund-30d", \
+        "dataset": "claims", "scenario_name": "refund-30d", \
         "replay_history": "", "simulation_history": "", \
         "system_output": "Refused, 30-day window", "expected_outcome": "Refuses"\
         """;
@@ -37,7 +37,7 @@ class CalibrationSampleTest {
 
         assertThat(samples).hasSize(1);
         assertThat(samples.get(0).reference()).isEqualTo(9);
-        assertThat(samples.get(0).corpus()).isEqualTo("claims");
+        assertThat(samples.get(0).dataset()).isEqualTo("claims");
     }
 
     @Test

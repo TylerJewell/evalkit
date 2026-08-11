@@ -113,13 +113,13 @@ public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rub
             reasons.add("no scenarios to run");
         }
 
-        reasons.addAll(corpusDefects());
+        reasons.addAll(datasetDefects());
 
         return reasons.isEmpty() ? new Check.Ready(this) : new Check.Refused(reasons);
     }
 
     /**
-     * Defects in the corpus rather than in the target.
+     * Defects in the dataset rather than in the target.
      *
      * <p>Every published benchmark that has audited its own tasks has found some of
      * these. They are checked here because each one produces a result that reads as a
@@ -127,7 +127,7 @@ public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rub
      * the scenario itself contradicts fails on every run for every service, and a
      * scenario that expects nothing passes whatever the system says.
      */
-    private List<String> corpusDefects() {
+    private List<String> datasetDefects() {
         var reasons = new java.util.ArrayList<String>();
 
         // Two rows for one requirement. Every panel counts it twice, and the second
@@ -162,7 +162,7 @@ public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rub
                 + "outcome says must not appear; no reply satisfies both");
         }
 
-        // A scenario naming a node it also says nothing about is the shape a corpus takes
+        // A scenario naming a node it also says nothing about is the shape a dataset takes
         // when a template was filled in halfway.
         var placeholder = scenarios.stream()
             .filter(s -> s.gradedTurn().equals(s.expectedOutcome()))

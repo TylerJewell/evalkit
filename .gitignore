@@ -3,7 +3,7 @@ target/
 *.iml
 .DS_Store
 
-# Rendered reports and recorded transcripts. A corpus is production data.
+# Rendered reports and recorded transcripts. A dataset is production data.
 evalkit-*/target/
 **/target/evalkit/
 

@@ -16,7 +16,7 @@ package io.akka.evalkit.domain;
  * <p>The case this exists for is recorded: during calibration a content filter refused to
  * score an identification-failure transcript. That is absent evidence about the transcript,
  * not a bug in the harness, and a report that files it under harness defects understates the
- * corpus exactly as much as filing a harness defect under refusals overstates it.
+ * dataset exactly as much as filing a harness defect under refusals overstates it.
  */
 public class NoVerdict extends RuntimeException {
 

@@ -91,7 +91,7 @@ class ScenarioRunnerTest {
 
         assertThat(result).isInstanceOf(ScenarioRunner.Execution.Produced.class);
         assertThat(target.submitted).hasSize(setup.size() + 1);
-        // Five calls against one — the throughput claim, made concrete. Claim corpora
+        // Five calls against one — the throughput claim, made concrete. Claim datasets
         // average ten setup exchanges, so the real ratio is worse than this.
         assertThat(target.submitted).hasSizeGreaterThan(4);
     }

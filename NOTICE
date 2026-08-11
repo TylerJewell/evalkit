@@ -15,7 +15,7 @@ licensed under the Apache License, Version 2.0.
 
 The sample domains under io.akka.evalkit.samples follow the structure of
 tau-bench, developed by Sierra and licensed under the MIT License: a versioned
-policy document beside the scenarios it governs, and a record of the corpus's
+policy document beside the scenarios it governs, and a record of the dataset's
 own known defects. No scenarios, tasks, policies or data were copied. The
 scenarios and policies in this product are its own.
 

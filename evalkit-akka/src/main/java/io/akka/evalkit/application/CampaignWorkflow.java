@@ -20,7 +20,7 @@ import static akka.Done.done;
 /**
  * A campaign, made durable.
  *
- * <p>Campaigns are long. The 10% calibration sample took three minutes; the full corpus
+ * <p>Campaigns are long. The 10% calibration sample took three minutes; the full dataset
  * at the same rate is over half an hour, and a real campaign that also executes scenarios
  * against a service is longer again. A process that loses all of it to a restart or a
  * deploy is a process nobody runs on anything that matters &mdash; which is the whole
@@ -28,7 +28,7 @@ import static akka.Done.done;
  *
  * <p><b>Waves, not one pass.</b> Each step takes a page of scenarios, runs them across
  * the configured lanes, and folds the counts into state before transitioning. Recovery
- * therefore costs at most one wave, and resuming reads a cursor rather than a corpus.
+ * therefore costs at most one wave, and resuming reads a cursor rather than a dataset.
  *
  * <p><b>State holds counts, not outcomes.</b> Workflow state is serialised on every
  * transition; carrying thousands of transcripts through each one would cost more than
@@ -153,7 +153,7 @@ public class CampaignWorkflow extends Workflow<CampaignWorkflow.State> {
                 .thenEnd();
         }
 
-        // Checked against the first page. The alternative is loading the corpus to
+        // Checked against the first page. The alternative is loading the dataset to
         // validate it, which is what paging exists to avoid — and fixture names repeat,
         // so a page is a fair sample of the names in play.
         var plan = new CampaignPlan(state.campaignId(),

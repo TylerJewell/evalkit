@@ -129,7 +129,7 @@
         <li><a href="#ready">Publishing readiness</a></li>
         <li><a href="#modules">Module design</a></li>
         <li><a href="#packages">Package design</a></li>
-        <li><a href="#scenario">The scenario and the corpus</a></li>
+        <li><a href="#scenario">The scenario and the dataset</a></li>
         <li><a href="#runner">The runner</a></li>
         <li><a href="#scorer">Scorers and outcomes</a></li>
         <li><a href="#metrics">Metrics</a></li>
@@ -168,7 +168,7 @@
             </tr>
             <tr>
               <td class="lbl">Rubric calibration</td>
-              <td><code>scenario-judge</code> v3 returns a reason on v2's bands. Whether the two agree is unmeasured, because the measurement needs the reference corpus and that corpus is not in this repository.</td>
+              <td><code>scenario-judge</code> v3 returns a reason on v2's bands. Whether the two agree is unmeasured, because the measurement needs the reference dataset and that dataset is not in this repository.</td>
             </tr>
           </tbody>
         </table></div>
@@ -205,8 +205,8 @@ evalkit-akka      durable campaigns, agent judges                   Akka SDK</co
       </section>
 
       <section id="scenario">
-        <h2 class="sec">The scenario and the corpus</h2>
-        <p class="answer">A scenario is a record. A corpus is a <code>List&lt;Scenario&gt;</code>, and no wrapper type stands between them.</p>
+        <h2 class="sec">The scenario and the dataset</h2>
+        <p class="answer">A scenario is a record. A dataset is a <code>List&lt;Scenario&gt;</code>, and no wrapper type stands between them.</p>
 
         <pre><code>public record Scenario(String id,
                        Optional&lt;String&gt; specNode,
@@ -224,7 +224,7 @@ evalkit-akka      durable campaigns, agent judges                   Akka SDK</co
         <h2 class="sec">The runner</h2>
         <p class="answer"><code>CampaignRunner</code> takes a checked plan and a router, runs the scenarios across a bounded pool, and returns one report with one row per scenario.</p>
 
-        <pre><code>var plan = new CampaignPlan("refund-policy", corpus, Lanes.of(8), rubric);
+        <pre><code>var plan = new CampaignPlan("refund-policy", dataset, Lanes.of(8), rubric);
 
 if (plan.check(target) instanceof CampaignPlan.Check.Refused refused) {
     refused.reasons().forEach(System.err::println);
@@ -236,7 +236,7 @@ System.out.println(result.report().summary());</code></pre>
 
         <p><code>CampaignPlan.check</code> asks the target which states it can build and which nodes it can emit, and refuses a campaign the target cannot satisfy. A campaign that would fail at minute forty for a reason knowable at minute zero stops in the first second.</p>
 
-        <p>Workers pull from a shared queue. Transcripts in the recorded corpora run from 2 messages to 82, so a fixed partition would leave one worker grinding while the rest idle. Every scenario produces a row whatever happens, and the runner refuses to build a report whose outcome count differs from its scenario count.</p>
+        <p>Workers pull from a shared queue. Transcripts in the recorded datasets run from 2 messages to 82, so a fixed partition would leave one worker grinding while the rest idle. Every scenario produces a row whatever happens, and the runner refuses to build a report whose outcome count differs from its scenario count.</p>
 
         <p><code>CampaignRunner.Completed</code> carries the outcome and the scenario together. Parallel lists indexed by position produced two separate defects, one inside the runner and one in the type it handed back, and a record holding both leaves nothing to zip.</p>
       </section>
@@ -297,7 +297,7 @@ System.out.println(result.report().summary());</code></pre>
 
       <section id="akka">
         <h2 class="sec">Akka components</h2>
-        <p class="answer">Two components. <code>ScenarioJudge</code> is a request-based agent scoring one transcript against one rubric. <code>CampaignWorkflow</code> runs a corpus in durable waves.</p>
+        <p class="answer">Two components. <code>ScenarioJudge</code> is a request-based agent scoring one transcript against one rubric. <code>CampaignWorkflow</code> runs a dataset in durable waves.</p>
 
         <p><code>ScenarioJudge</code> holds no prompt of its own. The rubric is loaded from <code>resources/rubrics/</code> by id and version and passed in, so the judge is the mechanism and the rubric is the data. Memory is switched off, because a judge that remembered its last twenty scores would drift toward them and two campaigns run in a different order would disagree for no reason connected to the services being judged.</p>
 
@@ -311,7 +311,7 @@ System.out.println(result.report().summary());</code></pre>
         <div class="table-wrap"><table>
           <thead><tr><th>Proposed</th><th>What exists</th></tr></thead>
           <tbody>
-            <tr><td class="lbl"><code>evalkit-formats</code>, <code>evalkit-junit</code></td><td>Neither module was built. A campaign runs as an ordinary JUnit test with no extension, and no corpus importer ships.</td></tr>
+            <tr><td class="lbl"><code>evalkit-formats</code>, <code>evalkit-junit</code></td><td>Neither module was built. A campaign runs as an ordinary JUnit test with no extension, and no dataset importer ships.</td></tr>
             <tr><td class="lbl"><code>scorer.deterministic</code>, <code>scorer.heuristic</code>, <code>scorer.agentic</code></td><td>The scorer types live in <code>domain</code> and the metrics in <code>metric</code>.</td></tr>
             <tr><td class="lbl"><code>NodeMatch</code>, <code>ExactMatch</code>, <code>JsonSchemaMatch</code>, <code>ToolCallMatch</code></td><td><code>SpecNodeMatch</code> is the only comparison that was written.</td></tr>
             <tr><td class="lbl"><code>LatencyBudget</code>, <code>TokenBudget</code></td><td>Neither exists. <code>Evidence</code> records latency and tokens, and no metric reads them yet.</td></tr>

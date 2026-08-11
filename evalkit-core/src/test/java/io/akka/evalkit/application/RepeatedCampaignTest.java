@@ -116,7 +116,7 @@ class RepeatedCampaignTest {
         var result = CampaignRunner.run(plan(5), new Wobbly("flaky"), router());
 
         // Ten rows were produced and two requirements were tested. Reading the tally as
-        // requirements would report a corpus five times the size of the one that ran.
+        // requirements would report a dataset five times the size of the one that ran.
         assertThat(result.report().total()).isEqualTo(10);
         assertThat(result.requirements()).hasSize(2);
     }

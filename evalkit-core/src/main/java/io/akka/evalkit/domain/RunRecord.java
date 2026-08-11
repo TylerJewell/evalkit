@@ -12,7 +12,7 @@ import java.util.Optional;
  * <p>The record is the result of a run and the report is a rendering of it. That order
  * matters: every figure the report prints is counted from the requirements here, and none
  * is stored beside them, so a report cannot disagree with the evidence it came from. It
- * also means a presentation can change without running a campaign again, and a corpus can
+ * also means a presentation can change without running a campaign again, and a dataset can
  * be re-scored without asking the system anything.
  *
  * @param measures      every quality measure the campaign registered, in the order the

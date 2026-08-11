@@ -18,7 +18,7 @@ import java.util.Optional;
 /**
  * An {@link InteractionRecord} as markdown a person can read and edit.
  *
- * <p>A recorded corpus is checked into a repository and edited by hand for years after the
+ * <p>A recorded dataset is checked into a repository and edited by hand for years after the
  * run that produced it. The shape below puts the conversation in prose sections and the
  * figures in list items, so a reviewer reads a transcript rather than a serialisation.
  *
@@ -65,7 +65,7 @@ import java.util.Optional;
  * - output: 38
  * }</pre>
  *
- * <p><b>The id is a field rather than the filename.</b> A file renamed while a corpus is
+ * <p><b>The id is a field rather than the filename.</b> A file renamed while a dataset is
  * tidied would otherwise change the identity of the interaction it holds, and every
  * evaluation already recorded against that id would name something that no longer exists.
  *
@@ -91,7 +91,7 @@ public final class InteractionMarkdown {
     /** The record as markdown, which {@link #parse} reads back. */
     public static String render(InteractionRecord record) {
         var out = new StringBuilder("# Interaction\n\n");
-        // The id is always written, blank included. A corpus entry with no id is a corpus
+        // The id is always written, blank included. A dataset entry with no id is a dataset
         // entry no evaluation can name, and an empty field says so where a missing line
         // would read as a format this writer did not support.
         field(out, "id", record.interactionId());

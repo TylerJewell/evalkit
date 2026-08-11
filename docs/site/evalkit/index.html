@@ -121,7 +121,7 @@ nav.onpage a.sub { padding-left: 24px; color: var(--ink-faint); }
 <p>evalkit covers these tasks:</p>
 <ul><li>Score a conversational service against recorded scenarios and report the result to a compliance, risk, or engineering audience.</li><li>Compare two versions of a service under one rubric version. <code>Scoring.compare</code> throws when the two sides were scored under different rubric versions.</li><li>Run hundreds of scenarios over hours against a live service, surviving restarts and deployments.</li><li>Separate a wrong answer from a run that produced no result.</li></ul>
 <h3 id="_when_not_to_use_evalkit">When NOT to use evalkit</h3>
-<ul><li><strong>Benchmarking a model against academic test sets</strong>, use a model benchmark runner. MMLU and GSM8K measure a model and say nothing about a service.</li><li><strong>Asserting deterministic component behaviour</strong>, use <code>TestKitSupport</code> and ordinary unit tests. A decision with a right answer needs no evaluation.</li><li><strong>Watching production quality continuously</strong>, use an <a href="https://doc.akka.io/java/agents/llm_eval.html">evaluator agent</a> called from a Consumer. evalkit runs campaigns against a corpus.</li></ul>
+<ul><li><strong>Benchmarking a model against academic test sets</strong>, use a model benchmark runner. MMLU and GSM8K measure a model and say nothing about a service.</li><li><strong>Asserting deterministic component behaviour</strong>, use <code>TestKitSupport</code> and ordinary unit tests. A decision with a right answer needs no evaluation.</li><li><strong>Watching production quality continuously</strong>, use an <a href="https://doc.akka.io/java/agents/llm_eval.html">evaluator agent</a> called from a Consumer. evalkit runs campaigns against a dataset.</li></ul>
 <h3 id="_the_system_under_test">The system under test</h3>
 <p>evalkit reaches the service through <code>SystemUnderTest</code>. The service can be an Akka service, an HTTP endpoint, or a process in another language.</p>
 <p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/SystemUnderTest.java">SystemUnderTest.java</a></p>
@@ -159,14 +159,14 @@ evalkit-akka      durable campaigns, agent judges                   Akka SDK</co
   &lt;version&gt;0.1.0-SNAPSHOT&lt;/version&gt;
 &lt;/dependency&gt;</code></pre>
 <p>A campaign needs scenarios, a target, and a router that decides how each scenario is settled.</p>
-<pre class="lang-java"><code>var corpus = List.of(
+<pre class="lang-java"><code>var dataset = List.of(
   new Scenario(&quot;refund-30d&quot;,
     Optional.of(&quot;REFUND-004&quot;),                                  // (1)
     Precursor.Fixture.named(&quot;authenticated-claim-open&quot;),
     &quot;What if these shoes don&#x27;t fit?&quot;,
     &quot;a 30-day full refund at no extra cost&quot;));
 
-var plan = new CampaignPlan(&quot;refund-policy&quot;, corpus, Lanes.of(4), rubric); // (2)
+var plan = new CampaignPlan(&quot;refund-policy&quot;, dataset, Lanes.of(4), rubric); // (2)
 
 if (plan.check(target) instanceof CampaignPlan.Check.Refused refused) { // (3)
   throw new IllegalStateException(String.join(&quot;; &quot;, refused.reasons()));

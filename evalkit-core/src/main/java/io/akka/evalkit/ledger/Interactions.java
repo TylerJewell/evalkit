@@ -60,7 +60,7 @@ public final class Interactions {
      * The same record under an interaction id.
      *
      * <p>A record this kit assembled carries no id, because nothing recorded it. A campaign
-     * names its runs after the scenario that caused them, which is what a corpus entry is
+     * names its runs after the scenario that caused them, which is what a dataset entry is
      * filed and re-scored under.
      */
     public static InteractionRecord identified(InteractionRecord record, String interactionId) {

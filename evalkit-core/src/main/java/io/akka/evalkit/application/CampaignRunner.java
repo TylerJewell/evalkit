@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Runs a checked plan: execute each scenario, judge what needs judging, aggregate.
  *
  * <p>Workers over a shared queue &mdash; see {@link Lanes} for why not a partition. The
- * queue self-balances, which matters here because transcripts in the corpora run from 2
+ * queue self-balances, which matters here because transcripts in the datasets run from 2
  * messages to 82 and a fixed split would leave one worker grinding while the rest idle.
  *
  * <p>The judge arrives as a function rather than an {@code Agent}, so the orchestration
@@ -43,7 +43,7 @@ public final class CampaignRunner {
      *
      * <p>{@code completed} holds one row per run and {@code requirements} groups those rows
      * by the scenario that produced them. The two count different things once a campaign
-     * repeats: a corpus of 80 scenarios run five times each is 400 completed rows and 80
+     * repeats: a dataset of 80 scenarios run five times each is 400 completed rows and 80
      * requirements. {@link CampaignReport} counts rows, and the report a reader sees is
      * rendered from the requirements, so a flaky scenario is one varied requirement rather
      * than a mixture of passes and failures.

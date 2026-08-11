@@ -232,7 +232,7 @@ prose follows the code.
 
 **Register no engineer speaks.** "by construction", "carries the reasoning", "holds the
 session", "is the point", "structural difference". Read each aloud in a design review. Say
-"a red-team corpus is made of them", "the Javadoc explains the design", "keeps the session
+"a red-team dataset is made of them", "the Javadoc explains the design", "keeps the session
 id", and name the structure that differs.
 
 **Antithesis.** Any "A is X; B is Y" or "not X, but Y" or "isn't just X — it's Y" shape.
@@ -325,7 +325,7 @@ the same low score."
 
 **Uncounted quantifiers as subjects.** "Most scenarios do not test a first message." The
 sentence has a subject and a verb and reports no figure. Count it, or describe the class:
-"A scenario that tests a first message is the exception in this corpus."
+"A scenario that tests a first message is the exception in this dataset."
 
 **Blame assigned to a program.** "The service takes the blame for the filter." "A number
 that reads as a broken service." A run has no share of the fault and a number does not

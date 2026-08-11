@@ -116,7 +116,7 @@ nav.onpage a.sub { padding-left: 24px; color: var(--ink-faint); }
   markdown is the source; this page is a local preview of how it reads on the documentation site.</div>
   <h2 id="_overview">Overview</h2>
 <p>A campaign runs in one of the modes below. The same scenarios and scorers serve every mode. The mode decides where the model calls come from and how much a restart costs.</p>
-<table><thead><tr><th>Mode</th><th>Runs on</th><th>Model</th><th>Costs</th></tr></thead><tbody><tr><td>Deterministic</td><td><code>TestKitSupport</code> with <code>TestModelProvider</code></td><td>Mocked</td><td>Every commit, no provider spend.</td></tr><tr><td>Opt-in live</td><td><code>TestKitSupport</code> with the configured provider</td><td>Real</td><td>A system property turns it on.</td></tr><tr><td>Full corpus</td><td><code>CampaignWorkflow</code> in a deployed service</td><td>Real</td><td>Hours, durable across restarts.</td></tr></tbody></table>
+<table><thead><tr><th>Mode</th><th>Runs on</th><th>Model</th><th>Costs</th></tr></thead><tbody><tr><td>Deterministic</td><td><code>TestKitSupport</code> with <code>TestModelProvider</code></td><td>Mocked</td><td>Every commit, no provider spend.</td></tr><tr><td>Opt-in live</td><td><code>TestKitSupport</code> with the configured provider</td><td>Real</td><td>A system property turns it on.</td></tr><tr><td>Full dataset</td><td><code>CampaignWorkflow</code> in a deployed service</td><td>Real</td><td>Hours, durable across restarts.</td></tr></tbody></table>
 <h2 id="_deterministic_mode">Deterministic mode</h2>
 <p><code>TestModelProvider</code> replaces an agent&#x27;s model provider, so a scenario returns the same answer on every run and costs nothing. Deterministic mode covers the parsing, the banding and the campaign machinery, which is where the mistakes that matter live.</p>
 <p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-akka/src/test/java/io/akka/evalkit/application/ScenarioJudgeTest.java">ScenarioJudgeTest.java</a></p>
@@ -145,20 +145,20 @@ nav.onpage a.sub { padding-left: 24px; color: var(--ink-faint); }
 <pre class="lang-shell"><code># Four transcripts under both rubrics, checking that the path to a provider works.
 mvn test -pl evalkit-akka -Dtest=LiveJudgeTest -Dlive=true
 
-# Agreement against a corpus carrying reference scores.
+# Agreement against a dataset carrying reference scores.
 mvn test -pl evalkit-akka -Dtest=JudgeCalibrationTest -Dcalibration=true \
          -Dcalibration.sample=/path/to/sample.jsonl -Dcalibration.lanes=8</code></pre>
-<p><code>LiveJudgeTest</code> establishes that a rubric reaches a provider and that the reply parses. The test prints its own caveat, because four transcripts written to have obvious answers say nothing about how a judge scores a corpus.</p>
+<p><code>LiveJudgeTest</code> establishes that a rubric reaches a provider and that the reply parses. The test prints its own caveat, because four transcripts written to have obvious answers say nothing about how a judge scores a dataset.</p>
 <p><code>JudgeCalibrationTest</code> measures agreement against reference scores. Adding <code>-Dcalibration.compare=true</code> scores each transcript under both rubric versions and reports the band agreement between them, which is what decides whether v3 is a drop-in for v2.</p>
-<p>The provider comes from <code>application.conf</code> and the key from the environment. The reference corpus is not in this repository.</p>
-<h2 id="_full_corpus_mode">Full corpus mode</h2>
-<p>A corpus of several hundred scenarios against a live service runs for hours, which no test runner should hold. <code>CampaignWorkflow</code> runs the same plan inside a deployed service, taking a page of scenarios per durable step.</p>
+<p>The provider comes from <code>application.conf</code> and the key from the environment. The reference dataset is not in this repository.</p>
+<h2 id="_full_dataset_mode">Full dataset mode</h2>
+<p>A dataset of several hundred scenarios against a live service runs for hours, which no test runner should hold. <code>CampaignWorkflow</code> runs the same plan inside a deployed service, taking a page of scenarios per durable step.</p>
 <p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-akka/src/main/java/io/akka/evalkit/application/CampaignWorkflow.java">CampaignWorkflow.java</a></p>
 <pre class="lang-java"><code>componentClient.forWorkflow(campaignId)
   .method(CampaignWorkflow::start)
   .invoke(new CampaignWorkflow.Start(campaignId, &quot;scenario-judge&quot;, 3, 8, 50)); // (1)</code></pre>
 <table class="callouts"><tbody><tr><td><strong>1</strong></td><td>The rubric id and version, then the lanes and the wave. Lanes set how many scenarios run at once. The wave sets how much a restart costs.</td></tr></tbody></table>
-<p>Workflow state holds counts and a cursor. A restart repeats at most one wave, and resuming reads a number instead of a corpus. <code>CampaignReport</code> accumulates across waves, so state carries no transcripts.</p>
+<p>Workflow state holds counts and a cursor. A restart repeats at most one wave, and resuming reads a number instead of a dataset. <code>CampaignReport</code> accumulates across waves, so state carries no transcripts.</p>
 <p>A wave that fails twice stops the campaign and keeps the tally, because partial evidence is still evidence. The report says where it stopped.</p>
 <h2 id="_the_plan_check">The plan check</h2>
 <p><code>CampaignPlan.check</code> runs before the first call. A campaign naming a fixture the target lacks fails in under a second and names the fixture.</p>
@@ -173,7 +173,7 @@ mvn test -pl evalkit-akka -Dtest=JudgeCalibrationTest -Dcalibration=true \
 └── eval/
     ├── java/…        campaigns, scorers, target adapters
     └── resources/
-        ├── datasets/     recorded corpora
+        ├── datasets/     recorded datasets
         ├── rubrics/      versioned judge prompts
         └── baselines/    prior runs, compared band by band</code></pre>
 <pre class="lang-xml"><code>&lt;profile&gt;
@@ -200,7 +200,7 @@ mvn test -pl evalkit-akka -Dtest=JudgeCalibrationTest -Dcalibration=true \
 </main>
 <nav class="onpage">
   <h2>On this page</h2>
-  <ul><li><a class="" href="#_overview">Overview</a></li><li><a class="" href="#_deterministic_mode">Deterministic mode</a></li><li><a class="" href="#_opt_in_live_mode">Opt-in live mode</a></li><li><a class="" href="#_full_corpus_mode">Full corpus mode</a></li><li><a class="" href="#_the_plan_check">The plan check</a></li><li><a class="" href="#_where_the_campaigns_go">Where the campaigns go</a></li><li><a class="" href="#_targets_outside_akka">Targets outside Akka</a></li><li><a class="" href="#_see_also">See also</a></li></ul>
+  <ul><li><a class="" href="#_overview">Overview</a></li><li><a class="" href="#_deterministic_mode">Deterministic mode</a></li><li><a class="" href="#_opt_in_live_mode">Opt-in live mode</a></li><li><a class="" href="#_full_dataset_mode">Full dataset mode</a></li><li><a class="" href="#_the_plan_check">The plan check</a></li><li><a class="" href="#_where_the_campaigns_go">Where the campaigns go</a></li><li><a class="" href="#_targets_outside_akka">Targets outside Akka</a></li><li><a class="" href="#_see_also">See also</a></li></ul>
 </nav>
 </div>
 </body>

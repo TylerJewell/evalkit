@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
  * The rules the system under test was operating under, as versioned data.
  *
  * <p>A campaign measures a system against what it was told to do. Change the instruction
- * and the same corpus, the same rubric and the same code produce different results, with
+ * and the same dataset, the same rubric and the same code produce different results, with
  * nothing in the numbers to say why. {@link Rubric} is versioned because it defines the
  * ruler; this is versioned because it defines what was being measured.
  *

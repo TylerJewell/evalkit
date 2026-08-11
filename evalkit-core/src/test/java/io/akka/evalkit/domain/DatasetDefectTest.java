@@ -10,14 +10,14 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Every check here has a corpus it is known to refuse.
+ * Every check here has a dataset it is known to refuse.
  *
- * <p>A pre-flight check that can pass by finding nothing looks identical to a corpus with
+ * <p>A pre-flight check that can pass by finding nothing looks identical to a dataset with
  * nothing wrong with it, so each case below is a scenario the check must reject and a
  * neighbouring one it must let through.
  */
-@DisplayName("A corpus that cannot be evaluated is refused before anything is spent")
-class CorpusDefectTest {
+@DisplayName("A dataset that cannot be evaluated is refused before anything is spent")
+class DatasetDefectTest {
 
     private static final Rubric RUBRIC = Rubric.load("scenario-judge", 3);
 
@@ -91,7 +91,7 @@ class CorpusDefectTest {
     @Test
     @DisplayName("a scenario expecting back exactly what it said is refused")
     void unfilledTemplateIsRefused() {
-        // The shape a corpus takes when a template was filled in halfway. It passes or
+        // The shape a dataset takes when a template was filled in halfway. It passes or
         // fails for reasons nobody chose.
         var placeholder = new Scenario("todo-1", Optional.empty(), new Precursor.None(),
             "TODO", "TODO");
@@ -108,12 +108,12 @@ class CorpusDefectTest {
     }
 
     @Test
-    @DisplayName("every reason a corpus is refused names the scenarios at fault")
+    @DisplayName("every reason a dataset is refused names the scenarios at fault")
     void reasonsNameTheScenarios() {
         var reasons = refusalReasons(ok("dup"), ok("dup"),
             new Scenario("todo-1", Optional.empty(), new Precursor.None(), "TODO", "TODO"));
 
-        // A refusal a reader cannot act on sends them to grep the corpus.
+        // A refusal a reader cannot act on sends them to grep the dataset.
         assertThat(reasons).hasSize(2);
         assertThat(reasons).allSatisfy(reason ->
             assertThat(reason).containsAnyOf("dup", "todo-1"));

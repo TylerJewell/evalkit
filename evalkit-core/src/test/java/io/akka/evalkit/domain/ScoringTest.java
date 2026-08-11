@@ -128,7 +128,7 @@ class ScoringTest {
     @Test
     @DisplayName("repeated runs must be aggregated before comparing, not silently collapsed")
     void repeatedRuns() {
-        // The reference corpus ran scenarios 1 to 61 times. Letting the last one win
+        // The reference dataset ran scenarios 1 to 61 times. Letting the last one win
         // would make a comparison depend on iteration order.
         assertThatThrownBy(() ->
             Scoring.compare(List.of(verdict("a", 9, V2), verdict("a", 2, V2)),

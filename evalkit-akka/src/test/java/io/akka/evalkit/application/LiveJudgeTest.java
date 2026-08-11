@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The judge against a real model, on transcripts written for this test.
  *
  * <p>{@link ScenarioJudgeTest} proves the parsing and the banding with a stubbed model, and
- * {@link JudgeCalibrationTest} measures agreement against a reference corpus. Between them
+ * {@link JudgeCalibrationTest} measures agreement against a reference dataset. Between them
  * sits the path nothing else covers: the rubric reaching a provider, the provider answering
  * in the shape the rubric asked for, and {@code ModelReply} reading that answer. A rubric
  * that asks for two labelled lines is worth nothing until a model has been asked for them.
@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p><b>This establishes that the path works. It establishes nothing about agreement.</b>
  * The transcripts below were written to have obvious answers, and four of them are not a
  * sample. Whether v3 scores as v2 scores is {@link JudgeCalibrationTest}'s question, on a
- * corpus with reference scores behind it.
+ * dataset with reference scores behind it.
  *
  * <p>Opt-in, because it calls a live model and costs money:
  *

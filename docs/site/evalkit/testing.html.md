@@ -17,7 +17,7 @@ The mode decides where the model calls come from and how much a restart costs.
 |---|---|---|---|
 | Deterministic | `TestKitSupport` with `TestModelProvider` | Mocked | Every commit, no provider spend. |
 | Opt-in live | `TestKitSupport` with the configured provider | Real | A system property turns it on. |
-| Full corpus | `CampaignWorkflow` in a deployed service | Real | Hours, durable across restarts. |
+| Full dataset | `CampaignWorkflow` in a deployed service | Real | Hours, durable across restarts. |
 
 ## <a href="about:blank#_deterministic_mode"></a> Deterministic mode
 
@@ -61,25 +61,25 @@ stay disabled until a system property turns them on.
 # Four transcripts under both rubrics, checking that the path to a provider works.
 mvn test -pl evalkit-akka -Dtest=LiveJudgeTest -Dlive=true
 
-# Agreement against a corpus carrying reference scores.
+# Agreement against a dataset carrying reference scores.
 mvn test -pl evalkit-akka -Dtest=JudgeCalibrationTest -Dcalibration=true \
          -Dcalibration.sample=/path/to/sample.jsonl -Dcalibration.lanes=8
 ```
 
 `LiveJudgeTest` establishes that a rubric reaches a provider and that the reply parses. The
 test prints its own caveat, because four transcripts written to have obvious answers say
-nothing about how a judge scores a corpus.
+nothing about how a judge scores a dataset.
 
 `JudgeCalibrationTest` measures agreement against reference scores. Adding
 `-Dcalibration.compare=true` scores each transcript under both rubric versions and reports
 the band agreement between them, which is what decides whether v3 is a drop-in for v2.
 
 The provider comes from `application.conf` and the key from the environment. The reference
-corpus is not in this repository.
+dataset is not in this repository.
 
-## <a href="about:blank#_full_corpus_mode"></a> Full corpus mode
+## <a href="about:blank#_full_dataset_mode"></a> Full dataset mode
 
-A corpus of several hundred scenarios against a live service runs for hours, which no test
+A dataset of several hundred scenarios against a live service runs for hours, which no test
 runner should hold. `CampaignWorkflow` runs the same plan inside a deployed service, taking
 a page of scenarios per durable step.
 
@@ -93,7 +93,7 @@ componentClient.forWorkflow(campaignId)
 | **1** | The rubric id and version, then the lanes and the wave. Lanes set how many scenarios run at once. The wave sets how much a restart costs. |
 
 Workflow state holds counts and a cursor. A restart repeats at most one wave, and resuming
-reads a number instead of a corpus. `CampaignReport` accumulates across waves, so state
+reads a number instead of a dataset. `CampaignReport` accumulates across waves, so state
 carries no transcripts.
 
 A wave that fails twice stops the campaign and keeps the tally, because partial evidence is
@@ -125,7 +125,7 @@ src/
 └── eval/
     ├── java/…        campaigns, scorers, target adapters
     └── resources/
-        ├── datasets/     recorded corpora
+        ├── datasets/     recorded datasets
         ├── rubrics/      versioned judge prompts
         └── baselines/    prior runs, compared band by band
 ```

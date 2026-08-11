@@ -11,7 +11,7 @@ import java.util.Optional;
  * <p>Routing at plan time is what keeps a campaign affordable. A scenario naming a
  * specification node is exercising a decision with a right answer, and sending it to a
  * model buys a slightly random opinion about something that has none. In one recorded
- * corpus, 510 of 514 scenarios named a node.
+ * dataset, 510 of 514 scenarios named a node.
  */
 @FunctionalInterface
 public interface ScorerRouter {

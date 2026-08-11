@@ -7,10 +7,10 @@ import java.util.List;
  *
  * <p>Paged rather than handed over whole, because a campaign of five thousand scenarios
  * cannot live in a workflow's state: state is serialised on every transition, and carrying
- * the corpus through each one would cost more than running it.
+ * the dataset through each one would cost more than running it.
  *
  * <p>The workflow therefore holds a cursor and asks for the next page. That is also what
- * makes a restart cheap &mdash; recovery reads a number, not a corpus.
+ * makes a restart cheap &mdash; recovery reads a number, not a dataset.
  */
 public interface ScenarioSource {
 
