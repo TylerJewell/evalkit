@@ -55,16 +55,35 @@ branch publishes no artifacts, so the SDK is built locally until it ships.
 3. Add a second `repository` and a matching `pluginRepository` to
    `~/.m2/settings.xml`, each with `/snapshots` appended to the URL step 2 wrote.
    The runtime artifacts the SDK depends on are published there.
-4. Check out `akka/akka-sdk` at `feature/governance`, add both URLs as resolvers
-   in `project/plugins.sbt` and in `build.sbt`, then `publishM2` the
-   `akka-javasdk`, `akka-javasdk-parent`, `akka-javasdk-testkit`,
+4. Clone `akka/akka-sdk` and check out the commit the version below names, add
+   both URLs as resolvers in `project/plugins.sbt` and in `build.sbt`, then
+   `publishM2` the `akka-javasdk`, `akka-javasdk-parent`, `akka-javasdk-testkit`,
    `akka-javasdk-validations`, `akka-javasdk-annotation-processor` and
-   `akka-javasdk-enforcer` projects.
+   `akka-javasdk-enforcer` projects. The sbt project ids are those names, not the
+   `lazy val` names in `build.sbt`. Pass the version, because the pin carries a
+   suffix a clean checkout does not reproduce:
+
+   ```
+   sbt 'set every version := "3.6.0-59-7321c44b-dev-SNAPSHOT"' akka-javasdk/publishM2
+   ```
+
 5. Run `mvn install`.
 
 Step 4 needs both resolver locations. sbt resolves a build's plugins before it
 reads any global resolver file, so a resolver declared anywhere else leaves the
 plugins unresolved.
+
+**Clone, rather than a worktree.** The SDK build reads its version from git
+through jgit, which cannot open the object database through a linked worktree's
+`.git` file and fails with `MissingObjectException`. On Windows the checkout also
+needs `core.longpaths`, and a short root such as `C:\sdk-gov`, because some paths
+in that repository exceed `MAX_PATH`.
+
+**The `-dev` in the version is a dirty-tree marker.** `project/SdkVersion.scala`
+appends it when the working tree carries uncommitted changes, so the pinned
+version corresponds to no commit and no repository can serve it. A clean checkout
+of `7321c44b` compiles and passes every evalkit test, so the changes that marker
+records are not ones this project depends on.
 
 Continuous integration skips this module while the SDK is built by hand.
 

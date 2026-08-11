@@ -51,6 +51,15 @@
         <url>https://github.com/tylerjewell/evalkit/issues</url>
     </issueManagement>
 
+    <properties>
+        <!--
+          This module is a library that a service depends on, not a service. The SDK parent
+          binds the Docker image build to install, guarded by this property, so leaving it
+          false makes `mvn install` fail on any machine without a Docker daemon.
+        -->
+        <non-akka-service>true</non-akka-service>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.akka.evalkit</groupId>
