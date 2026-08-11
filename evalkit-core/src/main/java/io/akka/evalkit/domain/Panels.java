@@ -91,12 +91,13 @@ public final class Panels {
         row(out, "undecided", counts.get(UNDECIDED), total);
         row(out, "no result", counts.get(NO_RESULT), total);
         blank(out);
-        para(out, (repeats > 1
-            ? "Each requirement ran " + repeats + " times. Varied passed some runs and "
-              + "failed others. "
-            : "Each requirement ran once. ")
-            + "Undecided landed in the judge's middle band. No result stopped before "
-            + "there was an answer to score.");
+        para(out, "In this run, each requirement ran "
+            + (repeats > 1
+                ? repeats + " times. Varied means the requirement passed some runs and "
+                  + "failed others. "
+                : "once. ")
+            + "Undecided means that a result was in a judge's middle confidence. No "
+            + "result means the run stopped before there was an answer to score.");
         blank(out);
         para(out, confidence(repeats));
     }

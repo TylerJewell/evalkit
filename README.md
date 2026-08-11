@@ -38,9 +38,10 @@ record  target/evalkit/refund-policy-20260811T0914Z.jsonl
   undecided         ##                                          4
   no result         ##                                          4
 
-Each requirement ran 5 times. Varied passed some runs and failed others.
-Undecided landed in the judge's middle band. No result stopped before there
-was an answer to score.
+In this run, each requirement ran 5 times. Varied means the requirement passed
+some runs and failed others. Undecided means that a result was in a judge's
+middle confidence. No result means the run stopped before there was an answer
+to score.
 
 Five runs is not many. A requirement the system only handles 8 times in 10
 would still pass all 5 of them about a third of the time. So a requirement
