@@ -31,6 +31,7 @@ metric is most useful with the judgements that produced the score, because
 ```shell
 mvn -f evalkit-core/pom.xml test                         # needs the Akka repository
 python tools/audit-prose.py docs/specs/*.html docs/site/evalkit/*.html.md README.md
+python tools/audit-prose.py --check-waivers README.md
 ```
 
 Build `evalkit-core` from its own POM. Maven reads every module POM in the
@@ -122,6 +123,10 @@ service, and a recorded score has to stay interpretable six weeks later.
 `conventions/prose.md` holds the rules for documentation, specifications,
 Javadoc and commit messages, and `tools/audit-prose.py` enforces the part a
 regex can reach. The auditor cannot hear diction, so read every new sentence aloud.
+
+`conventions/prose-waivers.md` holds wording the auditor flags and the project
+keeps. `--check-waivers` fails on an entry that covers nothing, so rewriting a
+waived sentence removes its entry in the same change.
 
 A new rule in the auditor arrives with a line in `tools/prose-fixtures.md` that it
 catches, under `## Caught`. A rule bank is a set of checks that pass by finding

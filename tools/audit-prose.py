@@ -24,6 +24,7 @@ Read the prose aloud; this is a backstop.
 """
 
 import argparse
+import pathlib
 import json
 import os
 import re
@@ -851,6 +852,25 @@ def structural(line, kind, s):
 CATALOGUE = re.compile(r"prose-audit:\s*(catalogue|verbatim)", re.I)
 
 
+WAIVERS = pathlib.Path(__file__).resolve().parent.parent / 'conventions' / 'prose-waivers.md'
+WAIVER = re.compile(r"^-\s+`([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(.+?)`\s*$", re.M)
+
+
+def waivers():
+    """Wording the project keeps, as (file, rule, phrase). Absent file means none."""
+    if not WAIVERS.exists():
+        return []
+    return WAIVER.findall(WAIVERS.read_text(encoding='utf-8'))
+
+
+def waived(path, hit, entries):
+    name = os.path.basename(path)
+    for f, rule, phrase in entries:
+        if os.path.basename(f) == name and rule == hit['rule'] and phrase in hit['match']:
+            return True
+    return False
+
+
 def audit_file(path, context=None, standalone_zones=('answer', 'faq')):
     with open(path, encoding='utf-8') as f:
         text = f.read()
@@ -1005,6 +1025,26 @@ def report(path, hits, only_headings=False):
     return '\n'.join(out)
 
 
+def check_waivers(files):
+    """A waiver covering nothing is a rule switched off for a forgotten reason."""
+    entries = waivers()
+    if not entries:
+        print('no waivers')
+        return 0
+    seen = set()
+    for path in files or ['README.md']:
+        for hit in audit_file(path):
+            for i, (f, rule, phrase) in enumerate(entries):
+                if (os.path.basename(f) == os.path.basename(path)
+                        and rule == hit['rule'] and phrase in hit['match']):
+                    seen.add(i)
+    stale = [entries[i] for i in range(len(entries)) if i not in seen]
+    for f, rule, phrase in stale:
+        print('stale waiver: %s | %s | %s' % (f, rule, phrase))
+    print('%d waiver(s), %d stale' % (len(entries), len(stale)))
+    return 1 if stale else 0
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     p.add_argument('files', nargs='*')
@@ -1013,10 +1053,14 @@ def main():
     p.add_argument('--format', choices=('text', 'json'), default='text')
     p.add_argument('--check-drift', action='store_true', help='compare the rule bank against conventions/prose.md')
     p.add_argument('--self-test', action='store_true', help='assert every rule still catches its fixture')
+    p.add_argument('--check-waivers', nargs='*', metavar='FILE',
+                   help='assert every waiver still covers wording that is there')
     a = p.parse_args()
 
     if a.self_test:
         return self_test()
+    if a.check_waivers is not None:
+        return check_waivers(a.check_waivers)
     if a.check_drift:
         return check_drift()
     if not a.files:
@@ -1027,6 +1071,8 @@ def main():
         hits = audit_file(path, context=a.context)
         if a.only_headings:
             hits = [h for h in hits if h['kind'] == 'heading']
+        entries = waivers()
+        hits = [h for h in hits if not waived(path, h, entries)]
         results[path] = hits
         total += len(hits)
 
