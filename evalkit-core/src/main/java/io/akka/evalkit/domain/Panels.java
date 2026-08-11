@@ -166,8 +166,9 @@ public final class Panels {
         }
         blank(out);
         para(out, slice == 1
-            ? "Each mark is one run, in the order they ran."
-            : "Each mark covers " + slice + " runs, in the order they ran. It is + when "
+            ? "Each mark is one run, in the order they were started."
+            : "Each mark covers " + slice + " runs, in the order they were started. It is "
+              + "+ when "
               + "more than half of those " + slice + " passed.");
         blank(out);
         para(out, "A requirement settled by comparison that varies means the system is "

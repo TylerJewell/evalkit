@@ -186,12 +186,6 @@ would narrow it to 86% and up, fifty runs to 94% and up.
   new since then and have nothing to compare against.
 ```
 
-Panels appear only when they have something to say. A campaign that runs each
-requirement once prints neither the varied panel nor the comparison, because nothing
-can vary in one run and there is no baseline yet. Every figure is counted from the
-record named in the header, so the report cannot disagree with the evidence it came
-from.
-
 ## Metrics and measurements
 
 <details open>

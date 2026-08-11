@@ -61,8 +61,12 @@ class RepeatedCampaignTest {
     }
 
     private static CampaignPlan plan(int repeats) {
+        return plan(repeats, 2);
+    }
+
+    private static CampaignPlan plan(int repeats, int lanes) {
         return new CampaignPlan("repeats",
-            List.of(scenario("steady"), scenario("flaky")), Lanes.of(2), RUBRIC)
+            List.of(scenario("steady"), scenario("flaky")), Lanes.of(lanes), RUBRIC)
             .repeating(repeats);
     }
 
@@ -118,15 +122,39 @@ class RepeatedCampaignTest {
     }
 
     @Test
-    @DisplayName("a requirement's marks are in the order the runs were submitted")
+    @DisplayName("a requirement's marks are in the order the runs were started")
     void runsKeepTheirOrder() {
-        var result = CampaignRunner.run(plan(6), new Wobbly("flaky"), router());
+        // One lane, so this target's alternating answer lines up with the submission
+        // order and the expected sequence is a fact rather than a race.
+        var result = CampaignRunner.run(plan(6, 1), new Wobbly("flaky"), router());
         var flaky = result.requirements().stream()
             .filter(r -> r.id().equals("flaky")).findFirst().orElseThrow();
 
-        // Workers append as they finish, so an unordered gather would show the marks in
-        // whatever sequence the lanes produced rather than the sequence they ran.
+        // Workers append as they finish and runs of one scenario are indistinguishable
+        // once appended, so gathering by list order would show the marks in whatever
+        // sequence the lanes produced.
         assertThat(Panels.strip(flaky).marks()).isEqualTo("+ - + - + -");
+    }
+
+    @Test
+    @DisplayName("the same requirement gives the same marks however many lanes ran it")
+    void marksDoNotDependOnLaneCount() {
+        // Across lanes the runs finish out of order. Sorting by the attempt they were
+        // submitted as is what keeps the sequence the report prints a real one.
+        var oneLane = CampaignRunner.run(plan(8, 1), new Wobbly("flaky"), router());
+        var manyLanes = CampaignRunner.run(plan(8, 4), new Wobbly("flaky"), router());
+
+        assertThat(passCount(oneLane)).isEqualTo(passCount(manyLanes));
+        assertThat(Panels.strip(flakyOf(oneLane)).marks()).isEqualTo("+ - + - + - + -");
+    }
+
+    private static int passCount(CampaignRunner.Result result) {
+        return flakyOf(result).passes();
+    }
+
+    private static RequirementResult flakyOf(CampaignRunner.Result result) {
+        return result.requirements().stream()
+            .filter(r -> r.id().equals("flaky")).findFirst().orElseThrow();
     }
 
     @Test

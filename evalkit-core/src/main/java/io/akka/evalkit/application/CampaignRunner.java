@@ -62,9 +62,12 @@ public final class CampaignRunner {
     /**
      * The runs of each scenario, gathered back into one requirement.
      *
-     * <p>Grouped by scenario id and ordered by the plan, because workers append as they
-     * finish: reading the completion order as the run order would put a requirement's
-     * marks in whatever sequence the lanes happened to produce.
+     * <p>Requirements follow the plan and each requirement's runs follow the order they
+     * were submitted in. Workers append as they finish, and runs of one scenario are
+     * indistinguishable once they are in the list, so reading the list order as the run
+     * order would put a requirement's marks in whatever sequence the lanes produced. The
+     * report prints those marks as a sequence and says they are in order, so the order
+     * has to be one.
      */
     private static List<io.akka.evalkit.domain.RequirementResult> requirements(
             CampaignPlan plan, List<Completed> completed) {
@@ -78,6 +81,7 @@ public final class CampaignRunner {
             .map(entry -> new io.akka.evalkit.domain.RequirementResult(
                 entry.getValue().get(0).scenario(),
                 entry.getValue().stream()
+                    .sorted(java.util.Comparator.comparingInt(Completed::attempt))
                     .map(row -> new io.akka.evalkit.domain.RequirementResult.Run(
                         row.outcome(),
                         row.recording().flatMap(io.akka.evalkit.domain.Recording::latency)))
@@ -100,10 +104,16 @@ public final class CampaignRunner {
      * is in submission order while results arrive in completion order.
      */
     public record Completed(RunOutcome outcome, Scenario scenario,
-                            java.util.Optional<io.akka.evalkit.domain.Recording> recording) {
+                            java.util.Optional<io.akka.evalkit.domain.Recording> recording,
+                            int attempt) {
+
+        public Completed(RunOutcome outcome, Scenario scenario,
+                         java.util.Optional<io.akka.evalkit.domain.Recording> recording) {
+            this(outcome, scenario, recording, 0);
+        }
 
         public Completed(RunOutcome outcome, Scenario scenario) {
-            this(outcome, scenario, java.util.Optional.empty());
+            this(outcome, scenario, java.util.Optional.empty(), 0);
         }
 
         public Precursor precursor() {
@@ -155,14 +165,17 @@ public final class CampaignRunner {
             // Each scenario is submitted once per repeat. Repeats are separate units of
             // work rather than a loop inside one, so a slow scenario's runs spread across
             // lanes instead of holding one lane for all of them.
+            record Attempt(Scenario scenario, int number) {}
             List<Callable<Void>> work = plan.scenarios().stream()
                 .flatMap(scenario -> java.util.stream.IntStream.range(0, plan.repeats())
-                    .mapToObj(ignored -> scenario))
-                .map(scenario -> (Callable<Void>) () -> {
+                    .mapToObj(n -> new Attempt(scenario, n)))
+                .map(attempt -> (Callable<Void>) () -> {
+                    Scenario scenario = attempt.scenario();
                     long start = System.nanoTime();
                     try {
                         var ran = runOne.apply(scenario);
-                        completed.add(new Completed(ran.outcome(), scenario, ran.recording()));
+                        completed.add(new Completed(ran.outcome(), scenario, ran.recording(),
+                            attempt.number()));
                     } catch (Throwable t) {
                         // Every scenario must produce a row. invokeAll parks a thrown
                         // exception in a Future nobody reads, so an uncaught throw would
@@ -171,7 +184,7 @@ public final class CampaignRunner {
                         completed.add(new Completed(
                             new RunOutcome.NotReached(RunOutcome.Cause.NO_REPLY,
                                 "run threw: " + rootMessage(t), scenario.precursor()),
-                            scenario));
+                            scenario, java.util.Optional.empty(), attempt.number()));
                     } finally {
                         busy.addAndGet(System.nanoTime() - start);
                     }
