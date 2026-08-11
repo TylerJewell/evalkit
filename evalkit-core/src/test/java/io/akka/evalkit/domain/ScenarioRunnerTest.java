@@ -43,6 +43,10 @@ class ScenarioRunnerTest {
                 }
                 // Seeding costs none.
                 case Precursor.Fixture f -> new Prepared.Ready("s1", "");
+                // This target owns no tools, so it cannot break one. Answering anyway
+                // would report recovery from a failure that never happened.
+                case Precursor.FailingTool broken ->
+                    new Prepared.Failed("cannot break " + broken.tool());
             };
         }
 

@@ -52,6 +52,40 @@ public sealed interface Precursor {
         }
     }
 
+    /**
+     * Put the system in a state where a named tool fails, and see what it does about it.
+     *
+     * <p>Tools fail in production, and what an agent does then is the difference between a
+     * service that says it cannot check right now and one that invents an answer. A
+     * campaign that never breaks a tool has no evidence either way, because the tools it
+     * called all worked.
+     *
+     * <p>The target is asked for a tool by name and decides how to break it, for the reason
+     * {@link Fixture} asks for a state by name: the target owns the tool and is the only
+     * side that knows how to make it fail the way it fails.
+     *
+     * @param message what the tool fails with, so a scenario can expect the agent to
+     *                repeat it rather than paraphrase it
+     */
+    record FailingTool(String tool, String message, Precursor then) implements Precursor {
+        public FailingTool {
+            if (tool == null || tool.isBlank()) {
+                throw new IllegalArgumentException("tool name required");
+            }
+            message = message == null || message.isBlank() ? "the tool failed" : message;
+            then = then == null ? new None() : then;
+        }
+
+        public static FailingTool named(String tool) {
+            return new FailingTool(tool, "the tool failed", new None());
+        }
+
+        /** The same broken tool, reached from a state the target builds first. */
+        public FailingTool after(Precursor precursor) {
+            return new FailingTool(tool, message, precursor);
+        }
+    }
+
     /** The turns to send before the graded one, in order. */
     static Precursor replay(String... userTurns) {
         return new Replay(List.of(userTurns));
@@ -59,7 +93,16 @@ public sealed interface Precursor {
 
     /** Whether reaching this state exercises the target's own path to it. */
     default boolean provesReachability() {
-        return this instanceof Replay;
+        return this instanceof Replay
+            || (this instanceof FailingTool broken && broken.then().provesReachability());
+    }
+
+    /** The tools this precursor asks the target to break, which a target may not be able to. */
+    default java.util.Set<String> brokenTools() {
+        return this instanceof FailingTool broken
+            ? java.util.stream.Stream.concat(java.util.stream.Stream.of(broken.tool()),
+                broken.then().brokenTools().stream()).collect(java.util.stream.Collectors.toSet())
+            : java.util.Set.of();
     }
 
     default String describe() {
@@ -67,6 +110,8 @@ public sealed interface Precursor {
             case None ignored -> "none";
             case Replay r -> "replay of " + r.userTurns().size() + " turns";
             case Fixture f -> "fixture " + f.name();
+            case FailingTool broken -> "tool " + broken.tool() + " failing"
+                + (broken.then() instanceof None ? "" : ", after " + broken.then().describe());
         };
     }
 }

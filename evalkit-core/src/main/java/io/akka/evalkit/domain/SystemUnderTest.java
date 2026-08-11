@@ -157,6 +157,17 @@ public interface SystemUnderTest {
      * <p>Empty means "unknown", not "none": a target that cannot enumerate its nodes is
      * not checked rather than being refused outright.
      */
+    /**
+     * Tools this target can be asked to break, for scenarios that test recovery.
+     *
+     * <p>Empty means the target cannot break anything, and a campaign asking it to is
+     * refused before it runs. Silently answering with working tools would report the
+     * system as recovering from a failure that never happened.
+     */
+    default java.util.Set<String> breakableTools() {
+        return java.util.Set.of();
+    }
+
     default java.util.Set<String> emittableNodes() {
         return java.util.Set.of();
     }

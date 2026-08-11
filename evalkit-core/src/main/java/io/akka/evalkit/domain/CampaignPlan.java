@@ -95,6 +95,20 @@ public record CampaignPlan(String id, List<Scenario> scenarios, Lanes lanes, Rub
             }
         }
 
+        // A tool the target cannot break answers normally, and the scenario reports the
+        // system recovering from a failure that never happened.
+        var breakable = target.breakableTools();
+        var unbreakable = scenarios.stream()
+            .flatMap(s -> s.precursor().brokenTools().stream())
+            .filter(tool -> !breakable.contains(tool))
+            .distinct()
+            .sorted()
+            .toList();
+        if (!unbreakable.isEmpty()) {
+            reasons.add("target cannot break tools " + unbreakable
+                + "; those scenarios would run against working tools");
+        }
+
         if (scenarios.isEmpty()) {
             reasons.add("no scenarios to run");
         }
