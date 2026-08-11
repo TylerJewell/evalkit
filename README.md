@@ -326,22 +326,26 @@ An eval source root declares no endpoints and registers no components. The
 `domain`/`application`/`api` convention the evalkit library follows would produce four
 near-empty packages there, so the eval tree is organised by function.
 
-## Recording a corpus once
+## Record once, score many times
 
-A campaign spends provider money on the traffic it causes. `FileLedger` writes what each run
-recorded into `datasets/` as markdown, and a later campaign scores those files under a new
-rubric without reaching the service again.
+A campaign pays for the traffic it causes. Record what the runs produced, and every later
+campaign scores those files under a new rubric without reaching the service again.
 
 ```java
+// after a campaign, write down what it recorded
 var corpus = FileLedger.open(Path.of("src/eval/resources/datasets"));
 result.completed().forEach(completed ->
     completed.recording().ifPresent(recording -> corpus.save(recording.interaction())));
+
+// any time later, score those files instead of a service
+var rescored = CampaignRunner.run(plan, new RecordedInteractions(corpus, corpus.fixtures()),
+    router);
 ```
 
-Each file holds one interaction, with the conversation in prose sections and the figures in
-list items.
+One file per interaction, with the conversation as prose sections and the figures as list
+items.
 
-```markdown
+````markdown
 # Interaction
 
 - id: refund-outside-window-01
@@ -380,18 +384,11 @@ Our return window is 30 days, so this order sits outside it.
 
 - input: 1204
 - output: 38
-```
+````
 
-The `id` field is what identifies an interaction. A file renamed while a corpus is tidied
-still holds the interaction every recorded evaluation names. Two files claiming one id are
-refused when the corpus is opened.
-
-`RecordedInteractions` runs a campaign over that corpus, and reaches no service.
-
-```java
-var recorded = new RecordedInteractions(corpus, corpus.fixtures());
-var result = CampaignRunner.run(plan, recorded, router);
-```
+An interaction is identified by its `id` field and not by its filename, so tidying a corpus
+does not orphan the evaluations that name it. Two files claiming one id are refused when the
+corpus opens.
 
 ## Works with
 
