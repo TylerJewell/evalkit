@@ -392,7 +392,7 @@ refused when the corpus opens.
 
 ## Works with
 
-**Akka services.** Campaigns run against real agents under the Akka TestKit, and a corpus
+**Akka services.** Campaigns run against real agents under the Akka TestKit, and a campaign
 too long for a test runner runs as a durable workflow that survives a deploy.
 
 **Services built on anything else.** A service in another language, reachable over a port,
@@ -409,13 +409,13 @@ step that produced it.
 [Akka Verify](https://akka.io/platform/verify) is continuous evaluation and governance for
 agentic AI.
 
-A corpus tells you how a service behaved on the cases someone thought to write. Verify runs
+A campaign tells you how a service behaved on the cases someone thought to write. Verify runs
 the same evaluations against live traffic, continuously, and governs what an agent may do
 while it does it.
 
 A campaign's results import into Verify directly, and the metric and rubric versions carry
 across, so a score recorded in CI and a score recorded in production are one measurement.
-Verify adds what a corpus cannot. Policies allow, block or report. Guardrails act inline.
+Verify adds what a campaign cannot. Policies allow, block or report. Guardrails act inline.
 Sanitizers redact, mask and reshape. Escalations put a person in the loop.
 
 Every run leaves a tamper-evident evidence record in the form an auditor or regulator
