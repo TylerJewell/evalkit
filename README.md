@@ -6,9 +6,10 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/java-21%2B-orange.svg)](https://openjdk.org/projects/jdk/21/)
 
-[Documentation](docs/site/evalkit/) · [What it measures](#what-it-measures) ·
-[Quickstart](#quickstart) · [Works with](#works-with) ·
-[Akka Verify](#akka-verify) · [Contributing](CONTRIBUTING.md)
+[Documentation](docs/site/evalkit/) · [What a run reports](#what-a-run-reports) ·
+[Metrics](#metrics-and-measurements) · [Quickstart](#quickstart) ·
+[Works with](#works-with) · [Akka Verify](#akka-verify) ·
+[Contributing](CONTRIBUTING.md)
 
 Akka Evalkit is a simple-to-use, open-source LLM evaluation framework, for evaluating large-language model systems. It is similar to Pytest and DeepEval but specialized for unit testing LLM apps and agentic systems authored in Java. Evalkit incorporates the latest research to run evals via metrics such as G-Eval, task completion, answer relevancy, and  hallucinations, which uses LLM-as-a-judge and other NLP models that run locally on your machine.
 
@@ -20,6 +21,134 @@ With Evalkit, you can easily evaluate:
 Use these evaluations to determine the optimal models, prompts, and architecture to improve your AI quality, prevent prompt drifting, or even transition from OpenAI to Claude with confidence.
 
 Evalkit runs campaigns using Akka's durable execution engine, in order to support long-lived, long-process evaluations that cover millions of scenarios.  With durable execution campaigns, you can restart the evaluation engine and continue where the campaign left off.
+
+## What a run reports
+
+Plain text, 80 columns, written for someone who has to act on the result and does not
+know how the system is built. This is a campaign that ran each requirement once.
+
+```
+Refund policy evaluation      run 2026-08-11T09:14Z    system claims-svc 4.2.0
+policy refund-desk v3     rubric scenario-judge v3    80 requirements, 80 runs
+record  target/evalkit/refund-policy-20260811T0914Z.jsonl
+
+1  What the run found
+---------------------
+
+  passed            ################################           63
+  failed            ####                                        9
+  undecided         ##                                          4
+  no result         ##                                          4
+
+Each requirement ran once. Undecided landed in the judge's middle band. No
+result stopped before there was an answer to score.
+
+One run cannot tell a requirement the system meets from one it happened to
+meet. Five runs would show a requirement holds at least 55% of the time,
+twenty runs at least 86%, fifty at least 94%.
+
+2  What failed
+--------------
+
+     refund-14d            expected GenUC-16a.3, found GenUC-17a
+     claim-reopen          expected GenUC-22, found GenUC-19
+     no-fee-claim          the reply did not state "no extra cost"
+     receipt-per-airline   the reply did not state "each airline"
+     tool-scope-1          tool-permission v1: scored 0.50, needed 1.00
+     bulk-refund           tool-correctness v2: scored 0.40, needed 0.80
+     interac-offer         scored 2 of 10: the agent named a Canadian service
+     cash-country          scored 3 of 10: offered cash outside Canada
+     escalation-missing    scored 1 of 10: no escalation path was given
+
+  Every requirement that failed, and what the scorer said about it. A scorer
+  that computes a number reports the number it got and the number it needed.
+
+3  How quality was measured
+---------------------------
+
+                      # passed   x failed   ? unsettled
+
+     specification node      ######################xxx?    24
+     scenario judge          #############xx????           18
+     required wording        ###########xx                 12
+     task completion                                        0
+     tool permission         #####x                         6
+     tool correctness        #####x                         6
+     argument correctness    ###?                           4
+     turn faithfulness       ##?                            3
+     citation faithfulness   #                              1
+     turn relevancy          ##                             2
+     plan quality                                           0
+     plan adherence                                         0
+     step efficiency         ###?                           4
+
+  Quality measures are specific to the use case being executed. Counts reflect
+  the number of requirements a quality measure checked. Unsettled means the
+  judge was undecided or the run produced nothing.
+
+4  How the judge scored
+-----------------------
+
+     10  ##################                    3
+      9  ##############################        5
+      8  ########################              4
+     ..... passed, 8 and above ................... 12
+      7  ############                          2
+      6  ######                                1
+      5  ######                                1
+      4                                        0
+     ..... undecided, 4 to 7 ...................... 4
+      3  ######                                1
+      2  ######                                1
+      1                                        0
+     ..... failed, 3 and below .................... 2
+
+  Models scored 18 requirements from 1 to 10, with 10 being very confident.
+  The judge agrees with a human reviewer 89-91% of the time on clear-cut
+  replies and 53% of the time on borderline ones.
+
+5  What this run cannot tell you
+--------------------------------
+
+  These runs stopped before the system produced an answer to score.
+
+     never reached the question                    3
+     no reply within 45 seconds                    1
+     the judge would not score the answer          0
+
+  These requirements were left out of this run.
+
+     booking changes                               14
+     seat fees                                     7
+
+  This kit can show that the system answered correctly from a stated starting
+  point. It cannot show that a user reaches that point unaided.
+
+6  What it cost
+---------------
+
+     the system under test         70,000 in     4,000 out
+     the judge                      7,628 in       948 out
+     total                         77,628 in     4,948 out
+
+  Tokens the system and the judge sent and received across all 80 runs.
+
+     under 5s      ##########################   38
+     5 to 15s      #################            25
+     15 to 30s     #######                      10
+     30 to 45s     ####                          6
+     over 45s      #                             1
+
+  How long the system took to answer, over 80 runs. 7 runs came within 15
+  seconds of the 45 second timeout and 1 exceeded it, which is counted as no
+  reply. Runs were executed 4 at a time, so these times include waiting for a
+  free lane.
+```
+
+Run each requirement more than once and the report gains two panels: the requirements
+that answered differently between runs, shown run by run, and a comparison against the
+previous run. Every figure is counted from the record named in the header, so the report
+cannot disagree with the evidence it came from.
 
 ## Metrics and measurements
 
@@ -57,26 +186,6 @@ Decision graphs express a rubric as a tree and call a model only where the branc
 genuinely in doubt.
 
 </details>
-
-## Reports
-
-```
-Refund policy evaluation    run 2026-08-08T09:14Z    system claims-svc 4.2.0
-
-63 of 80 requirements behaved as specified, 9 did not, 4 were too borderline
-to call and 4 produced no result.
-
-                                           rules   measured judged  total
-  behaved as specified                       52        0       11     63
-  did not behave                              6        0        3      9
-  undecided                                   -        -        4      4
-  no result                                                            4
-    never reached the question                                         3
-    no reply within 45 seconds                                         1
-    answer not assessed                                                0
-
-Model usage: 412,880 tokens, 388,140 in and 24,740 out.
-```
 
 ## Quickstart
 
