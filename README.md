@@ -25,9 +25,13 @@ Evalkit runs campaigns using Akka's durable execution engine, in order to suppor
 ## Reporting sample
 
 ```
-Refund policy evaluation      run 2026-08-11T09:14Z    system claims-svc 4.2.0
-policy refund-desk v3    rubric scenario-judge v3    80 requirements, 400 runs
-record  target/evalkit/refund-policy-20260811T0914Z.jsonl
+Refund policy evaluation
+--------------------------------------------------------------------------
+  run      2026-08-11T09:14Z           system   claims-svc 4.2.0
+  rules    refund-desk v3              rubric   scenario-judge v3
+  scope    80 requirements, 400 runs
+  record   target/evalkit/refund-policy-20260811T0914Z.jsonl
+--------------------------------------------------------------------------
 
 1  What the run found
 ---------------------
@@ -83,7 +87,7 @@ would narrow it to 86% and up, fifty runs to 94% and up.
      no-receipt-decline      + - + - +             comparison   3 of 5
      duplicate-claim         - - - + -             comparison   1 of 5
 
-  Each mark is one run, in the order they ran.
+  Each mark is one run, in the order they were started.
 
   A requirement settled by comparison that varies means the system is giving
   different answers to the same question.

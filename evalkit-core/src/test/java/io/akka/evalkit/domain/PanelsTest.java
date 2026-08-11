@@ -252,9 +252,10 @@ class PanelsTest {
     void headingCarriesProvenance() {
         var text = Panels.render(singleRun());
 
-        assertThat(text).contains("policy refund-desk v3");
-        assertThat(text).contains("record  target/evalkit/refund-policy.jsonl");
-        assertThat(text).contains("6 requirements, 6 runs");
+        assertThat(flat(text)).contains("rules refund-desk v3");
+        assertThat(flat(text)).contains("record target/evalkit/refund-policy.jsonl");
+        assertThat(flat(text)).contains("scope 6 requirements, 6 runs");
+        assertThat(flat(text)).contains("rubric scenario-judge v3");
     }
 
     /** Wrapped prose read as one line, so an assertion is about words not line breaks. */

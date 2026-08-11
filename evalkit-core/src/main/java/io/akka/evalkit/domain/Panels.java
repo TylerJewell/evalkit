@@ -64,20 +64,38 @@ public final class Panels {
 
     // ---- panels ----
 
+    /**
+     * What the run was, as labelled facts in a fixed column.
+     *
+     * <p>The values have no common length &mdash; a timestamp, a version, a policy label,
+     * a file path &mdash; so packing them onto a few lines puts every field somewhere
+     * different on every report and a reader looking for the rubric has to read rather
+     * than scan. Short facts pair two to a line and long ones take a line of their own,
+     * which keeps the block four lines without the path forcing a wide second column.
+     */
     private static void heading(StringBuilder out, RunRecord r) {
         var id = r.identity();
-        line(out, id.title() + "      run " + id.runReference() + "    system "
-            + id.systemVersion());
-        var second = new StringBuilder();
-        r.policy().ifPresent(p -> second.append("policy ").append(p.label()).append("     "));
-        second.append("rubric ").append(r.judge().rubricId()).append(" v")
-            .append(r.judge().rubricVersion()).append("    ")
-            .append(count(r.requirementCount(), "requirement")).append(", ")
-            .append(count(r.runCount(), "run"));
-        line(out, second.toString());
-        if (r.recordPath() != null && !r.recordPath().isBlank()) {
-            line(out, "record  " + r.recordPath());
+        var shorts = new ArrayList<String[]>();
+        shorts.add(new String[] {"run", id.runReference()});
+        shorts.add(new String[] {"system", id.systemVersion()});
+        r.policy().ifPresent(p -> shorts.add(new String[] {"rules", p.label()}));
+        shorts.add(new String[] {"rubric",
+            r.judge().rubricId() + " v" + r.judge().rubricVersion()});
+        shorts.add(new String[] {"scope", count(r.requirementCount(), "requirement")
+            + ", " + count(r.runCount(), "run")});
+
+        line(out, id.title());
+        line(out, "-".repeat(74));
+        for (int i = 0; i < shorts.size(); i += 2) {
+            var left = "  " + pad(shorts.get(i)[0], 9) + pad(shorts.get(i)[1], 28);
+            var right = i + 1 < shorts.size()
+                ? pad(shorts.get(i + 1)[0], 9) + shorts.get(i + 1)[1] : "";
+            line(out, left + right);
         }
+        if (r.recordPath() != null && !r.recordPath().isBlank()) {
+            line(out, "  " + pad("record", 9) + r.recordPath());
+        }
+        line(out, "-".repeat(74));
     }
 
     private static void whatTheRunFound(StringBuilder out, int number, RunRecord r) {
