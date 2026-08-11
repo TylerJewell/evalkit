@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../../assets/favicon.png">
+<title>Scoring · evalkit</title>
+<style>
+:root {
+  --ink:       #1b1b1f;
+  --ink-soft:  #5c5f6b;
+  --ink-faint: #8b8f9c;
+  --page:      #ffffff;
+  --panel:     #f7f8fa;
+  --rule:      #e3e5ea;
+  --link:      #0a6ed1;
+  --accent:    #00c1c7;
+  --code-bg:   #f5f6f8;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--sans);
+       font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.layout { display: grid; grid-template-columns: 1fr; max-width: 1320px; margin: 0 auto; }
+@media (min-width: 1000px) {
+  .layout { grid-template-columns: 232px minmax(0, 1fr); gap: 40px; }
+}
+@media (min-width: 1280px) {
+  .layout { grid-template-columns: 232px minmax(0, 1fr) 210px; }
+}
+
+aside.side { border-right: 1px solid var(--rule); padding: 30px 22px 60px; }
+@media (min-width: 1000px) { aside.side { position: sticky; top: 0; height: 100vh; overflow-y: auto; } }
+.brand { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+.brand span { color: var(--accent); }
+.kicker { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+          color: var(--ink-faint); margin-bottom: 26px; }
+aside.side h2 { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--ink-faint); margin: 0 0 10px; font-weight: 600; }
+aside.side ul { list-style: none; margin: 0 0 26px; padding: 0; }
+aside.side li { margin: 0 0 3px; }
+aside.side li a { display: block; padding: 5px 10px; border-radius: 5px;
+                  color: var(--ink-soft); font-size: 14px; }
+aside.side li a:hover { background: var(--panel); text-decoration: none; color: var(--ink); }
+aside.side li a.here { background: var(--panel); color: var(--ink); font-weight: 600;
+                       box-shadow: inset 2px 0 0 var(--accent); }
+
+main { min-width: 0; padding: 30px 24px 96px; }
+.crumbs { font-size: 13px; color: var(--ink-faint); margin-bottom: 26px; }
+.crumbs a { color: var(--ink-soft); }
+.crumbs span { padding: 0 7px; color: var(--rule); }
+main h1 { font-size: clamp(30px, 4vw, 40px); line-height: 1.15; letter-spacing: -0.022em;
+          margin: 0 0 28px; font-weight: 680; }
+main h2 { font-size: 23px; letter-spacing: -0.012em; margin: 46px 0 14px; font-weight: 650;
+          padding-top: 18px; border-top: 1px solid var(--rule); }
+main h3 { font-size: 17px; margin: 32px 0 10px; font-weight: 650; }
+main p { margin: 0 0 16px; max-width: 74ch; }
+main ul { max-width: 74ch; padding-left: 22px; }
+main li { margin-bottom: 7px; }
+code { font-family: var(--mono); font-size: 0.875em; background: var(--code-bg);
+       border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 7px;
+      padding: 16px 18px; overflow-x: auto; margin: 0 0 20px; }
+pre code { background: none; border: 0; padding: 0; font-size: 13.5px; line-height: 1.6; }
+p.src { margin: 0 0 -1px; font-family: var(--mono); font-size: 12px; }
+p.src a { display: inline-block; background: var(--panel); border: 1px solid var(--rule);
+          border-bottom: 0; border-radius: 7px 7px 0 0; padding: 6px 12px; color: var(--ink-soft); }
+p.src + pre { border-top-left-radius: 0; }
+
+table { border-collapse: collapse; width: 100%; margin: 0 0 22px; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 13px; border-bottom: 1px solid var(--rule); }
+thead th { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;
+           color: var(--ink-faint); border-bottom: 1px solid var(--ink-faint); font-weight: 600; }
+table.callouts { margin-top: -4px; font-size: 14px; }
+table.callouts td:first-child { width: 44px; color: var(--accent); font-family: var(--mono);
+                                font-weight: 700; }
+table.callouts strong { font-weight: 700; }
+
+nav.onpage { padding: 34px 20px 60px; font-size: 13px; }
+@media (max-width: 1279px) { nav.onpage { display: none; } }
+@media (min-width: 1280px) { nav.onpage { position: sticky; top: 0; height: 100vh; overflow-y: auto; } }
+nav.onpage h2 { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--ink-faint); margin: 0 0 12px; font-weight: 600; }
+nav.onpage ul { list-style: none; margin: 0; padding: 0; }
+nav.onpage a { display: block; padding: 4px 0 4px 12px; border-left: 1px solid var(--rule);
+               color: var(--ink-soft); line-height: 1.35; }
+nav.onpage a:hover { color: var(--link); border-left-color: var(--link); text-decoration: none; }
+nav.onpage a.sub { padding-left: 24px; color: var(--ink-faint); }
+
+.note { border: 1px solid var(--rule); border-left: 3px solid var(--accent); background: var(--panel);
+        border-radius: 0 7px 7px 0; padding: 14px 18px; margin: 0 0 26px; font-size: 14px;
+        color: var(--ink-soft); max-width: 74ch; }
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="brand">Akka <span>/</span> evalkit</div>
+  <div class="kicker">Libraries</div>
+  <h2>evalkit</h2>
+  <ul><li><a class="" href="index.html">evalkit</a></li><li><a class="here" href="scoring.html">Scoring</a></li><li><a class="" href="testing.html">Testing with the Akka TestKit</a></li></ul>
+  <h2>Related</h2>
+  <ul>
+    <li><a href="https://doc.akka.io/java/agents/llm_eval.html">LLM evaluation</a></li>
+    <li><a href="https://doc.akka.io/java/agents/testing.html">Testing the agent</a></li>
+  </ul>
+</aside>
+<main>
+  <div class="crumbs"><a href="https://doc.akka.io/">Akka</a><span>/</span><a href="https://doc.akka.io/libraries/">Libraries</a><span>/</span><a href="index.html">evalkit</a><span>/</span>Scoring</div>
+  <h1>Scoring</h1>
+  <div class="note">Rendered from <code>docs/site/evalkit/scoring.html.md</code> for review. The
+  markdown is the source; this page is a local preview of how it reads on the documentation site.</div>
+  <h2 id="_overview">Overview</h2>
+<p>A scorer reads a finished <code>Recording</code> and returns a <code>RunOutcome</code>. Execution and scoring are separate steps, so a rubric applies to a recording without running the conversation again, and two services are compared under one rubric version.</p>
+<p>A <code>Recording</code> holds a <code>Transcript</code> and an <code>Evidence</code>. The transcript carries the four fields a rubric interpolates. The evidence carries what the run observed beyond them: the specification node, the latency, the tool calls, the model calls, the instruction the model was given, and the failure that ended the run. A metric reads the evidence. A judge reads the transcript alone, so its input stays byte-identical whatever else the run observed.</p>
+<p>Three scorer families exist, and each is defined by what settles the result.</p>
+<table><thead><tr><th>Family</th><th>Settles the result by</th><th>Model calls</th><th>Outcome</th></tr></thead><tbody><tr><td>Comparison</td><td>The reply reached the specification node the scenario named.</td><td>0</td><td><code>Asserted</code></td></tr><tr><td>Computation</td><td>A metric scored the reply against a threshold.</td><td>0 or more</td><td><code>Measured</code></td></tr><tr><td>Judgement</td><td>A judge read the transcript against a versioned rubric.</td><td>1 or more</td><td><code>Scored</code></td></tr></tbody></table>
+<p>Every scenario is routed before any call goes out. A scenario that names a specification node is exercising a decision with a right answer, and sending it to a model buys a slightly random opinion and pays for it. In one recorded corpus, 510 of 514 scenarios named a node.</p>
+<h2 id="_the_scorer_interface">The scorer interface</h2>
+<p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/Scorer.java">Scorer.java</a></p>
+<pre class="lang-java"><code>public interface Scorer {
+
+  RunOutcome score(Recording recording); // (1)
+
+  default String id() { // (2)
+    return getClass().getSimpleName();
+  }
+}</code></pre>
+<table class="callouts"><tbody><tr><td><strong>1</strong></td><td>The return type is <code>RunOutcome</code> so that a scorer which cannot produce a result says so. A <code>double</code> return type can express a low score and cannot express the absence of one, and the number it returns instead reaches someone&#x27;s pass rate.</td></tr><tr><td><strong>2</strong></td><td>Names what produced the outcome, for the report. A judge returns its rubric label and a metric returns its metric label.</td></tr></tbody></table>
+<p><code>ScorerRouter.byExpectation</code> chooses the scorer for each scenario. A named node is left to the runner, which compares it through <code>SpecNodeMatch</code>. A named metric routes to that metric. A scenario naming neither states its expectation in prose, which only a judge reads.</p>
+<h2 id="_comparison">Comparison</h2>
+<p>A comparison result is a pass or a fail. Comparison has no confidence to be borderline about, so the undecided column carries a dash for this family. A figure in that cell would report a defect in evalkit.</p>
+<p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/SpecNodeMatch.java">SpecNodeMatch.java</a></p>
+<pre class="lang-java"><code>RunOutcome outcome = SpecNodeMatch.assertReached(&quot;GenUC-16a.3&quot;, reply.node()); // (1)
+// Asserted[passed=false, expectedNode=GenUC-16a.3, actualNode=GenUC-17a]</code></pre>
+<table class="callouts"><tbody><tr><td><strong>1</strong></td><td>The target reports the node it answered from through <code>Reply.node()</code>. A target that reports no node produces a failing <code>Asserted</code> naming what was expected.</td></tr></tbody></table>
+<h2 id="_computation">Computation</h2>
+<p>A metric computes a number over the recording and compares it against a threshold. The arithmetic repeats exactly. The meaning is approximate, because the threshold is a judgment encoded as a number.</p>
+<p><code>Metric</code> splits the work in two. Collecting judgements may call a model, and turning judgements into a number is a pure function, so <code>aggregate</code> runs in a unit test with no provider and no key.</p>
+<p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/metric/Metric.java">Metric.java</a></p>
+<pre class="lang-java"><code>var metric = ToolPermission.allowing(&quot;search_kb&quot;, &quot;reply&quot;);
+var judgements = metric.judge(List.of(&quot;search_kb&quot;, &quot;delete_account&quot;));
+
+metric.aggregate(judgements);   // 0.5
+metric.withinThreshold(0.5);    // false</code></pre>
+<p>The bundled metrics are <code>ToolPermission</code>, <code>ToolCorrectness</code>, <code>ArgumentCorrectness</code>, <code>TurnRelevancy</code>, <code>TurnFaithfulness</code> and <code>CitationFaithfulness</code>. <code>Dag</code> expresses a rubric as a decision graph and calls a model only at branch points.</p>
+<p><code>AlignmentMetric</code> covers the metrics whose score is one model call: <code>TaskCompletion</code>, <code>StepEfficiency</code>, <code>PlanQuality</code> and <code>PlanAdherence</code>. An alignment metric implements <code>Scorer</code>, because a single model-produced score gives <code>aggregate</code> nothing to work on.</p>
+<p>A metric with nothing to read returns <code>Unscoreable</code>. <code>PlanQuality</code> needs the reasoning a run&#x27;s model calls carried, and a run whose provider returned none produces no score.</p>
+<p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/RunOutcome.java">RunOutcome.java</a></p>
+<pre class="lang-java"><code>record Measured(String metricId, int metricVersion,
+                double value, double threshold, boolean withinThreshold,
+                String reason)
+  implements RunOutcome {}</code></pre>
+<p>The reason is empty for a metric that counts, and carries a sentence for a metric whose score came from a model.</p>
+<table class="callouts"><tbody><tr><td></td><td>A tuned threshold moves a score without the service changing. One corpus in this project&#x27;s history scored 23, 17 and 19 out of 40 across three passes at a text-extraction heuristic while the service never changed. <code>Measured</code> carries a metric id and version for that reason, and <code>Scoring.compare</code> refuses to compare results produced under different metric versions.</td></tr></tbody></table>
+<h2 id="_judgement">Judgement</h2>
+<p>A judge sends the transcript to a model with a versioned rubric. This family is the only one that always costs money.</p>
+<h3 id="_rubrics_are_versioned_data">Rubrics are versioned data</h3>
+<p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/Rubric.java">Rubric.java</a></p>
+<pre class="lang-java"><code>var rubric = Rubric.load(&quot;scenario-judge&quot;, 3); // (1)
+
+var verdict = Verdict.read(&quot;refund-30d&quot;, rubric, reply).orElseThrow(); // (2)</code></pre>
+<table class="callouts"><tbody><tr><td><strong>1</strong></td><td>Loads <code>rubrics/scenario-judge-v3.txt</code> from the classpath. v2 asks for a value from 1 to 10 and nothing else. v3 asks for that value and one sentence stating what decided it, on bands worded exactly as v2 words them.</td></tr><tr><td><strong>2</strong></td><td>Every verdict carries the rubric id and version that produced it. <code>Rubric.statesReason</code> decides which reader applies, so a reply to v3 that lost its label is unreadable instead of being read as a bare number.</td></tr></tbody></table>
+<p><code>Scoring.compare</code> throws when two verdict sets carry different rubric versions. Scoring a baseline under v2 and a candidate under v3 attributes a change in the rubric to the service. Re-score the kept transcripts under the newer rubric instead, which costs judge calls and no conversations.</p>
+<h3 id="_bands_carry_the_result">Bands carry the result</h3>
+<p><code>Scoring</code> works in bands and reports movement between them. Identical runs of one corpus scored 7, 8, 9 and 10 on the same as-specified scenarios, so an average of the raw scores describes the judge. The middle band counts as undecided, because measured agreement with an independent reviewer is 89 to 91 percent on clear-cut replies and 53 percent on borderline ones.</p>
+<h2 id="_runs_that_produced_nothing">Runs that produced nothing</h2>
+<p>A run can end with nothing to report about the service. The outcome says which way that happened, and none of these three enters a pass rate.</p>
+<table><thead><tr><th>Outcome</th><th>Produced by</th></tr></thead><tbody><tr><td><code>NotReached</code></td><td>The precursor never landed, or the service answered nothing.</td></tr><tr><td><code>Unscoreable</code></td><td>A scorer ran and reached no verdict, or threw <code>NoVerdict</code>.</td></tr><tr><td><code>ScorerFailed</code></td><td>A scorer threw anything else, which is a defect in evalkit.</td></tr></tbody></table>
+<p>A content filter refused to score one transcript during calibration, which is the recorded case for <code>Unscoreable</code>. That refusal reaches the runner as a thrown exception several frames inside parsing a reply. <code>NoVerdict</code> lets the throwing code name which of the two happened, because the runner cannot tell them apart from the stack.</p>
+<h2 id="_see_also">See also</h2>
+<ul><li><a href="index.html">evalkit overview</a></li><li><a href="testing.html">Testing with the Akka TestKit</a></li><li><a href="https://doc.akka.io/java/agents/llm_eval.html">LLM evaluation in the Akka SDK</a></li></ul>
+</main>
+<nav class="onpage">
+  <h2>On this page</h2>
+  <ul><li><a class="" href="#_overview">Overview</a></li><li><a class="" href="#_the_scorer_interface">The scorer interface</a></li><li><a class="" href="#_comparison">Comparison</a></li><li><a class="" href="#_computation">Computation</a></li><li><a class="" href="#_judgement">Judgement</a></li><li><a class="sub" href="#_rubrics_are_versioned_data">Rubrics are versioned data</a></li><li><a class="sub" href="#_bands_carry_the_result">Bands carry the result</a></li><li><a class="" href="#_runs_that_produced_nothing">Runs that produced nothing</a></li><li><a class="" href="#_see_also">See also</a></li></ul>
+</nav>
+</div>
+</body>
+</html>

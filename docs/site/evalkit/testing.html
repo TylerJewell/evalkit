@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../../assets/favicon.png">
+<title>Testing with the Akka TestKit · evalkit</title>
+<style>
+:root {
+  --ink:       #1b1b1f;
+  --ink-soft:  #5c5f6b;
+  --ink-faint: #8b8f9c;
+  --page:      #ffffff;
+  --panel:     #f7f8fa;
+  --rule:      #e3e5ea;
+  --link:      #0a6ed1;
+  --accent:    #00c1c7;
+  --code-bg:   #f5f6f8;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--sans);
+       font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.layout { display: grid; grid-template-columns: 1fr; max-width: 1320px; margin: 0 auto; }
+@media (min-width: 1000px) {
+  .layout { grid-template-columns: 232px minmax(0, 1fr); gap: 40px; }
+}
+@media (min-width: 1280px) {
+  .layout { grid-template-columns: 232px minmax(0, 1fr) 210px; }
+}
+
+aside.side { border-right: 1px solid var(--rule); padding: 30px 22px 60px; }
+@media (min-width: 1000px) { aside.side { position: sticky; top: 0; height: 100vh; overflow-y: auto; } }
+.brand { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+.brand span { color: var(--accent); }
+.kicker { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+          color: var(--ink-faint); margin-bottom: 26px; }
+aside.side h2 { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--ink-faint); margin: 0 0 10px; font-weight: 600; }
+aside.side ul { list-style: none; margin: 0 0 26px; padding: 0; }
+aside.side li { margin: 0 0 3px; }
+aside.side li a { display: block; padding: 5px 10px; border-radius: 5px;
+                  color: var(--ink-soft); font-size: 14px; }
+aside.side li a:hover { background: var(--panel); text-decoration: none; color: var(--ink); }
+aside.side li a.here { background: var(--panel); color: var(--ink); font-weight: 600;
+                       box-shadow: inset 2px 0 0 var(--accent); }
+
+main { min-width: 0; padding: 30px 24px 96px; }
+.crumbs { font-size: 13px; color: var(--ink-faint); margin-bottom: 26px; }
+.crumbs a { color: var(--ink-soft); }
+.crumbs span { padding: 0 7px; color: var(--rule); }
+main h1 { font-size: clamp(30px, 4vw, 40px); line-height: 1.15; letter-spacing: -0.022em;
+          margin: 0 0 28px; font-weight: 680; }
+main h2 { font-size: 23px; letter-spacing: -0.012em; margin: 46px 0 14px; font-weight: 650;
+          padding-top: 18px; border-top: 1px solid var(--rule); }
+main h3 { font-size: 17px; margin: 32px 0 10px; font-weight: 650; }
+main p { margin: 0 0 16px; max-width: 74ch; }
+main ul { max-width: 74ch; padding-left: 22px; }
+main li { margin-bottom: 7px; }
+code { font-family: var(--mono); font-size: 0.875em; background: var(--code-bg);
+       border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 7px;
+      padding: 16px 18px; overflow-x: auto; margin: 0 0 20px; }
+pre code { background: none; border: 0; padding: 0; font-size: 13.5px; line-height: 1.6; }
+p.src { margin: 0 0 -1px; font-family: var(--mono); font-size: 12px; }
+p.src a { display: inline-block; background: var(--panel); border: 1px solid var(--rule);
+          border-bottom: 0; border-radius: 7px 7px 0 0; padding: 6px 12px; color: var(--ink-soft); }
+p.src + pre { border-top-left-radius: 0; }
+
+table { border-collapse: collapse; width: 100%; margin: 0 0 22px; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 13px; border-bottom: 1px solid var(--rule); }
+thead th { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;
+           color: var(--ink-faint); border-bottom: 1px solid var(--ink-faint); font-weight: 600; }
+table.callouts { margin-top: -4px; font-size: 14px; }
+table.callouts td:first-child { width: 44px; color: var(--accent); font-family: var(--mono);
+                                font-weight: 700; }
+table.callouts strong { font-weight: 700; }
+
+nav.onpage { padding: 34px 20px 60px; font-size: 13px; }
+@media (max-width: 1279px) { nav.onpage { display: none; } }
+@media (min-width: 1280px) { nav.onpage { position: sticky; top: 0; height: 100vh; overflow-y: auto; } }
+nav.onpage h2 { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--ink-faint); margin: 0 0 12px; font-weight: 600; }
+nav.onpage ul { list-style: none; margin: 0; padding: 0; }
+nav.onpage a { display: block; padding: 4px 0 4px 12px; border-left: 1px solid var(--rule);
+               color: var(--ink-soft); line-height: 1.35; }
+nav.onpage a:hover { color: var(--link); border-left-color: var(--link); text-decoration: none; }
+nav.onpage a.sub { padding-left: 24px; color: var(--ink-faint); }
+
+.note { border: 1px solid var(--rule); border-left: 3px solid var(--accent); background: var(--panel);
+        border-radius: 0 7px 7px 0; padding: 14px 18px; margin: 0 0 26px; font-size: 14px;
+        color: var(--ink-soft); max-width: 74ch; }
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="brand">Akka <span>/</span> evalkit</div>
+  <div class="kicker">Libraries</div>
+  <h2>evalkit</h2>
+  <ul><li><a class="" href="index.html">evalkit</a></li><li><a class="" href="scoring.html">Scoring</a></li><li><a class="here" href="testing.html">Testing with the Akka TestKit</a></li></ul>
+  <h2>Related</h2>
+  <ul>
+    <li><a href="https://doc.akka.io/java/agents/llm_eval.html">LLM evaluation</a></li>
+    <li><a href="https://doc.akka.io/java/agents/testing.html">Testing the agent</a></li>
+  </ul>
+</aside>
+<main>
+  <div class="crumbs"><a href="https://doc.akka.io/">Akka</a><span>/</span><a href="https://doc.akka.io/libraries/">Libraries</a><span>/</span><a href="index.html">evalkit</a><span>/</span>Testing with the Akka TestKit</div>
+  <h1>Testing with the Akka TestKit</h1>
+  <div class="note">Rendered from <code>docs/site/evalkit/testing.html.md</code> for review. The
+  markdown is the source; this page is a local preview of how it reads on the documentation site.</div>
+  <h2 id="_overview">Overview</h2>
+<p>A campaign runs in one of the modes below. The same scenarios and scorers serve every mode. The mode decides where the model calls come from and how much a restart costs.</p>
+<table><thead><tr><th>Mode</th><th>Runs on</th><th>Model</th><th>Costs</th></tr></thead><tbody><tr><td>Deterministic</td><td><code>TestKitSupport</code> with <code>TestModelProvider</code></td><td>Mocked</td><td>Every commit, no provider spend.</td></tr><tr><td>Opt-in live</td><td><code>TestKitSupport</code> with the configured provider</td><td>Real</td><td>A system property turns it on.</td></tr><tr><td>Full corpus</td><td><code>CampaignWorkflow</code> in a deployed service</td><td>Real</td><td>Hours, durable across restarts.</td></tr></tbody></table>
+<h2 id="_deterministic_mode">Deterministic mode</h2>
+<p><code>TestModelProvider</code> replaces an agent&#x27;s model provider, so a scenario returns the same answer on every run and costs nothing. Deterministic mode covers the parsing, the banding and the campaign machinery, which is where the mistakes that matter live.</p>
+<p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-akka/src/test/java/io/akka/evalkit/application/ScenarioJudgeTest.java">ScenarioJudgeTest.java</a></p>
+<pre class="lang-java"><code>class ScenarioJudgeTest extends TestKitSupport { // (1)
+
+  private final TestModelProvider model = new TestModelProvider();
+
+  @Override
+  protected TestKit.Settings testKitSettings() {
+    return TestKit.Settings.DEFAULT.withModelProvider(ScenarioJudge.class, model); // (2)
+  }
+
+  @Test
+  void reasonedRubricCarriesTheReason() {
+    model.fixedResponse(&quot;SCORE: 9\nREASON: The agent named Interac e-transfer.&quot;); // (3)
+
+    var result = judgeUnder(Rubric.load(&quot;scenario-judge&quot;, 3));
+
+    assertThat(result.score()).isEqualTo(9);
+    assertThat(result.reason()).isEqualTo(&quot;The agent named Interac e-transfer.&quot;);
+  }
+}</code></pre>
+<table class="callouts"><tbody><tr><td><strong>1</strong></td><td>JUnit 5 supplies the lifecycle and the TestKit supplies the runtime.</td></tr><tr><td><strong>2</strong></td><td>The judge answers from the mocked provider, so the test spends nothing.</td></tr><tr><td><strong>3</strong></td><td>A harness that can only be tested by calling a model inherits every property that makes model output hard to test. The thing doing the evaluating is held to the standard it enforces.</td></tr></tbody></table>
+<h2 id="_opt_in_live_mode">Opt-in live mode</h2>
+<p>A test that calls a real provider costs money on every commit that runs it, so the two here stay disabled until a system property turns them on.</p>
+<pre class="lang-shell"><code># Four transcripts under both rubrics, checking that the path to a provider works.
+mvn test -pl evalkit-akka -Dtest=LiveJudgeTest -Dlive=true
+
+# Agreement against a corpus carrying reference scores.
+mvn test -pl evalkit-akka -Dtest=JudgeCalibrationTest -Dcalibration=true \
+         -Dcalibration.sample=/path/to/sample.jsonl -Dcalibration.lanes=8</code></pre>
+<p><code>LiveJudgeTest</code> establishes that a rubric reaches a provider and that the reply parses. The test prints its own caveat, because four transcripts written to have obvious answers say nothing about how a judge scores a corpus.</p>
+<p><code>JudgeCalibrationTest</code> measures agreement against reference scores. Adding <code>-Dcalibration.compare=true</code> scores each transcript under both rubric versions and reports the band agreement between them, which is what decides whether v3 is a drop-in for v2.</p>
+<p>The provider comes from <code>application.conf</code> and the key from the environment. The reference corpus is not in this repository.</p>
+<h2 id="_full_corpus_mode">Full corpus mode</h2>
+<p>A corpus of several hundred scenarios against a live service runs for hours, which no test runner should hold. <code>CampaignWorkflow</code> runs the same plan inside a deployed service, taking a page of scenarios per durable step.</p>
+<p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-akka/src/main/java/io/akka/evalkit/application/CampaignWorkflow.java">CampaignWorkflow.java</a></p>
+<pre class="lang-java"><code>componentClient.forWorkflow(campaignId)
+  .method(CampaignWorkflow::start)
+  .invoke(new CampaignWorkflow.Start(campaignId, &quot;scenario-judge&quot;, 3, 8, 50)); // (1)</code></pre>
+<table class="callouts"><tbody><tr><td><strong>1</strong></td><td>The rubric id and version, then the lanes and the wave. Lanes set how many scenarios run at once. The wave sets how much a restart costs.</td></tr></tbody></table>
+<p>Workflow state holds counts and a cursor. A restart repeats at most one wave, and resuming reads a number instead of a corpus. <code>CampaignReport</code> accumulates across waves, so state carries no transcripts.</p>
+<p>A wave that fails twice stops the campaign and keeps the tally, because partial evidence is still evidence. The report says where it stopped.</p>
+<h2 id="_the_plan_check">The plan check</h2>
+<p><code>CampaignPlan.check</code> runs before the first call. A campaign naming a fixture the target lacks fails in under a second and names the fixture.</p>
+<pre class="lang-text"><code>CampaignPlan refused:
+  target cannot build fixtures [authenticated-claim-open]; it knows {ready=a prepared state}</code></pre>
+<p>Forty scenarios once ran against a conversation that emits a different set of specification nodes. Every one failed on every fixture and read as forty service defects. The node check in <code>CampaignPlan.check</code> refuses that campaign before it starts.</p>
+<h2 id="_where_the_campaigns_go">Where the campaigns go</h2>
+<p>Campaigns cost provider spend and run for minutes. A separate source root in the consuming project keeps them off the build that runs on every commit.</p>
+<pre class="lang-text"><code>src/
+├── main/java/…       the service
+├── test/java/…       unit and integration tests, run on every commit
+└── eval/
+    ├── java/…        campaigns, scorers, target adapters
+    └── resources/
+        ├── datasets/     recorded corpora
+        ├── rubrics/      versioned judge prompts
+        └── baselines/    prior runs, compared band by band</code></pre>
+<pre class="lang-xml"><code>&lt;profile&gt;
+  &lt;id&gt;eval&lt;/id&gt;
+  &lt;build&gt;&lt;plugins&gt;
+    &lt;plugin&gt;
+      &lt;groupId&gt;org.codehaus.mojo&lt;/groupId&gt;
+      &lt;artifactId&gt;build-helper-maven-plugin&lt;/artifactId&gt;
+      &lt;executions&gt;&lt;execution&gt;
+        &lt;phase&gt;generate-test-sources&lt;/phase&gt;
+        &lt;goals&gt;&lt;goal&gt;add-test-source&lt;/goal&gt;&lt;/goals&gt;
+        &lt;configuration&gt;&lt;sources&gt;&lt;source&gt;src/eval/java&lt;/source&gt;&lt;/sources&gt;&lt;/configuration&gt;
+      &lt;/execution&gt;&lt;/executions&gt;
+    &lt;/plugin&gt;
+  &lt;/plugins&gt;&lt;/build&gt;
+&lt;/profile&gt;</code></pre>
+<p>Campaigns then run with <code>mvn -Peval verify</code>. The root is added as a test source so the TestKit and JUnit stay on the classpath.</p>
+<h2 id="_targets_outside_akka">Targets outside Akka</h2>
+<p><code>SystemUnderTest</code> is the only seam the target crosses, so a service in another language is evaluated by implementing it. Three capabilities degrade, and each degradation appears in the report.</p>
+<table><thead><tr><th>Capability</th><th>Akka target</th><th>Target outside Akka</th></tr></thead><tbody><tr><td>Mocked model</td><td><code>TestModelProvider</code> replaces the provider</td><td>Unavailable. Deterministic mode needs the target&#x27;s own stub.</td></tr><tr><td>Fixture seeding</td><td>A typed <code>ComponentClient</code> call writes the entity</td><td>Needs a fixture endpoint on the target. <code>Precursor.replay</code> walks the conversation instead.</td></tr><tr><td>Token accounting</td><td>Read from the model calls the target reports</td><td><code>spend()</code> reports a floor and names the calls it could not see.</td></tr></tbody></table>
+<p><code>CampaignRunner.run</code> in <code>evalkit-core</code> takes a <code>ScorerRouter</code> or a <code>Judge</code>, both of which are interfaces. A campaign against a service outside Akka runs with no Akka runtime at all.</p>
+<h2 id="_see_also">See also</h2>
+<ul><li><a href="index.html">evalkit overview</a></li><li><a href="scoring.html">Scoring</a></li><li><a href="https://doc.akka.io/java/agents/testing.html">Testing the agent</a></li><li><a href="https://doc.akka.io/java/workflows.html">Workflows</a></li></ul>
+</main>
+<nav class="onpage">
+  <h2>On this page</h2>
+  <ul><li><a class="" href="#_overview">Overview</a></li><li><a class="" href="#_deterministic_mode">Deterministic mode</a></li><li><a class="" href="#_opt_in_live_mode">Opt-in live mode</a></li><li><a class="" href="#_full_corpus_mode">Full corpus mode</a></li><li><a class="" href="#_the_plan_check">The plan check</a></li><li><a class="" href="#_where_the_campaigns_go">Where the campaigns go</a></li><li><a class="" href="#_targets_outside_akka">Targets outside Akka</a></li><li><a class="" href="#_see_also">See also</a></li></ul>
+</nav>
+</div>
+</body>
+</html>

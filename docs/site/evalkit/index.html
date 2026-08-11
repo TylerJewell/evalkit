@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="../../assets/favicon.png">
+<title>evalkit · evalkit</title>
+<style>
+:root {
+  --ink:       #1b1b1f;
+  --ink-soft:  #5c5f6b;
+  --ink-faint: #8b8f9c;
+  --page:      #ffffff;
+  --panel:     #f7f8fa;
+  --rule:      #e3e5ea;
+  --link:      #0a6ed1;
+  --accent:    #00c1c7;
+  --code-bg:   #f5f6f8;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--sans);
+       font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.layout { display: grid; grid-template-columns: 1fr; max-width: 1320px; margin: 0 auto; }
+@media (min-width: 1000px) {
+  .layout { grid-template-columns: 232px minmax(0, 1fr); gap: 40px; }
+}
+@media (min-width: 1280px) {
+  .layout { grid-template-columns: 232px minmax(0, 1fr) 210px; }
+}
+
+aside.side { border-right: 1px solid var(--rule); padding: 30px 22px 60px; }
+@media (min-width: 1000px) { aside.side { position: sticky; top: 0; height: 100vh; overflow-y: auto; } }
+.brand { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+.brand span { color: var(--accent); }
+.kicker { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+          color: var(--ink-faint); margin-bottom: 26px; }
+aside.side h2 { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--ink-faint); margin: 0 0 10px; font-weight: 600; }
+aside.side ul { list-style: none; margin: 0 0 26px; padding: 0; }
+aside.side li { margin: 0 0 3px; }
+aside.side li a { display: block; padding: 5px 10px; border-radius: 5px;
+                  color: var(--ink-soft); font-size: 14px; }
+aside.side li a:hover { background: var(--panel); text-decoration: none; color: var(--ink); }
+aside.side li a.here { background: var(--panel); color: var(--ink); font-weight: 600;
+                       box-shadow: inset 2px 0 0 var(--accent); }
+
+main { min-width: 0; padding: 30px 24px 96px; }
+.crumbs { font-size: 13px; color: var(--ink-faint); margin-bottom: 26px; }
+.crumbs a { color: var(--ink-soft); }
+.crumbs span { padding: 0 7px; color: var(--rule); }
+main h1 { font-size: clamp(30px, 4vw, 40px); line-height: 1.15; letter-spacing: -0.022em;
+          margin: 0 0 28px; font-weight: 680; }
+main h2 { font-size: 23px; letter-spacing: -0.012em; margin: 46px 0 14px; font-weight: 650;
+          padding-top: 18px; border-top: 1px solid var(--rule); }
+main h3 { font-size: 17px; margin: 32px 0 10px; font-weight: 650; }
+main p { margin: 0 0 16px; max-width: 74ch; }
+main ul { max-width: 74ch; padding-left: 22px; }
+main li { margin-bottom: 7px; }
+code { font-family: var(--mono); font-size: 0.875em; background: var(--code-bg);
+       border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 7px;
+      padding: 16px 18px; overflow-x: auto; margin: 0 0 20px; }
+pre code { background: none; border: 0; padding: 0; font-size: 13.5px; line-height: 1.6; }
+p.src { margin: 0 0 -1px; font-family: var(--mono); font-size: 12px; }
+p.src a { display: inline-block; background: var(--panel); border: 1px solid var(--rule);
+          border-bottom: 0; border-radius: 7px 7px 0 0; padding: 6px 12px; color: var(--ink-soft); }
+p.src + pre { border-top-left-radius: 0; }
+
+table { border-collapse: collapse; width: 100%; margin: 0 0 22px; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 13px; border-bottom: 1px solid var(--rule); }
+thead th { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;
+           color: var(--ink-faint); border-bottom: 1px solid var(--ink-faint); font-weight: 600; }
+table.callouts { margin-top: -4px; font-size: 14px; }
+table.callouts td:first-child { width: 44px; color: var(--accent); font-family: var(--mono);
+                                font-weight: 700; }
+table.callouts strong { font-weight: 700; }
+
+nav.onpage { padding: 34px 20px 60px; font-size: 13px; }
+@media (max-width: 1279px) { nav.onpage { display: none; } }
+@media (min-width: 1280px) { nav.onpage { position: sticky; top: 0; height: 100vh; overflow-y: auto; } }
+nav.onpage h2 { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--ink-faint); margin: 0 0 12px; font-weight: 600; }
+nav.onpage ul { list-style: none; margin: 0; padding: 0; }
+nav.onpage a { display: block; padding: 4px 0 4px 12px; border-left: 1px solid var(--rule);
+               color: var(--ink-soft); line-height: 1.35; }
+nav.onpage a:hover { color: var(--link); border-left-color: var(--link); text-decoration: none; }
+nav.onpage a.sub { padding-left: 24px; color: var(--ink-faint); }
+
+.note { border: 1px solid var(--rule); border-left: 3px solid var(--accent); background: var(--panel);
+        border-radius: 0 7px 7px 0; padding: 14px 18px; margin: 0 0 26px; font-size: 14px;
+        color: var(--ink-soft); max-width: 74ch; }
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="brand">Akka <span>/</span> evalkit</div>
+  <div class="kicker">Libraries</div>
+  <h2>evalkit</h2>
+  <ul><li><a class="here" href="index.html">evalkit</a></li><li><a class="" href="scoring.html">Scoring</a></li><li><a class="" href="testing.html">Testing with the Akka TestKit</a></li></ul>
+  <h2>Related</h2>
+  <ul>
+    <li><a href="https://doc.akka.io/java/agents/llm_eval.html">LLM evaluation</a></li>
+    <li><a href="https://doc.akka.io/java/agents/testing.html">Testing the agent</a></li>
+  </ul>
+</aside>
+<main>
+  <div class="crumbs"><a href="https://doc.akka.io/">Akka</a><span>/</span><a href="https://doc.akka.io/libraries/">Libraries</a><span>/</span>evalkit</div>
+  <h1>evalkit</h1>
+  <div class="note">Rendered from <code>docs/site/evalkit/index.html.md</code> for review. The
+  markdown is the source; this page is a local preview of how it reads on the documentation site.</div>
+  <h2 id="_overview">Overview</h2>
+<p>evalkit measures whether a conversational service answered correctly, and reports which numbers the result supports. A campaign puts the service into a known state, says the graded turn to it, records what came back, scores the recording, and prints a report of the result.</p>
+<p>An evaluation result is a number that reaches people who cannot check it. Every failure mode of an evaluation is silent: a campaign that ran half its scenarios, an audit that examined nothing, a judge scoring a pure function, a score that measures the tooling. The design of this library treats each of those as a defect to be made visible.</p>
+<h3 id="_when_to_use_evalkit">When to use evalkit</h3>
+<p>evalkit covers these tasks:</p>
+<ul><li>Score a conversational service against recorded scenarios and report the result to a compliance, risk, or engineering audience.</li><li>Compare two versions of a service under one rubric version. <code>Scoring.compare</code> throws when the two sides were scored under different rubric versions.</li><li>Run hundreds of scenarios over hours against a live service, surviving restarts and deployments.</li><li>Separate a wrong answer from a run that produced no result.</li></ul>
+<h3 id="_when_not_to_use_evalkit">When NOT to use evalkit</h3>
+<ul><li><strong>Benchmarking a model against academic test sets</strong>, use a model benchmark runner. MMLU and GSM8K measure a model and say nothing about a service.</li><li><strong>Asserting deterministic component behaviour</strong>, use <code>TestKitSupport</code> and ordinary unit tests. A decision with a right answer needs no evaluation.</li><li><strong>Watching production quality continuously</strong>, use an <a href="https://doc.akka.io/java/agents/llm_eval.html">evaluator agent</a> called from a Consumer. evalkit runs campaigns against a corpus.</li></ul>
+<h3 id="_the_system_under_test">The system under test</h3>
+<p>evalkit reaches the service through <code>SystemUnderTest</code>. The service can be an Akka service, an HTTP endpoint, or a process in another language.</p>
+<p class="src"><a href="https://github.com/tylerjewell/evalkit/blob/main/evalkit-core/src/main/java/io/akka/evalkit/domain/SystemUnderTest.java">SystemUnderTest.java</a></p>
+<pre class="lang-java"><code>public interface SystemUnderTest {
+
+  Prepared prepare(Precursor precursor); // (1)
+
+  Reply submit(String sessionId, String userText); // (2)
+
+  Map&lt;String, String&gt; fixtures(); // (3)
+
+  default Set&lt;String&gt; emittableNodes() { // (4)
+    return Set.of();
+  }
+
+  default Accounting spend() { // (5)
+    return new Accounting(Tokens.NONE, 1);
+  }
+}</code></pre>
+<table class="callouts"><tbody><tr><td><strong>1</strong></td><td>Put the service into the state a scenario assumes. A precursor that cannot land returns <code>Prepared.Failed</code> and becomes <code>NotReached</code>, which is a fact about the campaign.</td></tr><tr><td><strong>2</strong></td><td>Say the graded turn and return what the service said back. <code>Reply</code> carries the text, the specification node, the latency, the tool calls, the model calls and the failure that ended the run, and a target supplies whichever of those it can observe.</td></tr><tr><td><strong>3</strong></td><td>States this target can construct, each with a one-line description. A campaign naming a fixture the target lacks is refused before anything is spent.</td></tr><tr><td><strong>4</strong></td><td>Specification nodes this target can emit. An empty set means unknown, so the check is skipped and the campaign still runs.</td></tr><tr><td><strong>5</strong></td><td>Tokens the service spent answering. The default reports nothing measured, and the report labels the total a floor.</td></tr></tbody></table>
+<h2 id="_outcomes">Outcomes a run can produce</h2>
+<p><code>RunOutcome</code> is a sealed interface. Switches over it are exhaustive and carry no <code>default</code>, so a new variant is a compile error at every site that must handle it.</p>
+<table><thead><tr><th>Outcome</th><th>What happened</th><th>Counted</th></tr></thead><tbody><tr><td><code>Scored</code></td><td>A judge read the reply and gave it a score.</td><td>Yes</td></tr><tr><td><code>Asserted</code></td><td>The reply was compared against a stated answer. No model was involved.</td><td>Yes</td></tr><tr><td><code>Measured</code></td><td>A metric computed a number and compared it to a threshold.</td><td>Yes</td></tr><tr><td><code>NotReached</code></td><td>The setup failed, or the service sent nothing back.</td><td>No</td></tr><tr><td><code>Unscoreable</code></td><td>The scorer ran and reached no verdict.</td><td>No</td></tr><tr><td><code>ScorerFailed</code></td><td>The scorer itself broke.</td><td>No</td></tr></tbody></table>
+<p><code>Unscoreable</code> was added after a content filter refused to score an identification-failure transcript during calibration. Dropping that run would have raised the reported agreement between the judge and the human reviewer above the figure the run earned.</p>
+<p><code>ScorerFailed</code> separates a defect in evalkit from a property of the transcript. A judge that declines says so by throwing <code>NoVerdict</code>, and every other exception reaching the runner is recorded as this kit failing.</p>
+<h2 id="_modules">Modules</h2>
+<pre class="lang-text"><code>evalkit-core      scenarios, runner, scorers, metrics, reports      no dependencies
+evalkit-akka      durable campaigns, agent judges                   Akka SDK</code></pre>
+<p><code>evalkit-core</code> compiles against the JDK alone. A service written in another language, reachable over a port, is evaluated by implementing one interface. Adding a dependency to <code>evalkit-core</code> requires an argument that convenience does not satisfy.</p>
+<p><code>evalkit-akka</code> currently builds against an Akka SDK published by hand from an unmerged branch, which the <a href="https://github.com/tylerjewell/evalkit#build">Build section of the README</a> describes.</p>
+<h2 id="_getting_started">Getting started</h2>
+<pre class="lang-xml"><code>&lt;dependency&gt;
+  &lt;groupId&gt;io.akka.evalkit&lt;/groupId&gt;
+  &lt;artifactId&gt;evalkit-core&lt;/artifactId&gt;
+  &lt;version&gt;0.1.0-SNAPSHOT&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+<p>A campaign needs scenarios, a target, and a router that decides how each scenario is settled.</p>
+<pre class="lang-java"><code>var corpus = List.of(
+  new Scenario(&quot;refund-30d&quot;,
+    Optional.of(&quot;REFUND-004&quot;),                                  // (1)
+    Precursor.Fixture.named(&quot;authenticated-claim-open&quot;),
+    &quot;What if these shoes don&#x27;t fit?&quot;,
+    &quot;a 30-day full refund at no extra cost&quot;));
+
+var plan = new CampaignPlan(&quot;refund-policy&quot;, corpus, Lanes.of(4), rubric); // (2)
+
+if (plan.check(target) instanceof CampaignPlan.Check.Refused refused) { // (3)
+  throw new IllegalStateException(String.join(&quot;; &quot;, refused.reasons()));
+}
+
+var result = CampaignRunner.run(plan, target, router); // (4)
+System.out.println(result.report().summary()); // (5)</code></pre>
+<table class="callouts"><tbody><tr><td><strong>1</strong></td><td>The specification node this scenario exercises. Naming one settles the run by comparison, so no model is called. A scenario naming no node and no metric is judged.</td></tr><tr><td><strong>2</strong></td><td>Lanes set how many scenarios run at once. The report states how many the run sustained.</td></tr><tr><td><strong>3</strong></td><td>Pre-flight. Missing fixtures and unemittable nodes are refused in the first second.</td></tr><tr><td><strong>4</strong></td><td>Every scenario produces a row. A scenario whose run throws produces <code>NotReached</code> carrying the reason.</td></tr><tr><td><strong>5</strong></td><td>One line for a build log. <code>RunSummary.results</code> renders the terminal-width report written for a reader who does not know the service.</td></tr></tbody></table>
+<h2 id="_see_also">See also</h2>
+<ul><li><a href="scoring.html">Scoring</a></li><li><a href="testing.html">Testing with the Akka TestKit</a></li><li><a href="https://doc.akka.io/java/agents/llm_eval.html">LLM evaluation in the Akka SDK</a></li></ul>
+</main>
+<nav class="onpage">
+  <h2>On this page</h2>
+  <ul><li><a class="" href="#_overview">Overview</a></li><li><a class="sub" href="#_when_to_use_evalkit">When to use evalkit</a></li><li><a class="sub" href="#_when_not_to_use_evalkit">When NOT to use evalkit</a></li><li><a class="sub" href="#_the_system_under_test">The system under test</a></li><li><a class="" href="#_outcomes">Outcomes a run can produce</a></li><li><a class="" href="#_modules">Modules</a></li><li><a class="" href="#_getting_started">Getting started</a></li><li><a class="" href="#_see_also">See also</a></li></ul>
+</nav>
+</div>
+</body>
+</html>

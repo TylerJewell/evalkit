@@ -17,6 +17,11 @@ and `CampaignReport` unchanged.
 Read from `akka-javasdk-3.6.0-59-7321c44b-dev-SNAPSHOT-sources.jar`, branch
 `feature/governance`, commit `7321c44b`.
 
+The sources jar carries main sources alone. The branch's own tests answer several questions
+the jar leaves open, so the behaviour below is also read from `akka-javasdk-testkit` and
+from `akka-javasdk-tests/src/test/java/akkajavasdk/components/evaluation`, at the same
+commit. A claim sourced from a test names the test.
+
 `Evaluator` is an abstract class with one abstract method:
 
 ```java
@@ -36,6 +41,11 @@ no content.
 `getInteractionAsync(String)`, `getEvaluation(String)` and `getEvaluationAsync(String)`.
 `SdkRunner` lists `LedgerClient` in `platformManagedDependency`, so a component declares it
 as a constructor parameter and the runtime supplies it.
+
+An interaction is one agent turn. `InteractionRecord` documents itself as the record of a
+single interaction, `sessionId` names the conversation above it, `inputMessage` is one
+message rendered as a list of content parts, and `modelResponses` is the tool-calling loop
+that answered it rather than a series of turns.
 
 `InteractionRecord` holds twelve components: `interactionId`, `sessionId`,
 `agentComponentId`, `flowId`, `metadata`, `systemMessage`, `inputMessage`, `modelResponses`,
@@ -171,8 +181,13 @@ that range throws. The adapter reading an `EvaluationRecord` back into a `Verdic
 `Unscoreable` on an out-of-range score.
 
 **`Effect.Builder` has no `failed` call, and `EvaluationRecord.Outcome.Failed` exists.** The
-path from a broken scorer to a `Failed` outcome runs through a thrown exception. That path
-is unverified.
+path from a broken scorer to a `Failed` outcome runs through a thrown exception, and the
+branch's own tests hold both ends of it. `EvaluatorIntegrationTest.recordsFailedOutcomeWhenTheJudgeFails`
+makes the judge call throw and asserts the recorded outcome is `Failed` carrying no
+evaluations; `EvaluatorIntegrationTest.recordsInconclusiveOutcome` returns
+`effects().inconclusive(reason)` and asserts `Inconclusive` carrying that reason. evalkit's
+distinction survives the boundary: `Unscoreable` maps onto `inconclusive`, and
+`ScorerFailed` onto a throw.
 
 **`EvaluationRecord` flattens deterministic and judged results into one
 `List<Evaluation>`.** `CampaignReport` prints them in separate columns and prints a dash in
@@ -335,7 +350,11 @@ score outside 1 to 10 returns `Unscoreable`.
 `WorkflowEvaluator<S>` carries state, step transitions, and a `Settings` object holding the
 evaluation timeout, the step timeout and the retry ceiling. `CampaignWorkflow` holds a
 cursor and writes it after each wave. Whether `CampaignWorkflow` maps onto
-`WorkflowEvaluator` is unanswered. Phase 6 is scoped as a comparison.
+`WorkflowEvaluator`, and whether a wave maps onto the flow a `Subject.FlowInteraction`
+names, are both unanswered. Phase 6 is scoped as a comparison.
+
+`WorkflowEvaluatorIntegrationTest.runsMultiStepEvaluationForBoundAgentInteraction` is the
+worked example to compare against.
 
 ## Configuration a user writes
 
@@ -354,15 +373,58 @@ akka.javasdk.evaluation.evaluators {
 with no matching component id is the same class of failure. Extending `check` to read the
 evaluator bindings is in scope for Phase 4.
 
+## What the branch's tests settle
+
+**A broken evaluator and a declining one are distinguishable.** Stated under Fidelity risks
+above, from `EvaluatorIntegrationTest`.
+
+**`EvaluationContext.evaluationId` is assigned before `evaluate` runs, and the ledger
+returns a record for it once the evaluation terminates.** `ResponseQualityEvaluator` records
+`context.evaluationId()` as its first statement, before any call that can fail, and
+`EvaluatorIntegrationTest.evaluationFor` then fetches that id through
+`LedgerClient.getEvaluation` and asserts the outcome on what comes back. Phase 5 has its
+round-trip.
+
+**The runtime, not the evaluator, decides which `Subject` variant arrives.**
+`EvaluatorImpl.scala:46-48` returns `FlowInteraction` when the SPI subject carries a flow and
+`AgentInteraction` otherwise, and `WorkflowEvaluatorProtocol.java:42-43` keys the same choice
+on the presence of a `flowId`. No SDK API sets a `flowId`; it arrives from below the SDK.
+
 ## Open questions for the SDK team
 
-1. An `Evaluator` that throws produces `EvaluationRecord.Outcome.Failed` with the exception
-   message, or produces something else. `Effect.Builder` offers no `failed` call.
-2. `Trigger.MANUAL` names a caller that requests an evaluation. The API that caller uses is
-   not in the sources read.
-3. An `Evaluator` bound with `trigger = interaction` runs once per interaction, or runs once
-   per agent turn within an interaction.
-4. `EvaluationContext.evaluationId` is assigned by the runtime before `evaluate` runs, and
-   `LedgerClient.getEvaluation` returns a record for it after the effect completes.
-5. `Subject.FlowInteraction` carries a `flowId`. Whether a campaign wave maps onto a flow is
-   unanswered.
+1. **`Trigger.MANUAL` is mapped from the SPI but no SDK API produces it.** `ComponentClient`
+   exposes eight entry points at this commit and none is an evaluator;
+   `akka.javasdk.client` holds no `EvaluatorClient`. The only direct invocation on the branch
+   is `EvaluatorTestKit.evaluate(Subject)`, which ships in the testkit and is test-only. Is a
+   caller-side trigger planned, and is `EvaluatorTestKit` the intended shape for it? evalkit's
+   campaigns are that caller.
+2. **Can a binding be narrowed below the agent, so that a campaign's setup turns are not
+   scored?** An interaction is one agent turn, and a binding names an agent and nothing else:
+   `EvaluatorSettings` reads `enabled` and `trigger` per agent, with no session filter and no
+   predicate over the interaction. So every turn a bound agent takes fires the evaluator.
+
+   evalkit does not grade every turn. A scenario starts part-way through a conversation, and
+   `Precursor.replay` reaches that point by walking the conversation — turns the campaign
+   sends only to arrange the state it wants to examine. Those are interactions like any other.
+   Bound as configuration allows today, a five-turn precursor scores five times and the graded
+   turn once, and the five carry a rubric written for a question they were never asked.
+
+   Three consequences, in the order they hurt. The count breaks first: `CampaignReport` holds
+   one outcome per scenario, and a scenario that emits six `Evaluation`s has no row. Then the
+   result is wrong rather than merely miscounted, because a setup turn judged against the
+   graded turn's rubric fails, and a failure that says nothing about the system is the exact
+   thing this kit exists to keep out of a report. Cost is last and smallest: judged scoring is
+   a model call, so spend scales with conversation length and `RunSummary.Estimate`
+   understates it by that factor.
+
+   The question is therefore whether a narrowing exists or is planned — a metadata key, a
+   session-level opt-out, an interaction-level suppression — or whether the answer is that a
+   campaign must bind no evaluator and call its scorers directly, which is what evalkit does
+   today. `InteractionMetadata` carries model configuration, timing and a finish reason, and
+   nothing that distinguishes an interaction sent to arrange a state from one sent to be
+   judged.
+3. **What makes an interaction a flow interaction upstream?** The runtime picks the variant, so
+   an evaluator must handle both, and no integration test exercises a runtime-produced
+   `FlowInteraction` — only `SimpleEvaluatorTest.worksWithFlowInteractionSubject`, which
+   constructs one by hand through the testkit. Whether a campaign wave maps onto a flow is
+   asked with the `WorkflowEvaluator` comparison in Phase 6.
