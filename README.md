@@ -426,8 +426,6 @@ third-party agent's traces over OpenTelemetry.
 
 ## Proposed command line
 
-None of this is built. The shape is recorded here to be argued with first.
-
 `akka init` scaffolds the eval project structure: `src/eval` as a source root, the `eval`
 Maven profile that keeps campaigns off the build that runs on every commit, a starter
 dataset, and `target/evalkit` for records. Every command below acts on a project that
