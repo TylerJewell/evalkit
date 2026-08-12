@@ -195,8 +195,8 @@ evalkit-akka      durable campaigns, agent judges                   Akka SDK</co
         <div class="table-wrap"><table>
           <thead><tr><th>Package</th><th>Holds</th></tr></thead>
           <tbody>
-            <tr><td class="lbl"><code>io.akka.evalkit.domain</code></td><td>The scenario, the recording, the outcome taxonomy, the rubric, the report and the summary. <code>Scorer</code> and <code>ScorerRouter</code> live here because an outcome is a domain fact.</td></tr>
-            <tr><td class="lbl"><code>io.akka.evalkit.metric</code></td><td><code>Metric</code>, <code>Judgement</code>, <code>MetricRef</code>, <code>AlignmentMetric</code>, and every ported metric.</td></tr>
+            <tr><td class="lbl"><code>io.akka.evalkit.domain</code></td><td>The scenario, the observation, the outcome taxonomy, the rubric, the report and the summary. <code>Scorer</code> and <code>ScorerRouter</code> live here because an outcome is a domain fact.</td></tr>
+            <tr><td class="lbl"><code>io.akka.evalkit.metric</code></td><td><code>Metric</code>, <code>Grade</code>, <code>MetricRef</code>, <code>AlignmentMetric</code>, and every ported metric.</td></tr>
             <tr><td class="lbl"><code>io.akka.evalkit.metric.dag</code></td><td>The decision graph: <code>Dag</code>, <code>DagNode</code>, <code>DagJudge</code>.</td></tr>
             <tr><td class="lbl"><code>io.akka.evalkit.application</code></td><td><code>CampaignRunner</code>, which schedules lanes and assembles a report.</td></tr>
             <tr><td class="lbl"><code>io.akka.evalkit.conformance</code></td><td><code>SdkContract</code>, the record of the Akka SDK surface this kit is shaped against.</td></tr>
@@ -243,30 +243,30 @@ System.out.println(result.report().summary());</code></pre>
 
       <section id="scorer">
         <h2 class="sec">Scorers and outcomes</h2>
-        <p class="answer">A scorer reads a <code>Recording</code> and returns a <code>RunOutcome</code>. The return type is an outcome, because a <code>double</code> has no value meaning that nobody assessed the run.</p>
+        <p class="answer">A scorer reads a <code>Observation</code> and returns a <code>RunOutcome</code>. The return type is an outcome, because a <code>double</code> has no value meaning that nobody assessed the run.</p>
 
-        <p>A <code>Recording</code> holds a <code>Transcript</code> and an <code>Evidence</code>. The transcript carries the four fields a rubric interpolates. The evidence carries everything else the run observed: the specification node, the latency, the tool calls, the model calls, the instruction the model was given, the failure that ended the run, and the tokens. A metric reads the evidence. A judge reads the transcript alone, so its input stays byte-identical whatever else the run recorded.</p>
+        <p>A <code>Observation</code> holds a <code>Transcript</code> and an <code>Evidence</code>. The transcript carries the four fields a rubric interpolates. The evidence carries everything else the run observed: the specification node, the latency, the tool calls, the model calls, the instruction the model was given, the failure that ended the run, and the tokens. A metric reads the evidence. A judge reads the transcript alone, so its input stays byte-identical whatever else the run recorded.</p>
 
         <div class="table-wrap"><table>
           <thead><tr><th>Outcome</th><th>Meaning</th><th>Counted</th></tr></thead>
           <tbody>
-            <tr><td class="lbl"><code>Scored</code></td><td>A judge read the reply and returned a verdict.</td><td>Yes</td></tr>
+            <tr><td class="lbl"><code>Scored</code></td><td>A judge read the reply and returned a grade.</td><td>Yes</td></tr>
             <tr><td class="lbl"><code>Asserted</code></td><td>The reply reached the node the scenario named.</td><td>Yes</td></tr>
             <tr><td class="lbl"><code>Measured</code></td><td>A metric computed a number against a threshold.</td><td>Yes</td></tr>
             <tr><td class="lbl"><code>NotReached</code></td><td>The setup never landed, or the service answered nothing.</td><td>No</td></tr>
-            <tr><td class="lbl"><code>Unscoreable</code></td><td>A scorer ran and reached no verdict.</td><td>No</td></tr>
-            <tr><td class="lbl"><code>ScorerFailed</code></td><td>A scorer threw, which is a defect in this kit.</td><td>No</td></tr>
+            <tr><td class="lbl"><code>Inconclusive</code></td><td>A scorer ran and reached no grade.</td><td>No</td></tr>
+            <tr><td class="lbl"><code>Failed</code></td><td>A scorer threw, which is a defect in this kit.</td><td>No</td></tr>
           </tbody>
         </table></div>
 
         <p>The interface is sealed and every switch over it carries no <code>default</code>, so a further variant is a compile error at every site that handles one.</p>
 
-        <p>A scorer signals absence by returning <code>Unscoreable</code>, which suits a metric with nothing to measure. A judge that discovers the absence several frames inside parsing a reply throws <code>NoVerdict</code> instead, and the runner reads the exception type to tell a decline from a defect.</p>
+        <p>A scorer signals absence by returning <code>Inconclusive</code>, which suits a metric with nothing to measure. A judge that discovers the absence several frames inside parsing a reply throws <code>InconclusiveScore</code> instead, and the runner reads the exception type to tell a decline from a defect.</p>
       </section>
 
       <section id="metrics">
         <h2 class="sec">Metrics</h2>
-        <p class="answer"><code>Metric</code> splits judgement collection from aggregation. Collecting judgements may call a model. Turning judgements into a number is a pure function, so the arithmetic runs in a unit test with no provider and no key.</p>
+        <p class="answer"><code>Metric</code> splits finding collection from aggregation. Collecting findings may call a model. Turning findings into a number is a pure function, so the arithmetic runs in a unit test with no provider and no key.</p>
 
         <div class="table-wrap"><table>
           <thead><tr><th>Metric</th><th>Scores</th><th>Model calls</th></tr></thead>
@@ -283,14 +283,14 @@ System.out.println(result.report().summary());</code></pre>
 
         <p><code>AlignmentMetric</code> covers the metrics whose score is one model call: <code>TaskCompletion</code>, <code>StepEfficiency</code>, <code>PlanQuality</code> and <code>PlanAdherence</code>. An alignment metric implements <code>Scorer</code>, because a single model-produced score gives <code>aggregate</code> nothing to work on.</p>
 
-        <p><code>PlanQuality</code> and <code>PlanAdherence</code> read the plan from the reasoning a run's model calls carried. A run whose provider returned no reasoning produces <code>Unscoreable</code>, where the upstream these metrics were ported from scores such a run 1 and passes it.</p>
+        <p><code>PlanQuality</code> and <code>PlanAdherence</code> read the plan from the reasoning a run's model calls carried. A run whose provider returned no reasoning produces <code>Inconclusive</code>, where the upstream these metrics were ported from scores such a run 1 and passes it.</p>
       </section>
 
       <section id="reports">
         <h2 class="sec">Reports</h2>
         <p class="answer"><code>CampaignReport</code> counts. <code>RunSummary</code> renders. Neither prints one pass-rate percentage for a campaign.</p>
 
-        <p>The runs behind a campaign are not the same kind of thing. Averaging a borderline model verdict with an exact comparison gives the two equal weight, so the report keeps comparison, computation and judgement in separate columns. The undecided cell for comparison and for computation shows a dash, and a figure in that cell reports a defect in this kit.</p>
+        <p>The runs behind a campaign are not the same kind of thing. Averaging a borderline model grade with an exact comparison gives the two equal weight, so the report keeps comparison, computation and finding in separate columns. The undecided cell for comparison and for computation shows a dash, and a figure in that cell reports a defect in this kit.</p>
 
         <p><code>RunSummary</code> is terminal-width plain text written for a compliance or risk reader who does not know the service. The summary states what will be tested before the run, what was found after, the judge's bands and its measured agreement, and what the run cannot show. A total the target could not measure is labelled a floor.</p>
       </section>
@@ -306,7 +306,7 @@ System.out.println(result.report().summary());</code></pre>
 
       <section id="unbuilt">
         <h2 class="sec">Work the code never adopted</h2>
-        <p class="answer">An earlier revision of this document proposed an API the code never adopted. The reference documentation was written from that proposal, and every source link in it resolved to a file that does not exist. Recording the difference stops that happening again.</p>
+        <p class="answer">An earlier revision of this document proposed an API the code never adopted. The reference documentation was written from that proposal, and every source link in it resolved to a file that does not exist. Observation the difference stops that happening again.</p>
 
         <div class="table-wrap"><table>
           <thead><tr><th>Proposed</th><th>What exists</th></tr></thead>
@@ -339,7 +339,7 @@ System.out.println(result.report().summary());</code></pre>
 
         <ul>
           <li><b>Settle the SDK dependency,</b> because the pin on a hand-built SDK decides whether <code>evalkit-akka</code> ships.</li>
-          <li><b>Decide what a verdict from rubric v2 exports.</b> The SDK's <code>Evaluation</code> requires an explanation and makes the score optional, and a v2 verdict has no explanation to give.</li>
+          <li><b>Decide what a grade from rubric v2 exports.</b> The SDK's <code>Evaluation</code> requires an explanation and makes the score optional, and a v2 grade has no explanation to give.</li>
           <li><b>Record an agent's plan and steps.</b> <code>Evidence</code> reads reasoning from the model calls a target reports, and a target that reports none leaves two metrics with nothing to score.</li>
           <li><b>Raise Surefire from 2.22.2.</b></li>
           <li><b>Claim a groupId.</b></li>

@@ -8,11 +8,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * A judge that states why, and a judge that does not, read by what their rubric asked for.
  */
-@DisplayName("Reasoned verdicts · a score with the judge's own sentence beside it")
-class ReasonedVerdictTest {
+@DisplayName("Explained grades · a score with the judge's own sentence beside it")
+class ReasonedGradeTest {
 
     private static final Rubric BARE = Rubric.load("scenario-judge", 2);
     private static final Rubric REASONED = Rubric.load("scenario-judge", 3);
+    private static final Rubric EXPLAINED = Rubric.load("scenario-judge", 4);
 
     private static Transcript transcript() {
         return new Transcript("refund-outside-window", "",
@@ -20,10 +21,11 @@ class ReasonedVerdictTest {
     }
 
     @Test
-    @DisplayName("v2 asks for a number and v3 asks for a number and a reason")
+    @DisplayName("v2 asks for a number, and v3 and v4 ask for a number and a sentence")
     void rubricsDeclareWhatTheyAskedFor() {
-        assertThat(BARE.statesReason()).isFalse();
-        assertThat(REASONED.statesReason()).isTrue();
+        assertThat(BARE.statesExplanation()).isFalse();
+        assertThat(REASONED.statesExplanation()).isTrue();
+        assertThat(EXPLAINED.statesExplanation()).isTrue();
     }
 
     @Test
@@ -38,6 +40,52 @@ class ReasonedVerdictTest {
         assertThat(flatten(REASONED))
             .as("scenario-judge v3 must score on v2's bands or the two cannot be compared")
             .contains(bands);
+        assertThat(flatten(EXPLAINED))
+            .as("scenario-judge v4 must score on v2's bands or the two cannot be compared")
+            .contains(bands);
+    }
+
+    @Test
+    @DisplayName("v4 differs from v3 in the label it asks under and nothing else")
+    void v4AsksTheSameQuestionUnderADifferentLabel() {
+        // The whole claim for v4 is that only the output label moved. Anything else that
+        // differs is a change to what the judge was asked, which would make the two scales
+        // incomparable while looking like a rename.
+        assertThat(EXPLAINED.promptTemplate().replace("EXPLANATION:", "REASON:"))
+            .isEqualTo(REASONED.promptTemplate());
+    }
+
+    @Test
+    @DisplayName("a v4 reply is read under its own label")
+    void v4RepliesAreRead() {
+        var grade = Grade.read("refund", EXPLAINED,
+            "SCORE: 9\nEXPLANATION: The agent refused and cited the 30-day window.")
+            .orElseThrow();
+
+        assertThat(grade.score()).isEqualTo(9);
+        assertThat(grade.band()).isEqualTo(Band.FAITHFUL);
+        assertThat(grade.rubricVersion()).isEqualTo(4);
+        assertThat(grade.explanation())
+            .isEqualTo("The agent refused and cited the 30-day window.");
+    }
+
+    @Test
+    @DisplayName("v3's label still reads, because scores recorded under it are still read back")
+    void v3RepliesStillRead() {
+        var grade = Grade.read("refund", REASONED,
+            "SCORE: 9\nREASON: The agent refused and cited the 30-day window.")
+            .orElseThrow();
+
+        assertThat(grade.rubricVersion()).isEqualTo(3);
+        assertThat(grade.explanation())
+            .isEqualTo("The agent refused and cited the 30-day window.");
+    }
+
+    @Test
+    @DisplayName("a v4 reply that lost its label is unreadable, not read as a bare number")
+    void v4WithoutItsLabelIsUnreadable() {
+        assertThat(Grade.read("refund", EXPLAINED, "8")).isEmpty();
+        assertThat(Grade.read("refund", EXPLAINED, "I scored this 8 out of 10")).isEmpty();
     }
 
     @Test
@@ -52,53 +100,53 @@ class ReasonedVerdictTest {
     @Test
     @DisplayName("a labelled reply yields the score and the sentence")
     void readsScoreAndReason() {
-        var verdict = Verdict.read("refund", REASONED,
+        var grade = Grade.read("refund", REASONED,
             "SCORE: 9\nREASON: The agent refused and named the 30-day window.");
 
-        assertThat(verdict).isPresent();
-        assertThat(verdict.orElseThrow().score()).isEqualTo(9);
-        assertThat(verdict.orElseThrow().band()).isEqualTo(Band.FAITHFUL);
-        assertThat(verdict.orElseThrow().reason())
+        assertThat(grade).isPresent();
+        assertThat(grade.orElseThrow().score()).isEqualTo(9);
+        assertThat(grade.orElseThrow().band()).isEqualTo(Band.FAITHFUL);
+        assertThat(grade.orElseThrow().explanation())
             .isEqualTo("The agent refused and named the 30-day window.");
     }
 
     @Test
     @DisplayName("a reason spanning several lines arrives whole")
     void readsAMultiLineReason() {
-        var verdict = Verdict.read("refund", REASONED,
+        var grade = Grade.read("refund", REASONED,
             "SCORE: 4\nREASON: The agent named the window\nbut offered a refund anyway.");
 
-        assertThat(verdict.orElseThrow().reason())
+        assertThat(grade.orElseThrow().explanation())
             .isEqualTo("The agent named the window\nbut offered a refund anyway.");
     }
 
     @Test
     @DisplayName("a model that wrapped its labels in markdown is still read")
     void readsThroughMarkdown() {
-        var verdict = Verdict.read("refund", REASONED,
+        var grade = Grade.read("refund", REASONED,
             "**SCORE:** 7\n**REASON:** Partly right.");
 
-        assertThat(verdict.orElseThrow().score()).isEqualTo(7);
-        assertThat(verdict.orElseThrow().reason()).isEqualTo("Partly right.");
+        assertThat(grade.orElseThrow().score()).isEqualTo(7);
+        assertThat(grade.orElseThrow().explanation()).isEqualTo("Partly right.");
     }
 
     @Test
     @DisplayName("a reason written before the score does not swallow it")
     void readsLabelsInEitherOrder() {
-        var verdict = Verdict.read("refund", REASONED,
+        var grade = Grade.read("refund", REASONED,
             "REASON: The agent refused.\nSCORE: 8");
 
-        assertThat(verdict.orElseThrow().score()).isEqualTo(8);
-        assertThat(verdict.orElseThrow().reason()).isEqualTo("The agent refused.");
+        assertThat(grade.orElseThrow().score()).isEqualTo(8);
+        assertThat(grade.orElseThrow().explanation()).isEqualTo("The agent refused.");
     }
 
     @Test
     @DisplayName("a score that arrived without its reason is still a score")
     void keepsAScoreThatLostItsReason() {
-        var verdict = Verdict.read("refund", REASONED, "SCORE: 3");
+        var grade = Grade.read("refund", REASONED, "SCORE: 3");
 
-        assertThat(verdict.orElseThrow().score()).isEqualTo(3);
-        assertThat(verdict.orElseThrow().statesReason()).isFalse();
+        assertThat(grade.orElseThrow().score()).isEqualTo(3);
+        assertThat(grade.orElseThrow().statesExplanation()).isFalse();
     }
 
     @Test
@@ -106,42 +154,42 @@ class ReasonedVerdictTest {
     void refusesToGuessUnderAReasonedRubric() {
         // "8" alone is a valid reply to v2 and an incomplete reply to v3. Reading it here
         // would take the first integer out of any sentence the model wrote instead.
-        assertThat(Verdict.read("refund", REASONED, "8")).isEmpty();
-        assertThat(Verdict.read("refund", REASONED, "I scored this 8 out of 10")).isEmpty();
+        assertThat(Grade.read("refund", REASONED, "8")).isEmpty();
+        assertThat(Grade.read("refund", REASONED, "I scored this 8 out of 10")).isEmpty();
 
-        assertThat(Verdict.read("refund", BARE, "8")).isPresent();
+        assertThat(Grade.read("refund", BARE, "8")).isPresent();
     }
 
     @Test
-    @DisplayName("a bare rubric produces a verdict with nothing to state")
+    @DisplayName("a bare rubric produces a grade with nothing to state")
     void bareRubricStatesNoReason() {
-        var verdict = Verdict.read("refund", BARE, "Score: 9").orElseThrow();
+        var grade = Grade.read("refund", BARE, "Score: 9").orElseThrow();
 
-        assertThat(verdict.score()).isEqualTo(9);
-        assertThat(verdict.statesReason()).isFalse();
-        assertThat(verdict.rubricVersion()).isEqualTo(2);
+        assertThat(grade.score()).isEqualTo(9);
+        assertThat(grade.statesExplanation()).isFalse();
+        assertThat(grade.rubricVersion()).isEqualTo(2);
     }
 
     @Test
     @DisplayName("an unreadable reply is empty under either rubric")
     void unreadableRepliesAreEmpty() {
-        assertThat(Verdict.read("refund", REASONED, "I cannot assess this")).isEmpty();
-        assertThat(Verdict.read("refund", REASONED, null)).isEmpty();
-        assertThat(Verdict.read("refund", BARE, "I cannot assess this")).isEmpty();
+        assertThat(Grade.read("refund", REASONED, "I cannot assess this")).isEmpty();
+        assertThat(Grade.read("refund", REASONED, null)).isEmpty();
+        assertThat(Grade.read("refund", BARE, "I cannot assess this")).isEmpty();
     }
 
     @Test
-    @DisplayName("a score outside the band range is not a verdict")
+    @DisplayName("a score outside the band range is not a grade")
     void refusesAScoreOutsideTheRange() {
-        assertThat(Verdict.read("refund", REASONED, "SCORE: 47\nREASON: nonsense")).isEmpty();
+        assertThat(Grade.read("refund", REASONED, "SCORE: 47\nREASON: nonsense")).isEmpty();
     }
 
     @Test
     @DisplayName("the row prints the judge's sentence, and prints none when there is none")
     void describesWithAndWithoutAReason() {
         var reasoned = new RunOutcome.Scored(
-            Verdict.of("refund", REASONED, 2, "The agent gave the refund."));
-        var bare = new RunOutcome.Scored(Verdict.of("refund", BARE, 2));
+            Grade.of("refund", REASONED, 2, "The agent gave the refund."));
+        var bare = new RunOutcome.Scored(Grade.of("refund", BARE, 2));
 
         assertThat(reasoned.describe()).isEqualTo("NO_MATCH (2/10) — The agent gave the refund.");
         assertThat(bare.describe()).isEqualTo("NO_MATCH (2/10)");
@@ -154,7 +202,7 @@ class ReasonedVerdictTest {
         var aligned = new RunOutcome.Measured("task-completion", 1, 0.4, 0.5, false,
             "The agent never booked the table.");
 
-        assertThat(counted.statesReason()).isFalse();
+        assertThat(counted.statesExplanation()).isFalse();
         assertThat(counted.describe()).isEqualTo("tool-permission v1: 0.50 against 1.00");
         assertThat(aligned.describe())
             .isEqualTo("task-completion v1: 0.40 against 0.50 — The agent never booked the table.");

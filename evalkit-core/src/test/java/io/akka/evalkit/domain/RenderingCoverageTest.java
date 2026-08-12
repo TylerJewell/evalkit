@@ -34,7 +34,7 @@ class RenderingCoverageTest {
             4,   // review
             9,   // failed
             5,   // notReached
-            2,   // unscoreable
+            2,   // inconclusive
             11,  // walked
             20,  // asserted
             17,  // assertedPassed
@@ -126,7 +126,7 @@ class RenderingCoverageTest {
             new RunOutcome.Measured("tool-permission", 1, 0.5, 1.0, false),
             new RunOutcome.NotReached(RunOutcome.Cause.SETUP_FAILED, "no fixture",
                 new Precursor.None()),
-            new RunOutcome.Unscoreable("the content filter refused"));
+            new RunOutcome.Inconclusive("the content filter refused"));
 
         for (RunOutcome outcome : everyVariant) {
             var text = flat(RunSummary.results(IDENTITY, everyFamily(), COVERAGE,
@@ -146,7 +146,7 @@ class RenderingCoverageTest {
             new RunSummary.Finding("r1", "expected GenUC-1, reached GenUC-2"),
             new RunSummary.Finding("r2", "tool-permission v1: 0.50 against 1.00"),
             new RunSummary.Finding("r3", "NO_MATCH (3/10) under scenario-judge v2"),
-            new RunSummary.Finding("r4", "unscoreable — the content filter refused"));
+            new RunSummary.Finding("r4", "inconclusive — the content filter refused"));
 
         var text = flat(RunSummary.results(IDENTITY, everyFamily(), COVERAGE, findings, 45,
             "findings.csv", null));

@@ -3,7 +3,7 @@ package io.akka.evalkit.application;
 import akka.javasdk.annotations.Component;
 import akka.javasdk.client.ComponentClient;
 import akka.javasdk.ledger.LedgerClient;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.metric.Metric;
 import io.akka.evalkit.metric.TurnRelevancy;
 
@@ -68,9 +68,9 @@ public class TurnRelevancyEvaluator extends JudgedMetricEvaluator {
 
     /** The exchange, which is the question the user asked and the answer that came back. */
     @Override
-    public String material(Recording recording) {
-        String asked = recording.interaction().inputText().strip();
-        String answered = recording.interaction().finalResponseText().strip();
+    public String material(Observation observation) {
+        String asked = observation.interaction().inputText().strip();
+        String answered = observation.interaction().finalResponseText().strip();
         if (asked.isEmpty() || answered.isEmpty()) return "";
         return "User: " + asked + "\n\nAssistant: " + answered;
     }

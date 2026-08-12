@@ -2,7 +2,7 @@ package io.akka.evalkit.conformance;
 
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.metric.ArgumentCorrectness;
-import io.akka.evalkit.metric.Judgement;
+import io.akka.evalkit.metric.Finding;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code deepeval/metrics/argument_correctness/argument_correctness.py}. {@code PortedMetrics}
  * records that this is a weaker claim than the pinned ports make.
  *
- * <p>Collecting the judgements needs a model upstream and here. The arithmetic does not, and
+ * <p>Collecting the findings needs a model upstream and here. The arithmetic does not, and
  * it is the arithmetic that these cases fix.
  */
 @DisplayName("ArgumentCorrectness · matches DeepEval's ArgumentCorrectnessMetric")
@@ -28,12 +28,12 @@ class ArgumentCorrectnessConformanceTest {
 
     private static final ArgumentCorrectness METRIC = new ArgumentCorrectness();
 
-    private static List<Judgement> judgements(boolean... correct) {
-        var out = new java.util.ArrayList<Judgement>();
+    private static List<Finding> findings(boolean... correct) {
+        var out = new java.util.ArrayList<Finding>();
         for (int i = 0; i < correct.length; i++) {
             String call = "tool_call_" + (i + 1);
-            out.add(correct[i] ? Judgement.affirmed(call)
-                : Judgement.denied(call, "the arguments do not serve what was asked"));
+            out.add(correct[i] ? Finding.affirmed(call)
+                : Finding.denied(call, "the arguments do not serve what was asked"));
         }
         return out;
     }
@@ -45,13 +45,13 @@ class ArgumentCorrectnessConformanceTest {
         @Test
         @DisplayName("every call made with the right arguments scores 1.0")
         void allCallsCorrect() {
-            assertThat(METRIC.aggregate(judgements(true, true))).isEqualTo(1.0);
+            assertThat(METRIC.aggregate(findings(true, true))).isEqualTo(1.0);
         }
 
         @Test
         @DisplayName("two of three correct scores 0.67")
         void someCallsCorrect() {
-            double score = METRIC.aggregate(judgements(true, true, false));
+            double score = METRIC.aggregate(findings(true, true, false));
 
             assertThat(score).isEqualTo(2.0 / 3);
             assertThat(METRIC.withinThreshold(score)).isTrue();
@@ -60,7 +60,7 @@ class ArgumentCorrectnessConformanceTest {
         @Test
         @DisplayName("no call made correctly scores 0.0")
         void noCallsCorrect() {
-            assertThat(METRIC.aggregate(judgements(false, false))).isEqualTo(0.0);
+            assertThat(METRIC.aggregate(findings(false, false))).isEqualTo(0.0);
             assertThat(METRIC.withinThreshold(0.0)).isFalse();
         }
 
@@ -84,11 +84,11 @@ class ArgumentCorrectnessConformanceTest {
     class Divergence {
 
         @Test
-        @DisplayName("a run with no tool call is unscoreable, not a full score")
+        @DisplayName("a run with no tool call is inconclusive, not a full score")
         void noToolCallIsAbsentEvidence() {
             var outcome = METRIC.outcome(List.of());
 
-            assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+            assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
             assertThat(outcome.isEvidence()).isFalse();
             assertThat(outcome.describe()).contains("no tool call");
         }
@@ -96,7 +96,7 @@ class ArgumentCorrectnessConformanceTest {
         @Test
         @DisplayName("a run with tool calls is measured as usual")
         void aJudgedRunIsMeasured() {
-            var outcome = METRIC.outcome(judgements(true, false));
+            var outcome = METRIC.outcome(findings(true, false));
 
             assertThat(outcome).isInstanceOf(RunOutcome.Measured.class);
             assertThat(((RunOutcome.Measured) outcome).value()).isEqualTo(0.5);

@@ -15,7 +15,7 @@ import java.util.List;
  * @param review      judged PARTIAL — undecided, not weak; see {@link Band#needsReview()}
  * @param failed      judged NO_MATCH
  * @param notReached  the precursor never landed. Says nothing about the system
- * @param unscoreable the judge did not answer. Also says nothing about the system
+ * @param inconclusive the judge did not answer. Also says nothing about the system
  * @param scorerFailed the scorer broke. Says nothing about the system either, and unlike the
  *                     two above it is a defect in this kit rather than a property of the run
  * @param asserted    settled by comparison against a named decision, with no model call
@@ -27,16 +27,16 @@ import java.util.List;
  * @param noReply     of the not-reached, how many were asked and did not answer
  */
 public record CampaignReport(int passed, int review, int failed,
-                             int notReached, int unscoreable, int walked, int asserted,
+                             int notReached, int inconclusive, int walked, int asserted,
                              int assertedPassed, int measured, int measuredPassed,
                              int setupFailed, int noReply, int scorerFailed) {
 
     /** A report from before scorer failures were counted separately, which reads them as none. */
     public CampaignReport(int passed, int review, int failed,
-                          int notReached, int unscoreable, int walked, int asserted,
+                          int notReached, int inconclusive, int walked, int asserted,
                           int assertedPassed, int measured, int measuredPassed,
                           int setupFailed, int noReply) {
-        this(passed, review, failed, notReached, unscoreable, walked, asserted, assertedPassed,
+        this(passed, review, failed, notReached, inconclusive, walked, asserted, assertedPassed,
             measured, measuredPassed, setupFailed, noReply, 0);
     }
 
@@ -69,15 +69,15 @@ public record CampaignReport(int passed, int review, int failed,
         if (outcomes.size() != precursors.size()) {
             throw new IllegalArgumentException("one precursor per outcome");
         }
-        int passed = 0, review = 0, failed = 0, notReached = 0, unscoreable = 0, walked = 0;
+        int passed = 0, review = 0, failed = 0, notReached = 0, inconclusive = 0, walked = 0;
         int asserted = 0, assertedPassed = 0, measured = 0, measuredPassed = 0;
         int setupFailed = 0, noReply = 0, scorerFailed = 0;
         for (int i = 0; i < outcomes.size(); i++) {
             RunOutcome outcome = outcomes.get(i);
             switch (outcome) {
                 case RunOutcome.Scored s -> {
-                    if (s.verdict().band().passed()) passed++;
-                    else if (s.verdict().band().needsReview()) review++;
+                    if (s.grade().band().passed()) passed++;
+                    else if (s.grade().band().needsReview()) review++;
                     else failed++;
                     if (precursors.get(i).provesReachability()) walked++;
                 }
@@ -106,11 +106,11 @@ public record CampaignReport(int passed, int review, int failed,
                     if (n.cause() == RunOutcome.Cause.SETUP_FAILED) setupFailed++;
                     else noReply++;
                 }
-                case RunOutcome.Unscoreable ignored -> unscoreable++;
-                case RunOutcome.ScorerFailed ignored -> scorerFailed++;
+                case RunOutcome.Inconclusive ignored -> inconclusive++;
+                case RunOutcome.Failed ignored -> scorerFailed++;
             }
         }
-        return new CampaignReport(passed, review, failed, notReached, unscoreable, walked,
+        return new CampaignReport(passed, review, failed, notReached, inconclusive, walked,
             asserted, assertedPassed, measured, measuredPassed, setupFailed, noReply,
             scorerFailed);
     }
@@ -130,7 +130,7 @@ public record CampaignReport(int passed, int review, int failed,
     public CampaignReport plus(CampaignReport other) {
         return new CampaignReport(
             passed + other.passed, review + other.review, failed + other.failed,
-            notReached + other.notReached, unscoreable + other.unscoreable,
+            notReached + other.notReached, inconclusive + other.inconclusive,
             walked + other.walked, asserted + other.asserted,
             assertedPassed + other.assertedPassed,
             measured + other.measured, measuredPassed + other.measuredPassed,
@@ -187,7 +187,7 @@ public record CampaignReport(int passed, int review, int failed,
 
     /** Runs that produced no evidence, whatever the reason. */
     public int withoutEvidence() {
-        return notReached + unscoreable + scorerFailed;
+        return notReached + inconclusive + scorerFailed;
     }
 
     /** Runs that cost a model call. Comparison and computation settled the rest. */
@@ -204,8 +204,8 @@ public record CampaignReport(int passed, int review, int failed,
             caveats.append("  [pass rate not trustworthy]");
         }
         return ("%d judged of %d (%d asserted, %d scored) — %d passed, %d need review, "
-            + "%d failed; %d not reached, %d unscoreable, %d scorer failures%s")
+            + "%d failed; %d not reached, %d inconclusive, %d scorer failures%s")
             .formatted(judged(), total(), asserted, scored(), passed, review, failed,
-                notReached, unscoreable, scorerFailed, caveats);
+                notReached, inconclusive, scorerFailed, caveats);
     }
 }

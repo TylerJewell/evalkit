@@ -1,6 +1,6 @@
 package io.akka.evalkit.metric;
 
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -11,7 +11,7 @@ import java.util.function.Function;
  * <p>The plan comes from the reasoning the run's model calls carried, which
  * {@link io.akka.evalkit.domain.ModelCall#thinking()} records. A target that surfaces its
  * plan some other way supplies it through {@link #readingPlanFrom}, and a run whose calls
- * reported no reasoning produces {@link io.akka.evalkit.domain.RunOutcome.Unscoreable}
+ * reported no reasoning produces {@link io.akka.evalkit.domain.RunOutcome.Inconclusive}
  * rather than a score.
  *
  * <p><b>The divergence worth knowing about.</b> Upstream scores 1 and passes when it finds
@@ -24,20 +24,20 @@ import java.util.function.Function;
  */
 public final class PlanQuality extends AlignmentMetric {
 
-    private final Function<Recording, Optional<String>> plans;
+    private final Function<Observation, Optional<String>> plans;
 
     public PlanQuality(Assessor assessor) {
         this(new MetricRef("plan-quality", 1), 0.5, assessor, AlignmentMetric::recordedPlan);
     }
 
     private PlanQuality(MetricRef ref, double threshold, Assessor assessor,
-                        Function<Recording, Optional<String>> plans) {
+                        Function<Observation, Optional<String>> plans) {
         super(ref, threshold, assessor);
         this.plans = plans;
     }
 
     /** Where the agent's plan comes from, replacing the recorded reasoning. */
-    public PlanQuality readingPlanFrom(Function<Recording, Optional<String>> source) {
+    public PlanQuality readingPlanFrom(Function<Observation, Optional<String>> source) {
         return new PlanQuality(ref(), threshold(), assessor(), source);
     }
 
@@ -48,10 +48,10 @@ public final class PlanQuality extends AlignmentMetric {
     }
 
     @Override
-    protected Optional<Question> ask(Recording recording) {
-        String task = recording.transcript().expectedOutcome();
+    protected Optional<Question> ask(Observation observation) {
+        String task = observation.transcript().expectedOutcome();
         if (task.isBlank()) return Optional.empty();
-        return plans.apply(recording)
+        return plans.apply(observation)
             .filter(plan -> !plan.isBlank())
             .map(plan -> new Question("task against plan", task, plan));
     }

@@ -12,15 +12,15 @@ import java.util.List;
  * whether each call was made with arguments that serve it, so a scenario carries no list of
  * arguments to keep up to date.
  *
- * <p>One judgement per tool call, and the arithmetic is the share that went the metric's way
+ * <p>One finding per tool call, and the arithmetic is the share that went the metric's way
  * &mdash; the same split {@link TurnFaithfulness} uses, for the same reason: collecting the
- * judgements needs a model and turning them into a number does not.
+ * findings needs a model and turning them into a number does not.
  *
  * <p>Ported from DeepEval's {@code ArgumentCorrectnessMetric}, Apache 2.0, read at commit
  * bd10fa6. <b>One divergence.</b> Upstream scores a run with no tool calls 1 and passes it.
  * A metric about tool arguments that scores full marks because no tool was called is a check
  * passing by finding nothing, so a run with nothing to judge is
- * {@link RunOutcome.Unscoreable} here and stays out of the pass rate. The arithmetic below is
+ * {@link RunOutcome.Inconclusive} here and stays out of the pass rate. The arithmetic below is
  * still upstream's, including what it returns for an empty list; the divergence is in what
  * the run is reported as, not in what the formula computes.
  */
@@ -54,8 +54,8 @@ public final class ArgumentCorrectness implements Metric {
 
     /** Calls made with the right arguments over calls made. */
     @Override
-    public double aggregate(List<Judgement> judgements) {
-        return Metric.shareAffirmed(judgements);
+    public double aggregate(List<Finding> findings) {
+        return Metric.shareAffirmed(findings);
     }
 
     /**
@@ -65,11 +65,11 @@ public final class ArgumentCorrectness implements Metric {
      * calling tools would otherwise report a rising pass rate as the agent did less.
      */
     @Override
-    public RunOutcome outcome(List<Judgement> judgements) {
-        if (judgements.isEmpty()) {
-            return new RunOutcome.Unscoreable(
+    public RunOutcome outcome(List<Finding> findings) {
+        if (findings.isEmpty()) {
+            return new RunOutcome.Inconclusive(
                 "argument-correctness: the run made no tool call to judge arguments on");
         }
-        return Metric.super.outcome(judgements);
+        return Metric.super.outcome(findings);
     }
 }

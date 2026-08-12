@@ -65,7 +65,7 @@ public enum Band {
      * nothing distinguishing a 4 from a 7.
      *
      * <p>A {@code PARTIAL} is an <em>undecided</em> result. Reporting it as a score lends
-     * four points of precision to a judgement that does not reproduce, so the report
+     * four points of precision to a grade that does not reproduce, so the report
      * counts how many landed here instead of averaging where they sit.
      */
     public boolean needsReview() {

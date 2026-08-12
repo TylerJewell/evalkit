@@ -101,7 +101,7 @@ public record RunRecord(RunSummary.Identity identity,
             .flatMap(r -> r.runs().stream())
             .map(RequirementResult.Run::outcome)
             .filter(o -> o instanceof RunOutcome.Scored)
-            .map(o -> ((RunOutcome.Scored) o).verdict().score())
+            .map(o -> ((RunOutcome.Scored) o).grade().score())
             .toList();
     }
 
@@ -126,11 +126,11 @@ public record RunRecord(RunSummary.Identity identity,
         return counts;
     }
 
-    public int unscoreable() {
+    public int inconclusive() {
         return (int) requirements.stream()
             .flatMap(r -> r.runs().stream())
             .map(RequirementResult.Run::outcome)
-            .filter(o -> o instanceof RunOutcome.Unscoreable)
+            .filter(o -> o instanceof RunOutcome.Inconclusive)
             .count();
     }
 }

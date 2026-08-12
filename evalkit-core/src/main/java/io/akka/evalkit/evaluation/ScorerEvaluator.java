@@ -5,8 +5,8 @@ import akka.javasdk.evaluation.EvaluationContext;
 import akka.javasdk.evaluation.Evaluator;
 import akka.javasdk.ledger.InteractionRecord;
 import akka.javasdk.ledger.LedgerClient;
-import io.akka.evalkit.domain.NoVerdict;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.InconclusiveScore;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Scorer;
 import io.akka.evalkit.domain.Transcript;
@@ -17,11 +17,11 @@ import java.util.Objects;
  * Runs an evalkit {@link Scorer} against a recorded interaction.
  *
  * <p>An {@link EvaluationContext} carries an interaction id and no content, so the record is
- * fetched through {@link LedgerClient} and handed to the scorer as a {@link Recording}.
+ * fetched through {@link LedgerClient} and handed to the scorer as a {@link Observation}.
  *
  * <p><b>What each outcome becomes.</b> {@code Scored}, {@code Asserted} and {@code Measured}
- * complete the effect with one {@link Evaluation}. {@code Unscoreable} calls
- * {@code inconclusive}, which is the ledger's word for the same fact. {@code ScorerFailed}
+ * complete the effect with one {@link Evaluation}. {@code Inconclusive} calls
+ * {@code inconclusive}, which is the ledger's word for the same fact. {@code Failed}
  * rethrows, because {@code Effect.Builder} offers no failed call and a defect in a scorer is
  * not a finding about the system. {@code NotReached} cannot arrive here: an interaction that
  * never happened was never recorded, so no evaluation is triggered for it.
@@ -71,7 +71,7 @@ public abstract class ScorerEvaluator extends Evaluator {
         RunOutcome outcome;
         try {
             outcome = score(record);
-        } catch (NoVerdict declined) {
+        } catch (InconclusiveScore declined) {
             return effects().inconclusive(declined.getMessage());
         }
 
@@ -79,9 +79,9 @@ public abstract class ScorerEvaluator extends Evaluator {
             case RunOutcome.Scored scored -> effects().complete(Evaluations.of(scored));
             case RunOutcome.Asserted asserted -> effects().complete(Evaluations.of(asserted));
             case RunOutcome.Measured measured -> effects().complete(Evaluations.of(measured));
-            case RunOutcome.Unscoreable unscoreable ->
-                effects().inconclusive(unscoreable.reason());
-            case RunOutcome.ScorerFailed failed ->
+            case RunOutcome.Inconclusive inconclusive ->
+                effects().inconclusive(inconclusive.reason());
+            case RunOutcome.Failed failed ->
                 throw new IllegalStateException(
                     "the scorer failed on interaction " + record.interactionId()
                         + ": " + failed.reason());
@@ -93,10 +93,10 @@ public abstract class ScorerEvaluator extends Evaluator {
     }
 
     /** The record as a scorer reads it, with the transcript a rubric interpolates. */
-    public Recording recordingOf(InteractionRecord record) {
+    public Observation recordingOf(InteractionRecord record) {
         var transcript = new Transcript(
             scenarioName(record), "", record.transcript(), record.finalResponseText(),
             expectedOutcome(record));
-        return new Recording(transcript, record, java.util.Optional.empty());
+        return new Observation(transcript, record, java.util.Optional.empty());
     }
 }

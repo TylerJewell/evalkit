@@ -50,7 +50,7 @@ public final class TurnFaithfulness implements Metric {
      * a provider rather than by a provider returning nothing.
      */
     @Override
-    public double aggregate(List<Judgement> judgements) {
-        return Metric.shareAffirmed(judgements);
+    public double aggregate(List<Finding> findings) {
+        return Metric.shareAffirmed(findings);
     }
 }

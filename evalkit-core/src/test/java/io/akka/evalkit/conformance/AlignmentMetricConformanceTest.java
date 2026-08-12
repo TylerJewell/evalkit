@@ -1,6 +1,6 @@
 package io.akka.evalkit.conformance;
 
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.domain.RunOutcome;
 import akka.javasdk.ledger.ModelResponse;
 import akka.javasdk.ledger.ToolCall;
@@ -43,15 +43,15 @@ class AlignmentMetricConformanceTest {
     }
 
     /**
-     * A recording of a run that called these tools and nothing else.
+     * A observation of a run that called these tools and nothing else.
      *
      * <p>An interaction record keeps a tool call under the model response that made it, so a
      * run with a tool call has a model call to hang it on and a run with neither records no
      * model responses at all.
      */
-    private static Recording recording(ToolCall... called) {
+    private static Observation observation(ToolCall... called) {
         if (called.length == 0) {
-            return new Recording(transcript(),
+            return new Observation(transcript(),
                 Interactions.of("", "", "book me a table", List.of(),
                     Optional.empty(), Optional.empty()),
                 Optional.empty());
@@ -59,14 +59,14 @@ class AlignmentMetricConformanceTest {
         return over(Interactions.calling(Interactions.response("Booked for 8pm."), called));
     }
 
-    /** A recording whose model calls carried reasoning, which is where a plan lives. */
-    private static Recording reasoning(String thinking, ToolCall... called) {
+    /** A observation whose model calls carried reasoning, which is where a plan lives. */
+    private static Observation reasoning(String thinking, ToolCall... called) {
         return over(Interactions.thinking(
             Interactions.calling(Interactions.response("Booked for 8pm."), called), thinking));
     }
 
-    private static Recording over(ModelResponse call) {
-        return new Recording(transcript(),
+    private static Observation over(ModelResponse call) {
+        return new Observation(transcript(),
             Interactions.of("", "", "book me a table", List.of(call),
                 Optional.empty(), Optional.empty()),
             Optional.empty());
@@ -86,7 +86,7 @@ class AlignmentMetricConformanceTest {
             var metric = new TaskCompletion(
                 answering("SCORE: 0.8\nREASON: The table was booked for the right evening."));
 
-            var outcome = metric.score(recording());
+            var outcome = metric.score(observation());
 
             assertThat(outcome).isInstanceOf(RunOutcome.Measured.class);
             var measured = (RunOutcome.Measured) outcome;
@@ -94,7 +94,7 @@ class AlignmentMetricConformanceTest {
             assertThat(measured.value()).isEqualTo(0.8);
             assertThat(measured.threshold()).isEqualTo(0.5);
             assertThat(measured.withinThreshold()).isTrue();
-            assertThat(measured.reason())
+            assertThat(measured.explanation())
                 .isEqualTo("The table was booked for the right evening.");
         }
 
@@ -103,7 +103,7 @@ class AlignmentMetricConformanceTest {
         void aLowScoreIsStillEvidence() {
             var metric = new TaskCompletion(answering("SCORE: 0.2\nREASON: No table was booked."));
 
-            var outcome = metric.score(recording());
+            var outcome = metric.score(observation());
 
             assertThat(outcome.passed()).isFalse();
             assertThat(outcome.isEvidence()).isTrue();
@@ -114,9 +114,9 @@ class AlignmentMetricConformanceTest {
         void anUnreadableReplyIsUnscoreable() {
             var metric = new TaskCompletion(answering("I would rather not assess this."));
 
-            var outcome = metric.score(recording());
+            var outcome = metric.score(observation());
 
-            assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+            assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
             assertThat(outcome.isEvidence()).isFalse();
             assertThat(outcome.describe()).contains("no score");
         }
@@ -128,9 +128,9 @@ class AlignmentMetricConformanceTest {
             // invent a share the assessor never stated.
             var metric = new TaskCompletion(answering("SCORE: 8\nREASON: Mostly right."));
 
-            var outcome = metric.score(recording());
+            var outcome = metric.score(observation());
 
-            assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+            assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
             assertThat(outcome.describe()).contains("not a share");
         }
 
@@ -138,17 +138,17 @@ class AlignmentMetricConformanceTest {
         @DisplayName("the bounds of the scale are read, not rejected")
         void zeroAndOneAreScores() {
             assertThat(new TaskCompletion(answering("SCORE: 0\nREASON: none of it"))
-                .score(recording())).isInstanceOf(RunOutcome.Measured.class);
+                .score(observation())).isInstanceOf(RunOutcome.Measured.class);
             assertThat(new TaskCompletion(answering("SCORE: 1\nREASON: all of it"))
-                .score(recording())).isInstanceOf(RunOutcome.Measured.class);
+                .score(observation())).isInstanceOf(RunOutcome.Measured.class);
         }
 
         @Test
         @DisplayName("a score with no reason is still a score")
         void aScoreWithoutAReason() {
-            var outcome = new TaskCompletion(answering("SCORE: 0.6")).score(recording());
+            var outcome = new TaskCompletion(answering("SCORE: 0.6")).score(observation());
 
-            assertThat(((RunOutcome.Measured) outcome).statesReason()).isFalse();
+            assertThat(((RunOutcome.Measured) outcome).statesExplanation()).isFalse();
             assertThat(outcome.isEvidence()).isTrue();
         }
     }
@@ -164,7 +164,7 @@ class AlignmentMetricConformanceTest {
             new TaskCompletion(question -> {
                 asked.set(question);
                 return "SCORE: 1\nREASON: yes";
-            }).score(recording());
+            }).score(observation());
 
             assertThat(asked.get().task()).isEqualTo("Books a table for the evening");
             assertThat(asked.get().against()).isEqualTo("Booked for 8pm.");
@@ -177,7 +177,7 @@ class AlignmentMetricConformanceTest {
             new StepEfficiency(question -> {
                 asked.set(question);
                 return "SCORE: 0.5\nREASON: two searches where one would do";
-            }).score(recording(Interactions.tool("search"), Interactions.tool("book")));
+            }).score(observation(Interactions.tool("search"), Interactions.tool("book")));
 
             // The model call is a step. A recorded tool call hangs off the response that
             // made it, so a run that called a tool made a model call to call it from.
@@ -192,8 +192,8 @@ class AlignmentMetricConformanceTest {
                 asked.set(question);
                 return "SCORE: 1\nREASON: followed";
             })
-                .readingPlanFrom(recording -> Optional.of("search, then book"))
-                .score(recording(Interactions.tool("search")));
+                .readingPlanFrom(observation -> Optional.of("search, then book"))
+                .score(observation(Interactions.tool("search")));
 
             assertThat(asked.get().task()).contains("Books a table").contains("search, then book");
             assertThat(asked.get().against()).isEqualTo("model call\ntool: search");
@@ -223,9 +223,9 @@ class AlignmentMetricConformanceTest {
             // The pair that makes the case above worth having. Without it, a metric that
             // always returned Measured would pass the test above just as well.
             var outcome = new PlanQuality(answering("SCORE: 0.9\nREASON: unreachable"))
-                .score(recording(Interactions.tool("search")));
+                .score(observation(Interactions.tool("search")));
 
-            assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+            assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
         }
 
         @Test
@@ -270,13 +270,13 @@ class AlignmentMetricConformanceTest {
     class Divergence {
 
         @Test
-        @DisplayName("a run with no plan is unscoreable, where upstream scores it 1 and passes")
+        @DisplayName("a run with no plan is inconclusive, where upstream scores it 1 and passes")
         void noPlanIsAbsentEvidence() {
             var metric = new PlanQuality(answering("SCORE: 1\nREASON: unreachable"));
 
-            var outcome = metric.score(recording(Interactions.tool("search")));
+            var outcome = metric.score(observation(Interactions.tool("search")));
 
-            assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+            assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
             assertThat(outcome.isEvidence()).isFalse();
             assertThat(outcome.describe()).contains("no plan");
         }
@@ -285,27 +285,27 @@ class AlignmentMetricConformanceTest {
         @DisplayName("a target that reports its plan is scored on it")
         void aReportedPlanIsScored() {
             var metric = new PlanQuality(answering("SCORE: 0.9\nREASON: a workable plan"))
-                .readingPlanFrom(recording -> Optional.of("find a table, then book it"));
+                .readingPlanFrom(observation -> Optional.of("find a table, then book it"));
 
-            assertThat(metric.score(recording())).isInstanceOf(RunOutcome.Measured.class);
+            assertThat(metric.score(observation())).isInstanceOf(RunOutcome.Measured.class);
         }
 
         @Test
         @DisplayName("a blank plan is no plan")
         void aBlankPlanIsAbsent() {
             var metric = new PlanQuality(answering("SCORE: 1\nREASON: unreachable"))
-                .readingPlanFrom(recording -> Optional.of("   "));
+                .readingPlanFrom(observation -> Optional.of("   "));
 
-            assertThat(metric.score(recording())).isInstanceOf(RunOutcome.Unscoreable.class);
+            assertThat(metric.score(observation())).isInstanceOf(RunOutcome.Inconclusive.class);
         }
 
         @Test
         @DisplayName("a run with no steps has no efficiency to judge")
         void noStepsIsAbsentEvidence() {
             var outcome = new StepEfficiency(answering("SCORE: 1\nREASON: unreachable"))
-                .score(recording());
+                .score(observation());
 
-            assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+            assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
             assertThat(outcome.describe()).contains("no steps");
         }
 
@@ -313,23 +313,23 @@ class AlignmentMetricConformanceTest {
         @DisplayName("plan adherence needs both halves before it asks anything")
         void adherenceNeedsAPlanAndSteps() {
             var withoutSteps = new PlanAdherence(answering("SCORE: 1\nREASON: unreachable"))
-                .readingPlanFrom(recording -> Optional.of("search, then book"))
-                .score(recording());
+                .readingPlanFrom(observation -> Optional.of("search, then book"))
+                .score(observation());
             var withoutPlan = new PlanAdherence(answering("SCORE: 1\nREASON: unreachable"))
-                .score(recording(Interactions.tool("search")));
+                .score(observation(Interactions.tool("search")));
 
-            assertThat(withoutSteps).isInstanceOf(RunOutcome.Unscoreable.class);
-            assertThat(withoutPlan).isInstanceOf(RunOutcome.Unscoreable.class);
+            assertThat(withoutSteps).isInstanceOf(RunOutcome.Inconclusive.class);
+            assertThat(withoutPlan).isInstanceOf(RunOutcome.Inconclusive.class);
         }
 
         @Test
-        @DisplayName("an unscoreable run costs no model call")
+        @DisplayName("an inconclusive run costs no model call")
         void absenceIsDecidedBeforeTheCall() {
             var calls = new java.util.concurrent.atomic.AtomicInteger();
             new PlanQuality(question -> {
                 calls.incrementAndGet();
                 return "SCORE: 1";
-            }).score(recording());
+            }).score(observation());
 
             assertThat(calls).hasValue(0);
         }
@@ -368,7 +368,7 @@ class AlignmentMetricConformanceTest {
         @DisplayName("a measurement names the metric and version that produced it")
         void theRowNamesItsMetric() {
             var outcome = new TaskCompletion(answering("SCORE: 0.4\nREASON: half done"))
-                .score(recording());
+                .score(observation());
 
             assertThat(outcome.describe())
                 .isEqualTo("task-completion v1: 0.40 against 0.50 — half done");

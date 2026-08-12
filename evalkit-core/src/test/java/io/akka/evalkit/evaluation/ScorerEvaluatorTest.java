@@ -5,10 +5,10 @@ import akka.javasdk.ledger.EvaluationRecord;
 import akka.javasdk.ledger.InteractionRecord;
 import akka.javasdk.ledger.LedgerClient;
 import io.akka.evalkit.domain.Band;
-import io.akka.evalkit.domain.NoVerdict;
+import io.akka.evalkit.domain.InconclusiveScore;
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Scorer;
-import io.akka.evalkit.domain.Verdict;
+import io.akka.evalkit.domain.Grade;
 import io.akka.evalkit.ledger.Interactions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -82,15 +82,15 @@ class ScorerEvaluatorTest {
         };
     }
 
-    private static Verdict verdict(int score) {
-        return new Verdict("refund-window", "scenario-judge", 3, score, Band.of(score),
+    private static Grade verdict(int score) {
+        return new Grade("refund-window", "scenario-judge", 3, score, Band.of(score),
             "the agent stated the window");
     }
 
     @Test
     @DisplayName("a scored run completes the effect")
     void aScoredRunCompletes() {
-        var effect = evaluator(recording -> new RunOutcome.Scored(verdict(9)))
+        var effect = evaluator(observation -> new RunOutcome.Scored(verdict(9)))
             .evaluate(new StubContext());
 
         assertThat(effect).isNotNull();
@@ -99,7 +99,7 @@ class ScorerEvaluatorTest {
     @Test
     @DisplayName("an asserted run completes the effect")
     void anAssertedRunCompletes() {
-        var effect = evaluator(recording ->
+        var effect = evaluator(observation ->
             new RunOutcome.Asserted(true, "REFUND-004", "REFUND-004")).evaluate(new StubContext());
 
         assertThat(effect).isNotNull();
@@ -108,7 +108,7 @@ class ScorerEvaluatorTest {
     @Test
     @DisplayName("a measured run completes the effect")
     void aMeasuredRunCompletes() {
-        var effect = evaluator(recording ->
+        var effect = evaluator(observation ->
             new RunOutcome.Measured("tool-correctness", 1, 0.9, 0.5, true))
             .evaluate(new StubContext());
 
@@ -116,10 +116,10 @@ class ScorerEvaluatorTest {
     }
 
     @Test
-    @DisplayName("an unscoreable run is inconclusive rather than a failure")
+    @DisplayName("an inconclusive run is inconclusive rather than a failure")
     void anUnscoreableRunIsInconclusive() {
-        var effect = evaluator(recording ->
-            new RunOutcome.Unscoreable("the content filter would not score it"))
+        var effect = evaluator(observation ->
+            new RunOutcome.Inconclusive("the content filter would not score it"))
             .evaluate(new StubContext());
 
         assertThat(effect).isNotNull();
@@ -133,10 +133,10 @@ class ScorerEvaluatorTest {
      * read as a decline.
      */
     @Test
-    @DisplayName("a scorer that throws NoVerdict declined, and is inconclusive")
+    @DisplayName("a scorer that throws InconclusiveScore declined, and is inconclusive")
     void aThrownNoVerdictIsInconclusive() {
-        var effect = evaluator(recording -> {
-            throw new NoVerdict("the content filter refused the transcript");
+        var effect = evaluator(observation -> {
+            throw new InconclusiveScore("the content filter refused the transcript");
         }).evaluate(new StubContext());
 
         assertThat(effect).isNotNull();
@@ -145,8 +145,8 @@ class ScorerEvaluatorTest {
     @Test
     @DisplayName("a scorer that failed is a defect here, and reaches no effect")
     void aFailedScorerRethrows() {
-        var evaluator = evaluator(recording ->
-            new RunOutcome.ScorerFailed("a null reference in the metric"));
+        var evaluator = evaluator(observation ->
+            new RunOutcome.Failed("a null reference in the metric"));
 
         assertThatThrownBy(() -> evaluator.evaluate(new StubContext()))
             .isInstanceOf(IllegalStateException.class)
@@ -164,7 +164,7 @@ class ScorerEvaluatorTest {
     @Test
     @DisplayName("a not-reached run against a recorded interaction reaches no effect")
     void aNotReachedRunRethrows() {
-        var evaluator = evaluator(recording -> new RunOutcome.NotReached(
+        var evaluator = evaluator(observation -> new RunOutcome.NotReached(
             RunOutcome.Cause.SETUP_FAILED, "the fixture was never built",
             io.akka.evalkit.domain.Precursor.Fixture.named("signed-in")));
 
@@ -177,11 +177,11 @@ class ScorerEvaluatorTest {
     @DisplayName("the scorer reads the transcript and the expected outcome from the record")
     void theScorerReadsTheRecord() {
         var seen = new java.util.concurrent.atomic.AtomicReference<String>();
-        evaluator(recording -> {
-            seen.set(recording.transcript().expectedOutcome());
-            assertThat(recording.transcript().systemOutput())
+        evaluator(observation -> {
+            seen.set(observation.transcript().expectedOutcome());
+            assertThat(observation.transcript().systemOutput())
                 .isEqualTo("the refund takes 30 days");
-            assertThat(recording.systemMessage()).isEqualTo("be helpful");
+            assertThat(observation.systemMessage()).isEqualTo("be helpful");
             return new RunOutcome.Scored(verdict(9));
         }).evaluate(new StubContext());
 

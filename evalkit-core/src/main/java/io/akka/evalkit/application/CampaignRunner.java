@@ -3,7 +3,7 @@ package io.akka.evalkit.application;
 import io.akka.evalkit.domain.CampaignPlan;
 import io.akka.evalkit.domain.CampaignReport;
 import io.akka.evalkit.domain.Lanes;
-import io.akka.evalkit.domain.NoVerdict;
+import io.akka.evalkit.domain.InconclusiveScore;
 import io.akka.evalkit.domain.Precursor;
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Rubric;
@@ -84,7 +84,7 @@ public final class CampaignRunner {
                     .sorted(java.util.Comparator.comparingInt(Completed::attempt))
                     .map(row -> new io.akka.evalkit.domain.RequirementResult.Run(
                         row.outcome(),
-                        row.recording().flatMap(io.akka.evalkit.domain.Recording::latency)))
+                        row.observation().flatMap(io.akka.evalkit.domain.Observation::latency)))
                     .toList()))
             .toList();
     }
@@ -104,12 +104,12 @@ public final class CampaignRunner {
      * is in submission order while results arrive in completion order.
      */
     public record Completed(RunOutcome outcome, Scenario scenario,
-                            java.util.Optional<io.akka.evalkit.domain.Recording> recording,
+                            java.util.Optional<io.akka.evalkit.domain.Observation> observation,
                             int attempt) {
 
         public Completed(RunOutcome outcome, Scenario scenario,
-                         java.util.Optional<io.akka.evalkit.domain.Recording> recording) {
-            this(outcome, scenario, recording, 0);
+                         java.util.Optional<io.akka.evalkit.domain.Observation> observation) {
+            this(outcome, scenario, observation, 0);
         }
 
         public Completed(RunOutcome outcome, Scenario scenario) {
@@ -124,18 +124,18 @@ public final class CampaignRunner {
     /**
      * What one scenario produced, kept together for the reason {@link Completed} exists.
      *
-     * <p>The recording is absent for a run that never reached the question, because nothing
+     * <p>The observation is absent for a run that never reached the question, because nothing
      * was said and there is nothing to record.
      */
     private record Ran(RunOutcome outcome,
-                       java.util.Optional<io.akka.evalkit.domain.Recording> recording) {
+                       java.util.Optional<io.akka.evalkit.domain.Observation> observation) {
 
         static Ran of(RunOutcome outcome) {
             return new Ran(outcome, java.util.Optional.empty());
         }
 
-        static Ran of(RunOutcome outcome, io.akka.evalkit.domain.Recording recording) {
-            return new Ran(outcome, java.util.Optional.of(recording));
+        static Ran of(RunOutcome outcome, io.akka.evalkit.domain.Observation observation) {
+            return new Ran(outcome, java.util.Optional.of(observation));
         }
     }
 
@@ -174,7 +174,7 @@ public final class CampaignRunner {
                     long start = System.nanoTime();
                     try {
                         var ran = runOne.apply(scenario);
-                        completed.add(new Completed(ran.outcome(), scenario, ran.recording(),
+                        completed.add(new Completed(ran.outcome(), scenario, ran.observation(),
                             attempt.number()));
                     } catch (Throwable t) {
                         // Every scenario must produce a row. invokeAll parks a thrown
@@ -218,27 +218,27 @@ public final class CampaignRunner {
                 scenario.precursor()));
         }
         var produced = (ScenarioRunner.Execution.Produced) execution;
-        var recording = produced.recording();
+        var observation = produced.observation();
 
         // The routing this harness exists for. A scenario naming a decision is settled by
         // comparison — no model call, no variance, no cost. Only the ones that genuinely
         // reach a model boundary are judged.
         if (scenario.specNode().isPresent()) {
             return Ran.of(io.akka.evalkit.domain.SpecNodeMatch
-                .assertReached(scenario.specNode().orElseThrow(), produced.node()), recording);
+                .assertReached(scenario.specNode().orElseThrow(), produced.node()), observation);
         }
 
         var transcript = produced.transcript();
         try {
-            return Ran.of(judge.score(transcript, rubric), recording);
-        } catch (NoVerdict declined) {
+            return Ran.of(judge.score(transcript, rubric), observation);
+        } catch (InconclusiveScore declined) {
             // The judge ran and would not answer — a content filter, an unreadable reply.
             // Absent evidence about the transcript, never a verdict.
-            return Ran.of(new RunOutcome.Unscoreable(rootMessage(declined)), recording);
+            return Ran.of(new RunOutcome.Inconclusive(rootMessage(declined)), observation);
         } catch (RuntimeException e) {
             // Anything else is this kit breaking, which is a different row and a different
-            // reading. See RunOutcome.ScorerFailed.
-            return Ran.of(new RunOutcome.ScorerFailed(rootMessage(e)), recording);
+            // reading. See RunOutcome.Failed.
+            return Ran.of(new RunOutcome.Failed(rootMessage(e)), observation);
         }
     }
 
@@ -250,22 +250,22 @@ public final class CampaignRunner {
                 scenario.precursor()));
         }
         var produced = (ScenarioRunner.Execution.Produced) execution;
-        var recording = produced.recording();
+        var observation = produced.observation();
 
         var scorer = router.scorerFor(scenario);
         if (scorer.isEmpty()) {
             return Ran.of(io.akka.evalkit.domain.SpecNodeMatch
-                .assertReached(scenario.specNode().orElseThrow(), produced.node()), recording);
+                .assertReached(scenario.specNode().orElseThrow(), produced.node()), observation);
         }
 
         try {
-            return Ran.of(scorer.orElseThrow().score(recording), recording);
-        } catch (NoVerdict declined) {
-            return Ran.of(new RunOutcome.Unscoreable(rootMessage(declined)), recording);
+            return Ran.of(scorer.orElseThrow().score(observation), observation);
+        } catch (InconclusiveScore declined) {
+            return Ran.of(new RunOutcome.Inconclusive(rootMessage(declined)), observation);
         } catch (RuntimeException e) {
             // Every scorer family reaches here. A metric that threw computed nothing, and a
             // throw that is not a declared absence is this kit failing.
-            return Ran.of(new RunOutcome.ScorerFailed(rootMessage(e)), recording);
+            return Ran.of(new RunOutcome.Failed(rootMessage(e)), observation);
         }
     }
 

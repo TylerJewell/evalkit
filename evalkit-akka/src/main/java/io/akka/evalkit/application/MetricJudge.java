@@ -11,7 +11,7 @@ import akka.javasdk.annotations.Component;
  * <p>{@link ScenarioJudge} scores a whole transcript against an expected outcome and returns
  * one band. This one is asked about a list &mdash; every exchange, every claim, every
  * citation &mdash; and returns a block per subject that
- * {@link io.akka.evalkit.metric.JudgementReply} reads.
+ * {@link io.akka.evalkit.metric.FindingsReply} reads.
  *
  * <p>The prompt is not in this class. Each metric evaluator holds its own and passes it in,
  * so the agent is the mechanism and the prompt is the data.

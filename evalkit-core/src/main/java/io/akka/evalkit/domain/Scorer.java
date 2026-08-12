@@ -1,7 +1,7 @@
 package io.akka.evalkit.domain;
 
 /**
- * Turns a finished recording into an outcome.
+ * Turns a finished observation into an outcome.
  *
  * <p>The return type is {@link RunOutcome} and not a number. A {@code double} has no value
  * meaning "nobody assessed this", so a scorer that failed would have to return a figure,
@@ -10,12 +10,12 @@ package io.akka.evalkit.domain;
  * <p>Three families implement this. Comparison against a stated expectation returns
  * {@link RunOutcome.Asserted}. Computation against a threshold returns
  * {@link RunOutcome.Measured}. A judge returns {@link RunOutcome.Scored}, or
- * {@link RunOutcome.Unscoreable} when it could not answer.
+ * {@link RunOutcome.Inconclusive} when it could not answer.
  */
 @FunctionalInterface
 public interface Scorer {
 
-    RunOutcome score(Recording recording);
+    RunOutcome score(Observation observation);
 
     /**
      * What produced the outcome, for the report row.

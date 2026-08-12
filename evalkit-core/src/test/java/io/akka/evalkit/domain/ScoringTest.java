@@ -18,8 +18,8 @@ class ScoringTest {
         return "{replay_history}{simulation_history}{system_output}{expected_outcome}";
     }
 
-    private static Verdict verdict(String scenario, int score, Rubric rubric) {
-        return Verdict.of(scenario, rubric, score, "");
+    private static Grade verdict(String scenario, int score, Rubric rubric) {
+        return Grade.of(scenario, rubric, score, "");
     }
 
     // ---- bands ----
@@ -56,19 +56,19 @@ class ScoringTest {
     @Test
     @DisplayName("the score is read out of the replies models really give")
     void parsing() {
-        assertThat(Verdict.parseScore("8")).contains(8);
-        assertThat(Verdict.parseScore("Score: 8")).contains(8);
-        assertThat(Verdict.parseScore("8/10")).contains(8);
-        assertThat(Verdict.parseScore("10")).contains(10);
+        assertThat(Grade.parseScore("8")).contains(8);
+        assertThat(Grade.parseScore("Score: 8")).contains(8);
+        assertThat(Grade.parseScore("8/10")).contains(8);
+        assertThat(Grade.parseScore("10")).contains(10);
     }
 
     @Test
     @DisplayName("an unreadable reply yields nothing rather than a default")
     void unparseable() {
-        // A default here is a fabricated judgement that shifts a band distribution.
-        assertThat(Verdict.parseScore("I cannot assess this")).isEmpty();
-        assertThat(Verdict.parseScore("")).isEmpty();
-        assertThat(Verdict.parseScore(null)).isEmpty();
+        // A default here is a fabricated finding that shifts a band distribution.
+        assertThat(Grade.parseScore("I cannot assess this")).isEmpty();
+        assertThat(Grade.parseScore("")).isEmpty();
+        assertThat(Grade.parseScore(null)).isEmpty();
     }
 
     // ---- distribution ----

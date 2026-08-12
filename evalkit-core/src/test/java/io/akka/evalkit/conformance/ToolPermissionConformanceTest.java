@@ -1,6 +1,6 @@
 package io.akka.evalkit.conformance;
 
-import io.akka.evalkit.metric.Judgement;
+import io.akka.evalkit.metric.Finding;
 import io.akka.evalkit.metric.ToolPermission;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -43,13 +43,13 @@ class ToolPermissionConformanceTest {
         @DisplayName("one call off the allow list scores 0.5 and names the tool")
         void unauthorisedTool() {
             var metric = ToolPermission.allowing("search_kb");
-            var judgements = metric.judge(List.of("search_kb", "delete_account"));
+            var findings = metric.judge(List.of("search_kb", "delete_account"));
 
-            assertThat(metric.aggregate(judgements)).isEqualTo(0.5);
+            assertThat(metric.aggregate(findings)).isEqualTo(0.5);
             assertThat(metric.withinThreshold(0.5)).isFalse();
             // Upstream asserts the tool name appears in the reason. A report row saying
             // which call was unauthorised is what a reader acts on.
-            assertThat(ToolPermission.unauthorised(judgements)).containsExactly("delete_account");
+            assertThat(ToolPermission.unauthorised(findings)).containsExactly("delete_account");
         }
 
         @Test
@@ -111,13 +111,13 @@ class ToolPermissionConformanceTest {
     class PortSpecific {
 
         @Test
-        @DisplayName("the score depends on the judgements alone")
+        @DisplayName("the score depends on the findings alone")
         void aggregateIsPure() {
             var metric = ToolPermission.allowing("a");
-            var judgements = List.of(Judgement.affirmed("a"), Judgement.denied("b", "no"));
+            var findings = List.of(Finding.affirmed("a"), Finding.denied("b", "no"));
 
-            assertThat(metric.aggregate(judgements)).isEqualTo(metric.aggregate(judgements));
-            assertThat(metric.aggregate(judgements)).isEqualTo(0.5);
+            assertThat(metric.aggregate(findings)).isEqualTo(metric.aggregate(findings));
+            assertThat(metric.aggregate(findings)).isEqualTo(0.5);
         }
 
         @Test

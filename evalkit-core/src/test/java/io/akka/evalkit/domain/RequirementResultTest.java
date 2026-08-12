@@ -30,7 +30,7 @@ class RequirementResultTest {
     }
 
     private static RunOutcome scored(int score) {
-        return new RunOutcome.Scored(Verdict.of("refund-30d", RUBRIC, score, "because"));
+        return new RunOutcome.Scored(Grade.of("refund-30d", RUBRIC, score, "because"));
     }
 
     @Test
@@ -85,7 +85,7 @@ class RequirementResultTest {
         var result = new RequirementResult(scenario(), List.of(
             new RequirementResult.Run(asserted(true)),
             new RequirementResult.Run(asserted(true)),
-            new RequirementResult.Run(new RunOutcome.Unscoreable("the filter refused")),
+            new RequirementResult.Run(new RunOutcome.Inconclusive("the filter refused")),
             new RequirementResult.Run(asserted(true))));
 
         assertThat(result.verdict()).isEqualTo(RequirementResult.Verdict.PASSED);

@@ -72,7 +72,7 @@ class RepeatedCampaignTest {
 
     private static ScorerRouter router() {
         return ScorerRouter.judgingEverything(
-            recording -> new RunOutcome.Unscoreable("no judge in this campaign"));
+            observation -> new RunOutcome.Inconclusive("no judge in this campaign"));
     }
 
     @Test

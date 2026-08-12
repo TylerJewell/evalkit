@@ -1,6 +1,6 @@
 package io.akka.evalkit.domain;
 
-import io.akka.evalkit.metric.Judgement;
+import io.akka.evalkit.metric.Finding;
 import io.akka.evalkit.metric.ToolPermission;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -71,7 +71,7 @@ class MeasuredOutcomeTest {
     void measuredIsEvidence() {
         assertThat(measured(0.9, 0.8).isEvidence()).isTrue();
         assertThat(measured(0.1, 0.8).isEvidence()).isTrue();
-        assertThat(new RunOutcome.Unscoreable("filtered").isEvidence()).isFalse();
+        assertThat(new RunOutcome.Inconclusive("filtered").isEvidence()).isFalse();
     }
 
     @Test
@@ -114,10 +114,10 @@ class MeasuredOutcomeTest {
     @DisplayName("a metric produces the outcome carrying its own id and version")
     void metricBuildsItsOwnOutcome() {
         var metric = ToolPermission.allowing("search_kb");
-        var judgements = List.of(Judgement.affirmed("search_kb"),
-                                 Judgement.denied("delete_account", "not allowed"));
+        var findings = List.of(Finding.affirmed("search_kb"),
+                                 Finding.denied("delete_account", "not allowed"));
 
-        var outcome = (RunOutcome.Measured) metric.outcome(judgements);
+        var outcome = (RunOutcome.Measured) metric.outcome(findings);
 
         assertThat(outcome.metricId()).isEqualTo("tool-permission");
         assertThat(outcome.metricVersion()).isEqualTo(1);

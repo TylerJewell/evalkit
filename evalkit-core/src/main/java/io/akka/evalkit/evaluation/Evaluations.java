@@ -3,7 +3,7 @@ package io.akka.evalkit.evaluation;
 import akka.javasdk.evaluation.Evaluation;
 import io.akka.evalkit.domain.Band;
 import io.akka.evalkit.domain.RunOutcome;
-import io.akka.evalkit.domain.Verdict;
+import io.akka.evalkit.domain.Grade;
 
 import java.util.Optional;
 
@@ -38,16 +38,16 @@ public final class Evaluations {
 
     private Evaluations() {}
 
-    /** A model judgement, with its band in the label and its rubric in the attributes. */
+    /** A model grade, with its band in the label and its rubric in the attributes. */
     public static Evaluation of(RunOutcome.Scored scored) {
-        Verdict verdict = scored.verdict();
-        return Evaluation.of(verdict.passed(), scored.describe())
-            .withScore(verdict.score())
-            .withLabel(verdict.band().name())
+        Grade grade = scored.grade();
+        return Evaluation.of(grade.passed(), scored.describe())
+            .withScore(grade.score())
+            .withLabel(grade.band().name())
             .withAttribute(KIND, "scored")
-            .withAttribute(SCENARIO, verdict.scenarioName())
-            .withAttribute(RUBRIC_ID, verdict.rubricId())
-            .withAttribute(RUBRIC_VERSION, Integer.toString(verdict.rubricVersion()));
+            .withAttribute(SCENARIO, grade.scenarioName())
+            .withAttribute(RUBRIC_ID, grade.rubricId())
+            .withAttribute(RUBRIC_VERSION, Integer.toString(grade.rubricVersion()));
     }
 
     /**
@@ -74,33 +74,33 @@ public final class Evaluations {
     }
 
     /**
-     * The verdict an evaluation holds, or nothing when it holds no readable one.
+     * The grade an evaluation holds, or nothing when it holds no readable one.
      *
      * <p>{@link Evaluation#score()} is an unbounded {@code Optional<Double>} and
-     * {@link Verdict} pairs a 1-to-10 score with its band. A score outside that range, or a
-     * label naming no band, produces {@link RunOutcome.Unscoreable} instead of throwing.
+     * {@link Grade} pairs a 1-to-10 score with its band. A score outside that range, or a
+     * label naming no band, produces {@link RunOutcome.Inconclusive} instead of throwing.
      */
     public static RunOutcome read(Evaluation evaluation) {
         if (!"scored".equals(evaluation.attributes().get(KIND))) {
-            return new RunOutcome.Unscoreable(
-                "the evaluation records no model judgement: " + evaluation.explanation());
+            return new RunOutcome.Inconclusive(
+                "the evaluation records no model grade: " + evaluation.explanation());
         }
         Optional<Double> score = evaluation.score();
         if (score.isEmpty()) {
-            return new RunOutcome.Unscoreable("the evaluation carries no score");
+            return new RunOutcome.Inconclusive("the evaluation carries no score");
         }
         double value = score.get();
         int whole = (int) Math.round(value);
         if (value != whole || whole < 1 || whole > 10) {
-            return new RunOutcome.Unscoreable(
+            return new RunOutcome.Inconclusive(
                 "the evaluation scores " + value + ", which is outside the 1 to 10 a band holds");
         }
         var attributes = evaluation.attributes();
-        var verdict = new Verdict(
+        var grade = new Grade(
             attributes.getOrDefault(SCENARIO, ""),
             attributes.getOrDefault(RUBRIC_ID, ""),
             Integer.parseInt(attributes.getOrDefault(RUBRIC_VERSION, "1")),
             whole, Band.of(whole), evaluation.explanation());
-        return new RunOutcome.Scored(verdict);
+        return new RunOutcome.Scored(grade);
     }
 }

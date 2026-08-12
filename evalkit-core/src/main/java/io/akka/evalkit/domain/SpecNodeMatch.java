@@ -25,7 +25,7 @@ public final class SpecNodeMatch {
             // The target does not report nodes, or reported none for this turn. Silently
             // passing would make every assertion vacuous; silently failing would blame
             // the system for the harness not being wired.
-            return new RunOutcome.Unscoreable(
+            return new RunOutcome.Inconclusive(
                 "expected node " + expected + " but the target reported none — "
                     + "does this target track specification nodes?");
         }

@@ -11,14 +11,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("ContainsAll · whether the reply stated what the policy requires")
 class ContainsAllTest {
 
-    private static Recording replying(String systemOutput) {
-        return Recording.of(new Transcript("refund-30d", "", "user: what if they don't fit?",
+    private static Observation replying(String systemOutput) {
+        return Observation.of(new Transcript("refund-30d", "", "user: what if they don't fit?",
             systemOutput, "a 30-day refund at no extra cost"));
     }
 
     /** The user asking about a term is not the system stating it. */
-    private static Recording userSaidItInstead(String simulationHistory) {
-        return Recording.of(new Transcript("refund-30d", "", simulationHistory,
+    private static Observation userSaidItInstead(String simulationHistory) {
+        return Observation.of(new Transcript("refund-30d", "", simulationHistory,
             "Let me look into that for you.", "a 30-day refund at no extra cost"));
     }
 
@@ -80,10 +80,10 @@ class ContainsAllTest {
         // Blaming the system for evidence the harness never received is the error this
         // whole kit exists to avoid.
         var outcome = ContainsAll.of("no extra cost")
-            .score(Recording.of(new Transcript("refund-30d", "", "user: hello?", "  ",
+            .score(Observation.of(new Transcript("refund-30d", "", "user: hello?", "  ",
                 "a 30-day refund")));
 
-        assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+        assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
         assertThat(outcome.isEvidence()).isFalse();
     }
 
@@ -109,7 +109,7 @@ class ContainsAllTest {
 
         assertThat(scenario.needsJudge()).isFalse();
 
-        Scorer judge = recording -> {
+        Scorer judge = observation -> {
             throw new AssertionError("a judge was called for a decision with a right answer");
         };
         var scorer = ScorerRouter.judgingEverything(judge).scorerFor(scenario).orElseThrow();

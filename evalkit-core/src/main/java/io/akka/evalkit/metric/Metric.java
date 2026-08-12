@@ -3,19 +3,19 @@ package io.akka.evalkit.metric;
 import java.util.List;
 
 /**
- * A score computed from judgements about parts of a reply.
+ * A score computed from findings about parts of a reply.
  *
  * <p><b>The two halves are separated because only one of them can be tested.</b>
- * Producing judgements may require a model, and a model samples: the same transcript
- * scores differently on consecutive runs. Turning judgements into a number is a pure
+ * Producing findings may require a model, and a model samples: the same transcript
+ * scores differently on consecutive runs. Turning findings into a number is a pure
  * function, it is where a port goes wrong, and it is silent when it does.
  *
- * <p>{@link #aggregate} therefore takes judgements rather than a recording, so the
+ * <p>{@link #aggregate} therefore takes findings rather than a observation, so the
  * arithmetic runs in a unit test with no provider, no key and no network. The conformance
  * fixtures under {@code io.akka.evalkit.conformance} exercise exactly this method.
  *
- * <p>A deterministic metric produces its own judgements by comparison and never reaches a
- * model. {@link ToolPermission} is one, and its judgements are as testable as its
+ * <p>A deterministic metric produces its own findings by comparison and never reaches a
+ * model. {@link ToolPermission} is one, and its findings are as testable as its
  * arithmetic.
  */
 public interface Metric {
@@ -31,14 +31,14 @@ public interface Metric {
     double threshold();
 
     /**
-     * Judgements to a score between 0 and 1.
+     * Findings to a score between 0 and 1.
      *
-     * <p>Pure. The same judgements produce the same score on any machine at any time.
+     * <p>Pure. The same findings produce the same score on any machine at any time.
      *
-     * @param judgements in the order they were produced, which some metrics use and
+     * @param findings in the order they were produced, which some metrics use and
      *                   others ignore
      */
-    double aggregate(List<Judgement> judgements);
+    double aggregate(List<Finding> findings);
 
     /** Whether a score counts as within budget. */
     default boolean withinThreshold(double score) {
@@ -51,14 +51,14 @@ public interface Metric {
      * <p>Carries the metric id and version, so a run recorded today stays interpretable
      * after somebody changes a threshold.
      */
-    default io.akka.evalkit.domain.RunOutcome outcome(List<Judgement> judgements) {
-        double value = aggregate(judgements);
+    default io.akka.evalkit.domain.RunOutcome outcome(List<Finding> findings) {
+        double value = aggregate(findings);
         return new io.akka.evalkit.domain.RunOutcome.Measured(
             ref().metricId(), ref().version(), value, threshold(), withinThreshold(value));
     }
 
     /**
-     * The share of judgements that went the metric's way.
+     * The share of findings that went the metric's way.
      *
      * <p>The arithmetic most metrics use, kept here so that a metric which needs it does
      * not restate it and drift.
@@ -67,9 +67,9 @@ public interface Metric {
      * alternative reports a service as failing on evidence nobody produced. Metrics that
      * disagree override this method and say so.
      */
-    static double shareAffirmed(List<Judgement> judgements) {
-        if (judgements.isEmpty()) return 1.0;
-        long affirmed = judgements.stream().filter(Judgement::affirmed).count();
-        return (double) affirmed / judgements.size();
+    static double shareAffirmed(List<Finding> findings) {
+        if (findings.isEmpty()) return 1.0;
+        long affirmed = findings.stream().filter(Finding::affirmed).count();
+        return (double) affirmed / findings.size();
     }
 }

@@ -16,7 +16,7 @@ class CampaignReportTest {
         "{replay_history}{simulation_history}{system_output}{expected_outcome}");
 
     private static RunOutcome scored(int score) {
-        return new RunOutcome.Scored(Verdict.of("s", RUBRIC, score, ""));
+        return new RunOutcome.Scored(Grade.of("s", RUBRIC, score, ""));
     }
 
     /** Builds a report from outcomes, all seeded unless stated. */
@@ -46,9 +46,9 @@ class CampaignReportTest {
     void unscoreableIsNotFailure() {
         // Gemini's content filter refused a GenUC-02 transcript during calibration.
         var r = report(List.of(scored(10),
-            new RunOutcome.Unscoreable("content filter refused the transcript")));
+            new RunOutcome.Inconclusive("content filter refused the transcript")));
 
-        assertThat(r.unscoreable()).isEqualTo(1);
+        assertThat(r.inconclusive()).isEqualTo(1);
         assertThat(r.failed()).isZero();
         assertThat(r.judged()).isEqualTo(1);
     }
@@ -69,7 +69,7 @@ class CampaignReportTest {
         var outcomes = new ArrayList<RunOutcome>();
         for (int i = 0; i < 8; i++) outcomes.add(scored(9));
         outcomes.add(new RunOutcome.NotReached(RunOutcome.Cause.SETUP_FAILED, "setup failed", Precursor.Fixture.named("f")));
-        outcomes.add(new RunOutcome.Unscoreable("filter"));
+        outcomes.add(new RunOutcome.Inconclusive("filter"));
 
         var r = report(outcomes);
 
@@ -143,7 +143,7 @@ class CampaignReportTest {
             SpecNodeMatch.assertReached("GenUC-17a", Optional.of("GenUC-17a")),
             SpecNodeMatch.assertReached("GenUC-17b", Optional.of("GLOB-04b")),
             SpecNodeMatch.assertReached("SoC-03e", Optional.of("GLOB-04a")),
-            new RunOutcome.Scored(new Verdict("FAQ-01", "scenario-judge", 2, 5,
+            new RunOutcome.Scored(new Grade("FAQ-01", "scenario-judge", 2, 5,
                 Band.of(5), "")));
         var report = CampaignReport.of(outcomes,
             List.of(Precursor.Fixture.named("f"), Precursor.Fixture.named("f"), Precursor.Fixture.named("f"), Precursor.Fixture.named("f")));

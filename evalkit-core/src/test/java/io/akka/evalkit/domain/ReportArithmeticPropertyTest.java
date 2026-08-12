@@ -33,7 +33,7 @@ class ReportArithmeticPropertyTest {
         for (int i = 0; i < size; i++) {
             outcomes.add(switch (random.nextInt(6)) {
                 case 0 -> new RunOutcome.Scored(
-                    Verdict.of("s" + i, RUBRIC, 1 + random.nextInt(10), ""));
+                    Grade.of("s" + i, RUBRIC, 1 + random.nextInt(10), ""));
                 case 1 -> new RunOutcome.Asserted(random.nextBoolean(), "n" + i, "n" + i);
                 case 2 -> new RunOutcome.Measured("m", 1, random.nextDouble(), 0.5,
                     random.nextBoolean());
@@ -41,7 +41,7 @@ class ReportArithmeticPropertyTest {
                     new Precursor.None());
                 case 4 -> new RunOutcome.NotReached(RunOutcome.Cause.NO_REPLY, "silence",
                     new Precursor.None());
-                default -> new RunOutcome.Unscoreable("filtered");
+                default -> new RunOutcome.Inconclusive("filtered");
             });
             precursors.add(random.nextBoolean()
                 ? Precursor.replay("hello")
@@ -62,7 +62,7 @@ class ReportArithmeticPropertyTest {
         for (int trial = 0; trial < TRIALS; trial++) {
             var report = reportOf(random(random, random.nextInt(40)));
 
-            assertThat(report.judged() + report.notReached() + report.unscoreable())
+            assertThat(report.judged() + report.notReached() + report.inconclusive())
                 .as("total")
                 .isEqualTo(report.total());
             assertThat(report.passed() + report.review() + report.failed())
@@ -226,7 +226,7 @@ class ReportArithmeticPropertyTest {
     @DisplayName("one outcome per precursor, or the report is refused")
     void mismatchedLengthsAreRefused() {
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
-                CampaignReport.of(List.of(new RunOutcome.Unscoreable("x")), List.of()))
+                CampaignReport.of(List.of(new RunOutcome.Inconclusive("x")), List.of()))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("one precursor per outcome");
     }

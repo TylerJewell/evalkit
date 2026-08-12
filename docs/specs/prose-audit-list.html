@@ -89,13 +89,13 @@
         <tr><td class="term">produced no evidence</td><td class="n">4</td><td>Same.</td><td class="fix">produced no result</td><td class="off">no</td></tr>
         <tr><td class="term">the findings below stand</td><td class="n">2</td><td>A ruling survives appeal.</td><td class="fix">the 9 failures are listed below</td><td class="off">no</td></tr>
         <tr><td class="term">quotable / not quotable</td><td class="n">1</td><td>A press guideline.</td><td class="fix">complete enough to report</td><td class="off">no</td></tr>
-        <tr><td class="term">verdict</td><td class="n">31</td><td>Defensible for a judge's output, and it spreads. <code>Verdict</code> is a type name.</td><td class="fix">keep on the judge, drop elsewhere</td><td class="off">no</td></tr>
+        <tr><td class="term">grade</td><td class="n">31</td><td>Defensible for a judge's output, and it spreads. <code>Grade</code> is a type name.</td><td class="fix">keep on the judge, drop elsewhere</td><td class="off">no</td></tr>
       </tbody>
     </table></div>
 
     <div class="note">
       <h3>API names carry this vocabulary into the compiler</h3>
-      <p><code>RunOutcome.isEvidence()</code>, <code>CampaignReport.isTrustworthy()</code>, <code>Verdict</code> and <code>Unscoreable</code> put this vocabulary in the compiler. A caller reading <code>isTrustworthy()</code> cannot tell what it checks. <code>hasCompleteResults()</code> names the condition.</p>
+      <p><code>RunOutcome.isEvidence()</code>, <code>CampaignReport.isTrustworthy()</code>, <code>Grade</code> and <code>Inconclusive</code> put this vocabulary in the compiler. A caller reading <code>isTrustworthy()</code> cannot tell what it checks. <code>hasCompleteResults()</code> names the condition.</p>
     </div>
   </section>
 

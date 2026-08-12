@@ -39,7 +39,7 @@ class WorkflowStateSerializationTest {
             4,    // review
             6,    // failed
             3,    // notReached
-            2,    // unscoreable
+            2,    // inconclusive
             41,   // walked
             55,   // asserted
             52,   // assertedPassed
@@ -84,7 +84,7 @@ class WorkflowStateSerializationTest {
         // that deploy holds state in this shape, and refusing to read it would end the
         // campaign rather than resume it, losing the hours already spent.
         String written = "{\"passed\":70,\"review\":4,\"failed\":6,\"notReached\":3,"
-            + "\"unscoreable\":2,\"walked\":41,\"asserted\":55,\"assertedPassed\":52,"
+            + "\"inconclusive\":2,\"walked\":41,\"asserted\":55,\"assertedPassed\":52,"
             + "\"setupFailed\":9,\"noReply\":8,\"trustworthy\":true}";
 
         var after = SerializationTestkit.deserialize(CampaignReport.class, envelope(written));

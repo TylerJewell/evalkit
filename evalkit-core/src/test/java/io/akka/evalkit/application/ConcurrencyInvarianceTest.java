@@ -4,14 +4,14 @@ import io.akka.evalkit.domain.CampaignPlan;
 import io.akka.evalkit.domain.CampaignReport;
 import io.akka.evalkit.domain.Lanes;
 import io.akka.evalkit.domain.Precursor;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Rubric;
 import io.akka.evalkit.domain.Scenario;
 import io.akka.evalkit.domain.Scorer;
 import io.akka.evalkit.domain.ScorerRouter;
 import io.akka.evalkit.domain.SystemUnderTest;
-import io.akka.evalkit.domain.Verdict;
+import io.akka.evalkit.domain.Grade;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -75,7 +75,7 @@ class ConcurrencyInvarianceTest {
         }
     }
 
-    /** Scores every recording, naming the scenario it was given. */
+    /** Scores every observation, naming the scenario it was given. */
     private static final class NamingJudge implements Scorer {
         private final int failEvery;
 
@@ -84,12 +84,12 @@ class ConcurrencyInvarianceTest {
         }
 
         @Override
-        public RunOutcome score(Recording recording) {
-            String name = recording.scenarioName();
+        public RunOutcome score(Observation observation) {
+            String name = observation.scenarioName();
             if (failEvery > 0 && Math.abs(name.hashCode()) % failEvery == 0) {
                 throw new IllegalStateException("judge refused " + name);
             }
-            return new RunOutcome.Scored(Verdict.of(name, RUBRIC, 9, ""));
+            return new RunOutcome.Scored(Grade.of(name, RUBRIC, 9, ""));
         }
     }
 
@@ -160,7 +160,7 @@ class ConcurrencyInvarianceTest {
         for (CampaignRunner.Completed completed : result.completed()) {
             String id = completed.scenario().id();
             switch (completed.outcome()) {
-                case RunOutcome.Scored s -> assertThat(s.verdict().scenarioName()).isEqualTo(id);
+                case RunOutcome.Scored s -> assertThat(s.grade().scenarioName()).isEqualTo(id);
                 case RunOutcome.Asserted a -> assertThat(a.expected()).isEqualTo("node-" + id);
                 default -> throw new AssertionError(
                     "this dataset produces only scored and asserted rows, got " + completed.outcome());

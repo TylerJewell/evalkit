@@ -23,8 +23,8 @@ repository, so ask before changing a rule that reads as arbitrary.
 
 Use GitHub issues. A report of a wrong number is most useful with the scenario,
 the outcome the run produced, and the outcome you expected. A report about a
-metric is most useful with the judgements that produced the score, because
-`aggregate` is a pure function and those judgements reproduce it exactly.
+metric is most useful with the findings that produced the score, because
+`aggregate` is a pure function and those findings reproduce it exactly.
 
 ## Before you open a pull request
 
@@ -110,8 +110,8 @@ and the commit the values were read at, and a conformance test asserting them.
 `ConformanceCoverageTest` fails without both. Record the derivation in `NOTICE`.
 
 **A metric splits collection from arithmetic.** `aggregate` is a pure function
-of the judgements, so it runs under test with no provider and no key. Collecting
-judgements may call a model. A metric that mixes the two has no testable half.
+of the findings, so it runs under test with no provider and no key. Collecting
+findings may call a model. A metric that mixes the two has no testable half.
 
 **A threshold change is a version change.** `MetricRef` and `Rubric` both carry
 a version, and `Scoring.compare` throws across versions. Raising a threshold

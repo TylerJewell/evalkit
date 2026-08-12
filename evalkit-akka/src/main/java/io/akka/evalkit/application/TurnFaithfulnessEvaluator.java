@@ -4,7 +4,7 @@ import akka.javasdk.annotations.Component;
 import akka.javasdk.client.ComponentClient;
 import akka.javasdk.ledger.LedgerClient;
 import akka.javasdk.ledger.ToolCall;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.metric.Metric;
 import io.akka.evalkit.metric.TurnFaithfulness;
 
@@ -74,12 +74,12 @@ public class TurnFaithfulnessEvaluator extends JudgedMetricEvaluator {
     }
 
     @Override
-    public String material(Recording recording) {
-        String passages = recording.toolsCalled().stream()
+    public String material(Observation observation) {
+        String passages = observation.toolsCalled().stream()
             .map(ToolCall::response)
             .filter(response -> response != null && !response.isBlank())
             .collect(Collectors.joining("\n\n"));
-        String answered = recording.interaction().finalResponseText().strip();
+        String answered = observation.interaction().finalResponseText().strip();
         if (passages.isBlank() || answered.isEmpty()) return "";
         return "Passages:\n\n" + passages + "\n\nReply:\n\n" + answered;
     }

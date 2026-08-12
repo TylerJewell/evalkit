@@ -1,6 +1,6 @@
 package io.akka.evalkit.ledger;
 
-import io.akka.evalkit.domain.NoVerdict;
+import io.akka.evalkit.domain.InconclusiveScore;
 import io.akka.evalkit.metric.ToolCorrectness;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,7 +55,7 @@ class ArgumentsTest {
     @DisplayName("a string that is not a JSON object reaches no verdict")
     void anUnparseableStringIsNoVerdict() {
         assertThatThrownBy(() -> Arguments.parse("query=refund"))
-            .isInstanceOf(NoVerdict.class)
+            .isInstanceOf(InconclusiveScore.class)
             .hasMessageContaining("not readable as JSON");
     }
 
@@ -79,7 +79,7 @@ class ArgumentsTest {
             .comparingArguments();
         var called = List.of(new akka.javasdk.ledger.ToolCall("", "search", "query=refund", ""));
 
-        assertThatThrownBy(() -> metric.judge(called)).isInstanceOf(NoVerdict.class);
+        assertThatThrownBy(() -> metric.judge(called)).isInstanceOf(InconclusiveScore.class);
     }
 
     /**

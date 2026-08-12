@@ -64,13 +64,13 @@ class SpecNodeMatchTest {
     }
 
     @Test
-    @DisplayName("a target that reports no node is unscoreable, not a pass and not a failure")
+    @DisplayName("a target that reports no node is inconclusive, not a pass and not a failure")
     void noNodeReported() {
         // Passing would make every assertion vacuous; failing would blame the system for
         // a harness that was never wired to read a node.
         var outcome = SpecNodeMatch.assertReached("GenUC-17a", Optional.empty());
 
-        assertThat(outcome).isInstanceOfSatisfying(RunOutcome.Unscoreable.class,
+        assertThat(outcome).isInstanceOfSatisfying(RunOutcome.Inconclusive.class,
             u -> assertThat(u.reason()).contains("reported none"));
         assertThat(outcome.isEvidence()).isFalse();
     }

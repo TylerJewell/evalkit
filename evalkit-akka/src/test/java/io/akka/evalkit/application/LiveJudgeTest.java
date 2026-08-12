@@ -82,7 +82,7 @@ class LiveJudgeTest extends TestKitSupport {
             var bare = judge(transcript, BARE);
             var reasoned = judge(transcript, REASONED);
             judged.add(new Judged(transcript.scenarioName(), bare.score(), reasoned.score(),
-                reasoned.reason()));
+                reasoned.statedExplanation()));
         }
 
         System.out.println("\n============ live judge, v2 against v3 ============");

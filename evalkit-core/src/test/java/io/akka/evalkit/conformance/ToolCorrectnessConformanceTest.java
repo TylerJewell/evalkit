@@ -52,10 +52,10 @@ class ToolCorrectnessConformanceTest {
         @DisplayName("one expected tool of two scores 0.5 and names the one missed")
         void oneExpectedToolMissed() {
             var metric = ToolCorrectness.expecting("search_kb", "reply");
-            var judgements = metric.judge(List.of(Interactions.tool("search_kb")));
+            var findings = metric.judge(List.of(Interactions.tool("search_kb")));
 
-            assertThat(metric.aggregate(judgements)).isEqualTo(0.5);
-            assertThat(ToolCorrectness.missing(judgements)).containsExactly("reply");
+            assertThat(metric.aggregate(findings)).isEqualTo(0.5);
+            assertThat(ToolCorrectness.missing(findings)).containsExactly("reply");
         }
 
         @Test
@@ -263,13 +263,13 @@ class ToolCorrectnessConformanceTest {
     class PortSpecific {
 
         @Test
-        @DisplayName("the score depends on the judgements alone")
+        @DisplayName("the score depends on the findings alone")
         void aggregateIsPure() {
             var metric = ToolCorrectness.expecting("a", "b");
-            var judgements = metric.judge(List.of(Interactions.tool("a")));
+            var findings = metric.judge(List.of(Interactions.tool("a")));
 
-            assertThat(metric.aggregate(judgements)).isEqualTo(metric.aggregate(judgements));
-            assertThat(metric.aggregate(judgements)).isEqualTo(0.5);
+            assertThat(metric.aggregate(findings)).isEqualTo(metric.aggregate(findings));
+            assertThat(metric.aggregate(findings)).isEqualTo(0.5);
         }
 
         @Test
@@ -288,11 +288,11 @@ class ToolCorrectnessConformanceTest {
                 List.of(Interactions.tool("search", Map.of("query", "refund", "limit", "5"))))
                 .comparingArguments();
 
-            var judgement = metric.judge(List.of(
+            var finding = metric.judge(List.of(
                 Interactions.tool("search", Map.of("query", "refund", "limit", "50")))).get(0);
 
-            assertThat(judgement.credit()).isEqualTo(0.5);
-            assertThat(judgement.affirmed()).isFalse();
+            assertThat(finding.credit()).isEqualTo(0.5);
+            assertThat(finding.affirmed()).isFalse();
         }
     }
 }

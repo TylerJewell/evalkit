@@ -1,7 +1,7 @@
 package io.akka.evalkit.metric;
 
 import io.akka.evalkit.domain.ModelReply;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Scorer;
 
@@ -13,18 +13,18 @@ import java.util.Optional;
  * <p>DeepEval's trace-level agentic metrics share a formula:
  * {@code AlignmentScore(task, something)}, where the something is the outcome, the plan or
  * the steps. One model call returns one score and one sentence, which is why these are not
- * {@link Metric}s: there is no list of judgements to aggregate, so the arithmetic that
+ * {@link Metric}s: there is no list of findings to aggregate, so the arithmetic that
  * {@link Metric#aggregate} exists to keep testable does not exist here.
  *
  * <p><b>What that costs, stated once.</b> A metric whose score is a model's opinion inherits
  * everything a judged run inherits &mdash; it does not reproduce, and two runs of the same
- * recording can land either side of a threshold. Deterministic metrics and comparison are
+ * observation can land either side of a threshold. Deterministic metrics and comparison are
  * what a campaign should be made of; these are for the questions that have no right answer
  * to compare against.
  *
  * <p><b>Nothing to read is not a score.</b> Upstream scores 1 and passes when a trace carries
  * no plan, which is a check passing by finding nothing. Here a question that cannot be put
- * produces {@link RunOutcome.Unscoreable}, which keeps the run out of the pass rate and names
+ * produces {@link RunOutcome.Inconclusive}, which keeps the run out of the pass rate and names
  * what was missing.
  *
  * <p>Ported in shape from DeepEval, Apache 2.0, read at commit bd10fa6. Upstream ships no
@@ -87,7 +87,7 @@ public abstract sealed class AlignmentMetric implements Scorer
     }
 
     /** The question this metric puts, or empty when the run recorded nothing to ask about. */
-    protected abstract Optional<Question> ask(Recording recording);
+    protected abstract Optional<Question> ask(Observation observation);
 
     /** What was missing, for the row that says the run produced no evidence. */
     protected abstract String absence();
@@ -98,16 +98,16 @@ public abstract sealed class AlignmentMetric implements Scorer
     }
 
     @Override
-    public RunOutcome score(Recording recording) {
-        Optional<Question> question = ask(recording);
+    public RunOutcome score(Observation observation) {
+        Optional<Question> question = ask(observation);
         if (question.isEmpty()) {
-            return new RunOutcome.Unscoreable(ref.metricId() + ": " + absence());
+            return new RunOutcome.Inconclusive(ref.metricId() + ": " + absence());
         }
 
         String reply = assessor.assess(question.orElseThrow());
         Optional<ModelReply.Stated> stated = ModelReply.read(reply);
         if (stated.isEmpty()) {
-            return new RunOutcome.Unscoreable(
+            return new RunOutcome.Inconclusive(
                 ref.metricId() + ": the assessor returned no score");
         }
 
@@ -115,13 +115,13 @@ public abstract sealed class AlignmentMetric implements Scorer
         if (value.isEmpty()) {
             // A score outside 0 to 1 is a scale this metric cannot read, and reading it
             // anyway would put a number in the report that means something else.
-            return new RunOutcome.Unscoreable(ref.metricId()
+            return new RunOutcome.Inconclusive(ref.metricId()
                 + ": the assessor scored \"" + stated.orElseThrow().score() + "\", which is not a share");
         }
 
         double score = value.orElseThrow();
         return new RunOutcome.Measured(ref.metricId(), ref.version(), score, threshold,
-            score >= threshold, stated.orElseThrow().reason());
+            score >= threshold, stated.orElseThrow().explanation());
     }
 
     /** A score between 0 and 1, or empty when the text is not one. */
@@ -135,8 +135,8 @@ public abstract sealed class AlignmentMetric implements Scorer
     }
 
     /** The graded reply, falling back to the exchange when the target reported no final text. */
-    static String outcomeOf(Recording recording) {
-        var transcript = recording.transcript();
+    static String outcomeOf(Observation observation) {
+        var transcript = observation.transcript();
         return transcript.systemOutput().isBlank()
             ? transcript.simulationHistory() : transcript.systemOutput();
     }
@@ -152,8 +152,8 @@ public abstract sealed class AlignmentMetric implements Scorer
      * switched off produces. That is an absence of evidence about planning, not evidence
      * that the agent did not plan, and the metrics reading this report it as such.
      */
-    static Optional<String> recordedPlan(Recording recording) {
-        String reasoning = recording.thinking();
+    static Optional<String> recordedPlan(Observation observation) {
+        String reasoning = observation.thinking();
         return reasoning.isBlank() ? Optional.empty() : Optional.of(reasoning);
     }
 }

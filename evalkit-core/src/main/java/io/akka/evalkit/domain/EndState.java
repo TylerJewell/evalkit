@@ -52,12 +52,12 @@ public final class EndState implements Scorer {
     }
 
     @Override
-    public RunOutcome score(Recording recording) {
-        var actual = recording.endState();
+    public RunOutcome score(Observation observation) {
+        var actual = observation.endState();
         if (actual.isEmpty()) {
             // The target does not report state, so nothing here is a finding about the
             // system. Failing would blame it for evidence the harness never received.
-            return new RunOutcome.Unscoreable(
+            return new RunOutcome.Inconclusive(
                 "the target reported no state, so the end state cannot be compared — "
                     + "does this target expose what a run changed?");
         }

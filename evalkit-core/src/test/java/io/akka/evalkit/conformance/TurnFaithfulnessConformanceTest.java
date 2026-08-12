@@ -1,6 +1,6 @@
 package io.akka.evalkit.conformance;
 
-import io.akka.evalkit.metric.Judgement;
+import io.akka.evalkit.metric.Finding;
 import io.akka.evalkit.metric.TurnFaithfulness;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,7 +10,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The empty-judgement behaviour is DeepEval's, pinned four times in its own fixture.
+ * The empty-finding behaviour is DeepEval's, pinned four times in its own fixture.
  *
  * <p>Source: {@code tests/test_metrics/test_turn_faithfulness_metric_empty_verdicts.py} at
  * commit bd10fa6. Upstream installs a stub model that raises if the metric ever calls it,
@@ -31,30 +31,30 @@ class TurnFaithfulnessConformanceTest {
     @Test
     @DisplayName("every claim supported scores 1.0")
     void allClaimsSupported() {
-        var judgements = List.of(
-            Judgement.affirmed("refunds run 30 days"),
-            Judgement.affirmed("no extra cost"));
+        var findings = List.of(
+            Finding.affirmed("refunds run 30 days"),
+            Finding.affirmed("no extra cost"));
 
-        assertThat(metric.aggregate(judgements)).isEqualTo(1.0);
+        assertThat(metric.aggregate(findings)).isEqualTo(1.0);
     }
 
     @Test
     @DisplayName("one unsupported claim among four scores 0.75")
     void oneUnsupportedClaim() {
-        var judgements = List.of(
-            Judgement.affirmed("refunds run 30 days"),
-            Judgement.affirmed("no extra cost"),
-            Judgement.affirmed("returns are free"),
-            Judgement.denied("refunds are instant", "no passage mentions timing"));
+        var findings = List.of(
+            Finding.affirmed("refunds run 30 days"),
+            Finding.affirmed("no extra cost"),
+            Finding.affirmed("returns are free"),
+            Finding.denied("refunds are instant", "no passage mentions timing"));
 
-        assertThat(metric.aggregate(judgements)).isEqualTo(0.75);
+        assertThat(metric.aggregate(findings)).isEqualTo(0.75);
         assertThat(metric.withinThreshold(0.75)).isTrue();
     }
 
     @Test
     @DisplayName("no claim supported scores 0.0")
     void nothingSupported() {
-        assertThat(metric.aggregate(List.of(Judgement.denied("invented", "unsupported"))))
+        assertThat(metric.aggregate(List.of(Finding.denied("invented", "unsupported"))))
             .isEqualTo(0.0);
         assertThat(metric.withinThreshold(0.0)).isFalse();
     }

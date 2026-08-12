@@ -2,8 +2,8 @@ package io.akka.evalkit.evaluation;
 
 import akka.javasdk.annotations.Component;
 import akka.javasdk.ledger.LedgerClient;
-import io.akka.evalkit.domain.Recording;
-import io.akka.evalkit.metric.Judgement;
+import io.akka.evalkit.domain.Observation;
+import io.akka.evalkit.metric.Finding;
 import io.akka.evalkit.metric.Metric;
 import io.akka.evalkit.metric.ToolPermission;
 
@@ -26,7 +26,7 @@ import java.util.List;
  * }
  * }</pre>
  *
- * <p>A run that called no tool produces no judgement, and {@link ToolPermission} scores an
+ * <p>A run that called no tool produces no finding, and {@link ToolPermission} scores an
  * empty list 1. A policy holds over a run that called nothing, because nothing unauthorised
  * happened.
  */
@@ -51,7 +51,7 @@ public class ToolPermissionEvaluator extends MetricEvaluator {
     }
 
     @Override
-    protected List<Judgement> judge(Recording recording) {
-        return policy.judge(recording.toolNames());
+    protected List<Finding> judge(Observation observation) {
+        return policy.judge(observation.toolNames());
     }
 }

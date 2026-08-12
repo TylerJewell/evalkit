@@ -110,14 +110,14 @@ public final class RunSummary {
          * call that produced text and reported no usage is counted here, so the floor is
          * established from the record instead of trusted from the target.
          *
-         * @param judge what the judge spent, which no recording of the system carries
+         * @param judge what the judge spent, which no observation of the system carries
          */
-        public static Spend over(java.util.List<Recording> recordings, Tokens judge) {
-            Tokens system = recordings.stream()
-                .map(Recording::spend)
+        public static Spend over(java.util.List<Observation> observations, Tokens judge) {
+            Tokens system = observations.stream()
+                .map(Observation::spend)
                 .reduce(Tokens.NONE, Tokens::plus);
-            int unaccounted = recordings.stream()
-                .mapToInt(Recording::callsMissingUsage)
+            int unaccounted = observations.stream()
+                .mapToInt(Observation::callsMissingUsage)
                 .sum();
             return new Spend(system, judge, unaccounted);
         }
@@ -254,7 +254,7 @@ public final class RunSummary {
             + rightText("", 9) + right(report.withoutEvidence(), 7));
         sub(out, "never reached the question", report.setupFailed());
         sub(out, "no reply within " + replyTimeoutSeconds + " seconds", report.noReply());
-        sub(out, "answer not assessed", report.unscoreable());
+        sub(out, "answer not assessed", report.inconclusive());
         sub(out, "the scoring itself failed", report.scorerFailed());
 
         blank(out);
@@ -317,8 +317,8 @@ public final class RunSummary {
             parts.add("The " + report.noReply() + " were asked and did not answer within "
                 + timeout + " seconds.");
         }
-        if (report.unscoreable() > 0) {
-            parts.add("The " + report.unscoreable() + " were answered, but the second model "
+        if (report.inconclusive() > 0) {
+            parts.add("The " + report.inconclusive() + " were answered, but the second model "
                 + "would not judge the reply.");
         }
         return parts.isEmpty() ? "Every test produced a result." : String.join(" ", parts);

@@ -17,8 +17,8 @@ class PolicyTest {
 
     private static final Rubric RUBRIC = Rubric.load("scenario-judge", 3);
 
-    private static Verdict verdict(String scenario, int score) {
-        return Verdict.of(scenario, RUBRIC, score, "because");
+    private static Grade verdict(String scenario, int score) {
+        return Grade.of(scenario, RUBRIC, score, "because");
     }
 
     @Test

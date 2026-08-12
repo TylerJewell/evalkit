@@ -145,7 +145,7 @@ class JudgeCalibrationTest extends TestKitSupport {
                     var reasoned = judge(sample, REASONED);
                     synchronized (compared) {
                         compared.add(new Compared(sample, bare.score(), reasoned.score(),
-                            reasoned.reason()));
+                            reasoned.statedExplanation()));
                     }
                 } catch (RuntimeException e) {
                     synchronized (failures) {
@@ -176,7 +176,7 @@ class JudgeCalibrationTest extends TestKitSupport {
             return Band.of(reasoned);
         }
 
-        boolean statesReason() {
+        boolean statesExplanation() {
             return reason != null && !reason.isBlank();
         }
     }
@@ -199,7 +199,7 @@ class JudgeCalibrationTest extends TestKitSupport {
         for (Compared c : compared) {
             if (c.bareBand() == c.reasonedBand()) sameBand++;
             if (c.bare() == c.reasoned()) sameScore++;
-            if (c.statesReason()) withReason++;
+            if (c.statesExplanation()) withReason++;
             if (Band.of(c.sample().reference()) == c.bareBand()) bareAgrees++;
             if (Band.of(c.sample().reference()) == c.reasonedBand()) reasonedAgrees++;
             moved += Math.abs(c.reasoned() - c.bare());
@@ -253,7 +253,7 @@ class JudgeCalibrationTest extends TestKitSupport {
             // Not a finding about the judge. Every v3 reply arriving without a reason means
             // the rubric or the reader is broken, and the comparison above measured nothing.
             throw new AssertionError(
-                "no v3 judgement carried a reason; the rubric asked for one");
+                "no v3 finding carried a reason; the rubric asked for one");
         }
     }
 
@@ -289,7 +289,7 @@ class JudgeCalibrationTest extends TestKitSupport {
         int n = scored.size();
         System.out.println("\n================ judge calibration ================");
         System.out.printf("judged            %d of %d  (%d failed)%n", n, total, failures.size());
-        System.out.printf("wall clock        %.1fs at %d lanes → %.1f judgements/s%n",
+        System.out.printf("wall clock        %.1fs at %d lanes → %.1f findings/s%n",
             elapsed, lanes, n / elapsed);
         System.out.printf("achieved lanes    %.1f of %d configured  (%.0f%% utilisation)%n",
             achieved, lanes, 100.0 * achieved / lanes);

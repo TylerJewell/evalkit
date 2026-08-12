@@ -105,11 +105,11 @@ class FailingToolTest {
     @DisplayName("an agent that escalates passes and one that invents an answer fails")
     void recoveryIsScoredApartFromFabrication() {
         var escalates = ContainsAll.of("can't reach", "ticket").score(
-            Recording.of(new Transcript("balance-when-down", "", "user: what is my balance?",
+            Observation.of(new Transcript("balance-when-down", "", "user: what is my balance?",
                 "I can't reach the account service right now. I've raised a ticket.",
                 "says it cannot check")));
         var invents = ContainsAll.of("can't reach", "ticket").score(
-            Recording.of(new Transcript("balance-when-down", "", "user: what is my balance?",
+            Observation.of(new Transcript("balance-when-down", "", "user: what is my balance?",
                 "Your balance is $421.00.", "says it cannot check")));
 
         assertThat(escalates.passed()).isTrue();

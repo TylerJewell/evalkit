@@ -7,7 +7,7 @@ import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Rubric;
 import io.akka.evalkit.domain.Scenario;
 import io.akka.evalkit.domain.SystemUnderTest;
-import io.akka.evalkit.domain.Verdict;
+import io.akka.evalkit.domain.Grade;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -63,7 +63,7 @@ class CampaignRunnerTest {
 
     private static CampaignRunner.Judge scoring(int score) {
         return (transcript, rubric) ->
-            new RunOutcome.Scored(Verdict.of(transcript.scenarioName(), rubric, score, ""));
+            new RunOutcome.Scored(Grade.of(transcript.scenarioName(), rubric, score, ""));
     }
 
     // ---- pre-flight ----
@@ -132,19 +132,19 @@ class CampaignRunnerTest {
     @DisplayName("a judge that throws becomes absent evidence, not a failure")
     void judgeRefusal() {
         // Gemini's content filter did exactly this during calibration. A judge that declines
-        // says so with NoVerdict, which is what separates it from a judge that broke.
+        // says so with InconclusiveScore, which is what separates it from a judge that broke.
         CampaignRunner.Judge refusing = (t, r) -> {
-            throw new io.akka.evalkit.domain.NoVerdict("content filter refused the transcript");
+            throw new io.akka.evalkit.domain.InconclusiveScore("content filter refused the transcript");
         };
 
         var result = CampaignRunner.run(
             plan(List.of(judged("a", Precursor.Fixture.named("authenticated"))), 1),
             new Target("authenticated"), refusing);
 
-        assertThat(result.report().unscoreable()).isEqualTo(1);
+        assertThat(result.report().inconclusive()).isEqualTo(1);
         assertThat(result.report().scorerFailed()).isZero();
         assertThat(result.report().failed()).isZero();
-        assertThat(result.outcomes()).first().isInstanceOfSatisfying(RunOutcome.Unscoreable.class,
+        assertThat(result.outcomes()).first().isInstanceOfSatisfying(RunOutcome.Inconclusive.class,
             u -> assertThat(u.reason()).contains("content filter"));
     }
 
@@ -160,7 +160,7 @@ class CampaignRunnerTest {
             new Target("authenticated"), broken);
 
         assertThat(result.report().scorerFailed()).isEqualTo(1);
-        assertThat(result.report().unscoreable()).isZero();
+        assertThat(result.report().inconclusive()).isZero();
         assertThat(result.report().failed()).isZero();
         assertThat(result.notes())
             .anySatisfy(note -> assertThat(note).contains("defect in this kit"));
@@ -238,7 +238,7 @@ class CampaignRunnerTest {
         var judgeCalls = new java.util.concurrent.atomic.AtomicInteger();
         CampaignRunner.Judge counting = (t, r) -> {
             judgeCalls.incrementAndGet();
-            return new RunOutcome.Scored(Verdict.of(t.scenarioName(), r, 9, ""));
+            return new RunOutcome.Scored(Grade.of(t.scenarioName(), r, 9, ""));
         };
 
         var asserted = new Scenario("GenUC-17a: cash", Optional.of("GenUC-17a"),

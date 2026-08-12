@@ -1,6 +1,6 @@
 package io.akka.evalkit.metric;
 
-import io.akka.evalkit.domain.NoVerdict;
+import io.akka.evalkit.domain.InconclusiveScore;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,11 +13,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>A metric aggregates the share of subjects that went its way, so a block the parser drops
  * moves the score without anybody seeing it move.
  */
-@DisplayName("JudgementReply · a judge asked about several subjects")
-class JudgementReplyTest {
+@DisplayName("FindingsReply · a judge asked about several subjects")
+class FindingsReplyTest {
 
     @Test
-    @DisplayName("every block becomes one judgement")
+    @DisplayName("every block becomes one finding")
     void everyBlockBecomesAJudgement() {
         String reply = """
             SUBJECT: the claim that the window is 30 days
@@ -29,13 +29,13 @@ class JudgementReplyTest {
             REASON: no passage mentions shipping
             """;
 
-        var judgements = JudgementReply.read(reply);
+        var findings = FindingsReply.read(reply);
 
-        assertThat(judgements).hasSize(2);
-        assertThat(judgements.get(0).affirmed()).isTrue();
-        assertThat(judgements.get(0).subject()).isEqualTo("the claim that the window is 30 days");
-        assertThat(judgements.get(1).affirmed()).isFalse();
-        assertThat(judgements.get(1).reason()).isEqualTo("no passage mentions shipping");
+        assertThat(findings).hasSize(2);
+        assertThat(findings.get(0).affirmed()).isTrue();
+        assertThat(findings.get(0).claim()).isEqualTo("the claim that the window is 30 days");
+        assertThat(findings.get(1).affirmed()).isFalse();
+        assertThat(findings.get(1).explanation()).isEqualTo("no passage mentions shipping");
     }
 
     @Test
@@ -47,21 +47,21 @@ class JudgementReplyTest {
             **REASON:** it holds
             """;
 
-        var judgements = JudgementReply.read(reply);
+        var findings = FindingsReply.read(reply);
 
-        assertThat(judgements).hasSize(1);
-        assertThat(judgements.get(0).subject()).isEqualTo("the first claim");
-        assertThat(judgements.get(0).affirmed()).isTrue();
+        assertThat(findings).hasSize(1);
+        assertThat(findings.get(0).claim()).isEqualTo("the first claim");
+        assertThat(findings.get(0).affirmed()).isTrue();
     }
 
     @Test
     @DisplayName("a block with no reason keeps its verdict")
     void aBlockWithNoReasonKeepsItsVerdict() {
-        var judgements = JudgementReply.read("SUBJECT: a claim\nVERDICT: yes");
+        var findings = FindingsReply.read("SUBJECT: a claim\nVERDICT: yes");
 
-        assertThat(judgements).hasSize(1);
-        assertThat(judgements.get(0).affirmed()).isTrue();
-        assertThat(judgements.get(0).reason()).isEmpty();
+        assertThat(findings).hasSize(1);
+        assertThat(findings.get(0).affirmed()).isTrue();
+        assertThat(findings.get(0).explanation()).isEmpty();
     }
 
     /**
@@ -73,9 +73,9 @@ class JudgementReplyTest {
     @Test
     @DisplayName("a hedged verdict counts against the metric")
     void aHedgedVerdictIsNotAffirmed() {
-        var judgements = JudgementReply.read("SUBJECT: a claim\nVERDICT: partially");
+        var findings = FindingsReply.read("SUBJECT: a claim\nVERDICT: partially");
 
-        assertThat(judgements.get(0).affirmed()).isFalse();
+        assertThat(findings.get(0).affirmed()).isFalse();
     }
 
     /**
@@ -87,11 +87,11 @@ class JudgementReplyTest {
     @Test
     @DisplayName("a reply naming no subject reaches no verdict")
     void anUnreadableReplyReachesNoVerdict() {
-        assertThatThrownBy(() -> JudgementReply.read("I could not assess this."))
-            .isInstanceOf(NoVerdict.class)
+        assertThatThrownBy(() -> FindingsReply.read("I could not assess this."))
+            .isInstanceOf(InconclusiveScore.class)
             .hasMessageContaining("named no subject");
 
-        assertThatThrownBy(() -> JudgementReply.read(""))
-            .isInstanceOf(NoVerdict.class);
+        assertThatThrownBy(() -> FindingsReply.read(""))
+            .isInstanceOf(InconclusiveScore.class);
     }
 }

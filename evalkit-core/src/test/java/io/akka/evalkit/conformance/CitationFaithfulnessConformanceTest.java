@@ -1,7 +1,7 @@
 package io.akka.evalkit.conformance;
 
 import io.akka.evalkit.metric.CitationFaithfulness;
-import io.akka.evalkit.metric.Judgement;
+import io.akka.evalkit.metric.Finding;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -32,19 +32,19 @@ class CitationFaithfulnessConformanceTest {
         // "The Eiffel Tower was completed in 1889 [1]." cites the height passage for a
         // year claim. Plain faithfulness passes this, because passage 2 supports the
         // claim. Attribution-aware checking fails it.
-        var judgement = Judgement.denied("completed in 1889 [1]",
+        var finding = Finding.denied("completed in 1889 [1]",
             "the year claim is cited to [1], which only covers height");
 
-        assertThat(metric.aggregate(List.of(judgement))).isEqualTo(0.0);
+        assertThat(metric.aggregate(List.of(finding))).isEqualTo(0.0);
         assertThat(metric.withinThreshold(0.0)).isFalse();
     }
 
     @Test
     @DisplayName("every marker pointing at a supporting passage scores 1.0")
     void correctlyCitedPasses() {
-        var judgement = Judgement.affirmed("330 metres tall [1] and completed in 1889 [2]");
+        var finding = Finding.affirmed("330 metres tall [1] and completed in 1889 [2]");
 
-        assertThat(metric.aggregate(List.of(judgement))).isEqualTo(1.0);
+        assertThat(metric.aggregate(List.of(finding))).isEqualTo(1.0);
         assertThat(metric.withinThreshold(1.0)).isTrue();
     }
 
@@ -70,13 +70,13 @@ class CitationFaithfulnessConformanceTest {
     @Test
     @DisplayName("one bad citation among two scores 0.5 and fails the default threshold")
     void oneBadCitationAmongTwo() {
-        var judgements = List.of(
-            Judgement.affirmed("330 metres tall [1]"),
-            Judgement.denied("completed in 1889 [1]", "cited to the height passage"));
+        var findings = List.of(
+            Finding.affirmed("330 metres tall [1]"),
+            Finding.denied("completed in 1889 [1]", "cited to the height passage"));
 
         // The default threshold is 1.0: a reply is either correctly attributed or it
         // is not, and a half-attributed answer is one a reader cannot follow.
-        assertThat(metric.aggregate(judgements)).isEqualTo(0.5);
+        assertThat(metric.aggregate(findings)).isEqualTo(0.5);
         assertThat(metric.withinThreshold(0.5)).isFalse();
     }
 }

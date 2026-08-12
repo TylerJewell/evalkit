@@ -31,9 +31,9 @@ public final class Scoring {
         }
     }
 
-    public static Distribution distribution(List<Verdict> verdicts) {
+    public static Distribution distribution(List<Grade> verdicts) {
         var counts = new EnumMap<Band, Integer>(Band.class);
-        for (Verdict v : verdicts) counts.merge(v.band(), 1, Integer::sum);
+        for (Grade v : verdicts) counts.merge(v.band(), 1, Integer::sum);
         return new Distribution(counts, verdicts.size());
     }
 
@@ -71,8 +71,8 @@ public final class Scoring {
      * can attribute, and a policy change is the easier of the two to make by accident,
      * because it is a change to the system rather than to this kit.
      */
-    public static Comparison compare(Policy baselinePolicy, List<Verdict> baseline,
-                                     Policy candidatePolicy, List<Verdict> candidate) {
+    public static Comparison compare(Policy baselinePolicy, List<Grade> baseline,
+                                     Policy candidatePolicy, List<Grade> candidate) {
         if (!baselinePolicy.equals(candidatePolicy)) {
             throw new IllegalArgumentException(
                 "cannot compare runs under different policies: "
@@ -83,7 +83,7 @@ public final class Scoring {
         return compare(baseline, candidate);
     }
 
-    public static Comparison compare(List<Verdict> baseline, List<Verdict> candidate) {
+    public static Comparison compare(List<Grade> baseline, List<Grade> candidate) {
         var left = index(baseline);
         var right = index(candidate);
 
@@ -102,7 +102,7 @@ public final class Scoring {
         var onlyIn = new java.util.ArrayList<String>();
 
         for (var entry : left.entrySet()) {
-            Verdict other = right.get(entry.getKey());
+            Grade other = right.get(entry.getKey());
             if (other == null) {
                 onlyIn.add(entry.getKey());
                 continue;
@@ -121,9 +121,9 @@ public final class Scoring {
         return new Comparison(improved, regressed, unchanged, onlyIn);
     }
 
-    private static Map<String, Verdict> index(List<Verdict> verdicts) {
-        var out = new java.util.LinkedHashMap<String, Verdict>();
-        for (Verdict v : verdicts) {
+    private static Map<String, Grade> index(List<Grade> verdicts) {
+        var out = new java.util.LinkedHashMap<String, Grade>();
+        for (Grade v : verdicts) {
             if (out.putIfAbsent(v.scenarioName(), v) != null) {
                 // A scenario can run many times; the reference export carries 1 to 61
                 // runs of a single scenario. The caller decides which run counts, because

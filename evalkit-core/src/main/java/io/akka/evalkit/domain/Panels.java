@@ -280,7 +280,7 @@ public final class Panels {
             + causes.getOrDefault(RunOutcome.Cause.SETUP_FAILED, 0));
         line(out, "     " + pad("no reply within " + r.replyTimeoutSeconds() + " seconds", 46)
             + causes.getOrDefault(RunOutcome.Cause.NO_REPLY, 0));
-        line(out, "     " + pad("the judge would not score the answer", 46) + r.unscoreable());
+        line(out, "     " + pad("the judge would not score the answer", 46) + r.inconclusive());
         if (!r.coverage().excluded().isEmpty()) {
             blank(out);
             para(out, "These requirements were left out of this run.");

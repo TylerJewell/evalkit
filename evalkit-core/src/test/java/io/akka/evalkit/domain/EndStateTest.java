@@ -13,10 +13,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("EndState · whether the run left the world as the scenario expected")
 class EndStateTest {
 
-    private static Recording leaving(Map<String, String> state) {
+    private static Observation leaving(Map<String, String> state) {
         var transcript = new Transcript("refund-30d", "", "user: refund these please",
             "Done, that's refunded.", "the refund is issued");
-        return new Recording(transcript,
+        return new Observation(transcript,
             io.akka.evalkit.ledger.Interactions.of("", "", "Done, that's refunded.",
                 List.of(), Optional.empty(), Optional.empty()),
             Optional.empty(), state);
@@ -80,7 +80,7 @@ class EndStateTest {
     void noStateIsUnscoreable() {
         var outcome = EndState.matching("refund.status", "issued").score(leaving(Map.of()));
 
-        assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+        assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
         assertThat(outcome.isEvidence()).isFalse();
         assertThat(outcome.describe()).contains("does this target expose what a run changed");
     }

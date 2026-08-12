@@ -100,7 +100,7 @@ class ConformanceCoverageTest {
         // a metric at all. Counting either would put a name in the comparison that no
         // entry could ever match.
         assertThat(isScorable(AlignmentMetric.class)).isFalse();
-        assertThat(isScorable(io.akka.evalkit.metric.Judgement.class)).isFalse();
+        assertThat(isScorable(io.akka.evalkit.metric.Finding.class)).isFalse();
     }
 
     @Test
@@ -178,7 +178,7 @@ class ConformanceCoverageTest {
     /**
      * Whether a type in the metric package is something that scores a run.
      *
-     * <p>Two shapes qualify. A {@link Metric} turns judgements into a number, and an
+     * <p>Two shapes qualify. A {@link Metric} turns findings into a number, and an
      * {@link AlignmentMetric} asks a model for the number directly. Checking only the first
      * would leave every model-scored metric out of the coverage comparison, which is a
      * coverage check that passes by not looking &mdash; the failure this repository has

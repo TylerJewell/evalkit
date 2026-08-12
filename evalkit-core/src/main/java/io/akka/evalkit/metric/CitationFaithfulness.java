@@ -61,7 +61,7 @@ public final class CitationFaithfulness implements Metric {
     }
 
     @Override
-    public double aggregate(List<Judgement> judgements) {
-        return Metric.shareAffirmed(judgements);
+    public double aggregate(List<Finding> findings) {
+        return Metric.shareAffirmed(findings);
     }
 }

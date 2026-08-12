@@ -31,9 +31,26 @@ evalkit-akka   durable campaigns, model judge             Akka SDK + TestKit
 
 **A type comes from the SDK when it carries evidence. A type stays in evalkit when it
 holds an invariant the SDK does not enforce.** `InteractionRecord`, `ModelResponse`,
-`ToolCall` and `Failure` are the SDK's. `Verdict` pairs a 1-to-10 score with its `Band`
+`ToolCall` and `Failure` are the SDK's. `Grade` pairs a 1-to-10 score with its `Band`
 and rejects a pair that disagrees. `RunOutcome` carries `NotReached`, which no ledger
 record represents, because an interaction that never happened was never recorded.
+
+**Where the SDK has a word, the SDK's word wins.** `RunOutcome.Inconclusive` and
+`RunOutcome.Failed` carry the names `EvaluationRecord.Outcome` gives those two facts.
+The SDK spends `Verdict` on the outcome category, so the judge's 1-to-10
+result is `Grade`. `Observation` is evalkit's bundle of a
+transcript and an `InteractionRecord`, named so it cannot be misread as the SDK's
+record. `Subject` is the SDK's name for what an evaluation ran over, so a `Finding`
+names its `claim`.
+
+**`explanation` and `reason` are not interchangeable.** An explanation says why the
+subject passed or failed, and `Grade` and `Measured` carry it. A reason says why there
+is no conclusion at all, and `Inconclusive`, `Failed` and `NotReached` carry that.
+Nothing carries both.
+
+**"failed" is never used bare.** The subject failing is `passed=false`. The machinery
+failing is `Failed`. A sentence, a field or a method that says only "failed" leaves a
+reader unable to tell a finding about the product from a defect in this kit.
 
 Adding a dependency beyond `akka-javasdk` still requires an argument, and "it would be
 convenient" is not one. A service in another language behind an HTTP port is still
@@ -58,7 +75,7 @@ because a figure there would be a bug in this kit rather than a finding about th
 system.
 
 **Absent evidence is never a verdict.** A judge that times out, refuses, or returns an
-unreadable score gives `Unscoreable`. A precursor that does not land gives
+unreadable score gives `Inconclusive`. A precursor that does not land gives
 `NotReached`. Neither is a failure of the system under test, and neither is folded
 into a pass rate.
 
@@ -125,6 +142,8 @@ Three things are known-wrong and are in the README's Status section:
 1. Surefire pinned to 2.22.2 because that is what was cached offline — raise it once
    building against a real repository.
 2. `groupId` is `io.akka.evalkit`, which presumes a namespace not yet granted.
-3. Rubric v3 returns a reason beside the score on v2's bands, and the agreement between the
-   two is unmeasured until `JudgeCalibrationTest` runs with `-Dcalibration.compare=true`.
-   Token accounting understates any agent whose memory is off.
+3. Rubric v3 returns a sentence beside the score on v2's bands, and v4 asks for it under
+   `EXPLANATION` where v3 asks under `REASON`. Neither one's agreement with v2 is measured
+   until `JudgeCalibrationTest` runs with `-Dcalibration.compare=true`, and a label is
+   still a prompt: whether a judge writes differently under the two words is unknown until
+   that run. Token accounting understates any agent whose memory is off.

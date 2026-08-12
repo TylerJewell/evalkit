@@ -22,14 +22,14 @@ public final class ScenarioRunner {
     /** What execution produced, which is not always a transcript. */
     public sealed interface Execution {
 
-        record Produced(Recording recording) implements Execution {
+        record Produced(Observation observation) implements Execution {
 
             public Transcript transcript() {
-                return recording.transcript();
+                return observation.transcript();
             }
 
             public java.util.Optional<String> node() {
-                return recording.node();
+                return observation.node();
             }
         }
 
@@ -87,7 +87,7 @@ public final class ScenarioRunner {
             scenario.id());
         // Read after the graded turn, so it is the state the run left behind rather than
         // the state it started from.
-        return new Execution.Produced(new Recording(transcript, interaction, reply.node(),
+        return new Execution.Produced(new Observation(transcript, interaction, reply.node(),
             target.stateAfter(ready.sessionId())));
     }
 

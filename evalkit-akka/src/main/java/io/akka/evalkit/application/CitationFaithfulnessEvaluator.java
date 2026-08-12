@@ -4,7 +4,7 @@ import akka.javasdk.annotations.Component;
 import akka.javasdk.client.ComponentClient;
 import akka.javasdk.ledger.LedgerClient;
 import akka.javasdk.ledger.ToolCall;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.metric.CitationFaithfulness;
 import io.akka.evalkit.metric.Metric;
 
@@ -74,12 +74,12 @@ public class CitationFaithfulnessEvaluator extends JudgedMetricEvaluator {
     }
 
     @Override
-    public String material(Recording recording) {
-        List<String> passages = recording.toolsCalled().stream()
+    public String material(Observation observation) {
+        List<String> passages = observation.toolsCalled().stream()
             .map(ToolCall::response)
             .filter(response -> response != null && !response.isBlank())
             .toList();
-        String answered = recording.interaction().finalResponseText().strip();
+        String answered = observation.interaction().finalResponseText().strip();
         if (passages.isEmpty() || answered.isEmpty()) return "";
         return "Passages:\n\n" + CitationFaithfulness.numberPassages(passages)
             + "\n\nReply:\n\n" + answered;

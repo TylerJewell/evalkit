@@ -51,12 +51,12 @@ public final class ContainsAll implements Scorer {
     }
 
     @Override
-    public RunOutcome score(Recording recording) {
-        String reply = recording.transcript().systemOutput();
+    public RunOutcome score(Observation observation) {
+        String reply = observation.transcript().systemOutput();
         if (reply.isBlank()) {
             // The target does not report reply text, or reported none for this turn.
             // Failing would blame the system for evidence the harness never received.
-            return new RunOutcome.Unscoreable(
+            return new RunOutcome.Inconclusive(
                 "no reply text to search for the required phrases — "
                     + "does this target report what the system said?");
         }

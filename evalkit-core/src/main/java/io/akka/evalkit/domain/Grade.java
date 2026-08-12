@@ -9,51 +9,50 @@ import java.util.regex.Pattern;
  * <p>The rubric id and version travel with the score because without them a score is
  * uninterpretable six weeks later &mdash; see {@link Rubric}.
  *
- * @param reason the judge's own words, and empty under a rubric that asked for a bare
- *               number. What used to sit here was assembled from the band and the score,
- *               which restated the two fields beside it and told a reader nothing they
- *               could act on; {@link RunOutcome#describe()} builds that line where it is
- *               needed, because it is rendering rather than evidence
+ * @param explanation the judge's own words for why the transcript scored what it did, and
+ *                    empty under a rubric that asked for a bare number. It holds nothing
+ *                    derived from the band and the score, which sit beside it already;
+ *                    {@link RunOutcome#describe()} assembles that line where it is needed,
+ *                    because it is rendering rather than evidence
  */
-public record Verdict(String scenarioName, String rubricId, int rubricVersion,
-                      int score, Band band, String reason) {
+public record Grade(String scenarioName, String rubricId, int rubricVersion,
+                      int score, Band band, String explanation) {
 
-    public Verdict {
+    public Grade {
         if (score < 1 || score > 10) throw new IllegalArgumentException("score outside 1-10: " + score);
         if (band != Band.of(score)) {
             throw new IllegalArgumentException("band " + band + " does not hold score " + score);
         }
-        reason = reason == null ? "" : reason.strip();
+        explanation = explanation == null ? "" : explanation.strip();
     }
 
-    public static Verdict of(String scenarioName, Rubric rubric, int score, String reason) {
-        return new Verdict(scenarioName, rubric.id(), rubric.version(), score,
-            Band.of(score), reason);
+    public static Grade of(String scenarioName, Rubric rubric, int score, String explanation) {
+        return new Grade(scenarioName, rubric.id(), rubric.version(), score,
+            Band.of(score), explanation);
     }
 
-    /** A verdict from a rubric that asked for a bare number, so there is no reason to carry. */
-    public static Verdict of(String scenarioName, Rubric rubric, int score) {
+    /** A grade from a rubric that asked for a bare number, so there is nothing to explain. */
+    public static Grade of(String scenarioName, Rubric rubric, int score) {
         return of(scenarioName, rubric, score, "");
     }
 
-    public boolean statesReason() {
-        return !reason.isEmpty();
+    public boolean statesExplanation() {
+        return !explanation.isEmpty();
     }
 
     /**
-     * The verdict a reply carries, read the way its rubric asked for it.
+     * The grade a reply carries, read the way its rubric asked for it.
      *
-     * <p>Empty means the judge did not answer, which is {@link RunOutcome.Unscoreable} and
-     * never a score. A rubric that asked for a reason and got a reply with no label is
+     * <p>Empty means the judge did not answer, which is {@link RunOutcome.Inconclusive} and
+     * never a score. A rubric that asked for an explanation and got a reply with no label is
      * unreadable here rather than falling back to the bare-number reader: that fallback
-     * would take the first integer out of an ordinary sentence and report it as a
-     * judgement.
+     * would take the first integer out of an ordinary sentence and report it as a grade.
      */
-    public static Optional<Verdict> read(String scenarioName, Rubric rubric, String reply) {
-        if (rubric.statesReason()) {
+    public static Optional<Grade> read(String scenarioName, Rubric rubric, String reply) {
+        if (rubric.statesExplanation()) {
             return ModelReply.read(reply)
                 .flatMap(stated -> parseScore(stated.score())
-                    .map(score -> of(scenarioName, rubric, score, stated.reason())));
+                    .map(score -> of(scenarioName, rubric, score, stated.explanation())));
         }
         return parseScore(reply).map(score -> of(scenarioName, rubric, score));
     }
@@ -68,7 +67,7 @@ public record Verdict(String scenarioName, String rubricId, int rubricVersion,
      * <p>The rubric asks for "a single value from 1 to 10" and models mostly comply, but
      * "8", "Score: 8", and "8/10" all occur. Parsing the first bare integer in range is
      * deliberate: a reply this cannot read is returned as empty rather than defaulted,
-     * because a default here would be a fabricated judgement, and a fabricated 1 and a
+     * because a default here would be a fabricated grade, and a fabricated 1 and a
      * fabricated 10 are both worse than an admission that the judge did not answer.
      *
      * <p>A decimal is unreadable rather than truncated. "3.5" carries no integer the rubric

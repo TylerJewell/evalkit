@@ -2,7 +2,7 @@ package io.akka.evalkit.metric;
 
 import akka.javasdk.ledger.ModelResponse;
 import akka.javasdk.ledger.ToolCall;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.ledger.Arguments;
 
 import java.util.Optional;
@@ -16,7 +16,7 @@ import java.util.stream.Stream;
  * A run that recorded neither has nothing to call efficient or wasteful.
  *
  * <p><b>The two sequences are rendered in order within their kind, and not interleaved.</b>
- * A recording keeps model calls and tool calls as separate ordered lists, so the exact
+ * A observation keeps model calls and tool calls as separate ordered lists, so the exact
  * alternation between them is not recoverable. An assessor is told which steps happened and
  * in what order each kind happened; it is not told that a particular tool call fell between
  * two particular model calls.
@@ -41,9 +41,9 @@ public final class StepEfficiency extends AlignmentMetric {
     }
 
     @Override
-    protected Optional<Question> ask(Recording recording) {
-        String task = recording.transcript().expectedOutcome();
-        String steps = render(recording);
+    protected Optional<Question> ask(Observation observation) {
+        String task = observation.transcript().expectedOutcome();
+        String steps = render(observation);
         return task.isBlank() || steps.isEmpty() ? Optional.empty()
             : Optional.of(new Question("task against steps", task, steps));
     }
@@ -59,10 +59,10 @@ public final class StepEfficiency extends AlignmentMetric {
      * <p>Model calls first and tool calls after, each in the order the run made them. See the
      * note on this class about what that ordering does and does not establish.
      */
-    static String render(Recording recording) {
+    static String render(Observation observation) {
         return Stream.concat(
-                recording.modelCalls().stream().map(StepEfficiency::describe),
-                recording.toolsCalled().stream().map(StepEfficiency::describe))
+                observation.modelCalls().stream().map(StepEfficiency::describe),
+                observation.toolsCalled().stream().map(StepEfficiency::describe))
             .collect(Collectors.joining("\n"));
     }
 

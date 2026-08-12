@@ -3,7 +3,7 @@ package io.akka.evalkit.application;
 import io.akka.evalkit.domain.CampaignPlan;
 import io.akka.evalkit.domain.Lanes;
 import io.akka.evalkit.domain.Precursor;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Rubric;
 import io.akka.evalkit.domain.Scenario;
@@ -11,8 +11,8 @@ import io.akka.evalkit.domain.Scorer;
 import io.akka.evalkit.domain.ScorerRouter;
 import io.akka.evalkit.domain.SystemUnderTest;
 import io.akka.evalkit.ledger.Interactions;
-import io.akka.evalkit.domain.Verdict;
-import io.akka.evalkit.metric.Judgement;
+import io.akka.evalkit.domain.Grade;
+import io.akka.evalkit.metric.Finding;
 import io.akka.evalkit.metric.Metric;
 import io.akka.evalkit.metric.MetricRef;
 import io.akka.evalkit.metric.ToolPermission;
@@ -66,9 +66,9 @@ class RoutedCampaignTest {
         final AtomicInteger calls = new AtomicInteger();
 
         @Override
-        public RunOutcome score(Recording recording) {
+        public RunOutcome score(Observation observation) {
             calls.incrementAndGet();
-            return new RunOutcome.Scored(Verdict.of(recording.scenarioName(), RUBRIC, 9, ""));
+            return new RunOutcome.Scored(Grade.of(observation.scenarioName(), RUBRIC, 9, ""));
         }
     }
 
@@ -80,17 +80,17 @@ class RoutedCampaignTest {
         @Override public double threshold() { return 0.5; }
 
         @Override
-        public double aggregate(List<Judgement> judgements) {
-            return Metric.shareAffirmed(judgements);
+        public double aggregate(List<Finding> findings) {
+            return Metric.shareAffirmed(findings);
         }
 
         @Override
-        public RunOutcome score(Recording recording) {
+        public RunOutcome score(Observation observation) {
             calls.incrementAndGet();
-            boolean brief = recording.transcript().systemOutput().length() <= 40;
+            boolean brief = observation.transcript().systemOutput().length() <= 40;
             return outcome(List.of(brief
-                ? Judgement.affirmed("reply length")
-                : Judgement.denied("reply length", "over 40 characters")));
+                ? Finding.affirmed("reply length")
+                : Finding.denied("reply length", "over 40 characters")));
         }
     }
 
@@ -156,7 +156,7 @@ class RoutedCampaignTest {
     }
 
     @Test
-    @DisplayName("a scenario naming a metric this campaign did not register is unscoreable")
+    @DisplayName("a scenario naming a metric this campaign did not register is inconclusive")
     void unregisteredMetricProducesNoEvidence() {
         var router = ScorerRouter.byExpectation(new CountingJudge(), Map.of());
 
@@ -166,13 +166,13 @@ class RoutedCampaignTest {
 
         // A scorer that cannot run produced no evidence. Reporting a zero would blame the
         // service for a campaign that was misconfigured.
-        assertThat(result.report().unscoreable()).isEqualTo(1);
+        assertThat(result.report().inconclusive()).isEqualTo(1);
         assertThat(result.report().measured()).isZero();
         assertThat(result.outcomes().get(0).describe()).contains("answer-length v1");
     }
 
     @Test
-    @DisplayName("a metric that throws is unscoreable, on the same terms as a refused judge")
+    @DisplayName("a metric that throws is inconclusive, on the same terms as a refused judge")
     void aThrowingMetricProducesNoEvidence() {
         Scorer throwing = transcript -> {
             throw new IllegalStateException("embedding service unreachable");
@@ -185,7 +185,7 @@ class RoutedCampaignTest {
 
         // Unreachable infrastructure is this kit failing, not the metric declining.
         assertThat(result.report().scorerFailed()).isEqualTo(1);
-        assertThat(result.report().unscoreable()).isZero();
+        assertThat(result.report().inconclusive()).isZero();
         assertThat(result.outcomes().get(0).describe()).contains("embedding service unreachable");
     }
 
@@ -221,10 +221,10 @@ class RoutedCampaignTest {
         private final ToolPermission metric = ToolPermission.allowing("search_kb", "reply");
 
         @Override
-        public RunOutcome score(Recording recording) {
+        public RunOutcome score(Observation observation) {
             // The tool names come from the evidence the run recorded, which is the whole
-            // reason a recording carries more than the four rubric fields.
-            return metric.outcome(metric.judge(recording.toolNames()));
+            // reason a observation carries more than the four rubric fields.
+            return metric.outcome(metric.judge(observation.toolNames()));
         }
     }
 
@@ -251,10 +251,10 @@ class RoutedCampaignTest {
     @Test
     @DisplayName("latency and tool calls reach a scorer, and a judge never sees them")
     void evidenceTravelsBesideTheTranscript() {
-        var seen = new java.util.concurrent.atomic.AtomicReference<Recording>();
-        io.akka.evalkit.domain.Scorer capture = recording -> {
-            seen.set(recording);
-            return new RunOutcome.Scored(Verdict.of(recording.scenarioName(), RUBRIC, 9, ""));
+        var seen = new java.util.concurrent.atomic.AtomicReference<Observation>();
+        io.akka.evalkit.domain.Scorer capture = observation -> {
+            seen.set(observation);
+            return new RunOutcome.Scored(Grade.of(observation.scenarioName(), RUBRIC, 9, ""));
         };
 
         CampaignRunner.run(

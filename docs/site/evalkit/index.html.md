@@ -11,7 +11,7 @@
 
 evalkit measures whether a conversational service answered correctly, and reports which
 numbers the result supports. A campaign puts the service into a known state, says the
-graded turn to it, records what came back, scores the recording, and prints a report of the
+graded turn to it, records what came back, scores the observation, and prints a report of the
 result.
 
 An evaluation result is a number that reaches people who cannot check it. Every failure
@@ -83,15 +83,15 @@ so a new variant is a compile error at every site that must handle it.
 | `Asserted` | The reply was compared against a stated answer. No model was involved. | Yes |
 | `Measured` | A metric computed a number and compared it to a threshold. | Yes |
 | `NotReached` | The setup failed, or the service sent nothing back. | No |
-| `Unscoreable` | The scorer ran and reached no verdict. | No |
-| `ScorerFailed` | The scorer itself broke. | No |
+| `Inconclusive` | The scorer ran and reached no conclusion. | No |
+| `Failed` | The scorer itself broke. | No |
 
-`Unscoreable` was added after a content filter refused to score an identification-failure
+`Inconclusive` was added after a content filter refused to score an identification-failure
 transcript during calibration. Dropping that run would have raised the reported agreement
 between the judge and the human reviewer above the figure the run earned.
 
-`ScorerFailed` separates a defect in evalkit from a property of the transcript. A judge that
-declines says so by throwing `NoVerdict`, and every other exception reaching the runner is
+`Failed` separates a defect in evalkit from a property of the transcript. A judge that
+declines says so by throwing `InconclusiveScore`, and every other exception reaching the runner is
 recorded as this kit failing.
 
 ## <a href="about:blank#_modules"></a> Modules

@@ -25,5 +25,5 @@ it is asked to score.
 
 A service running judges against recorded or live traffic should declare a
 guardrail on `model-request` for its judge agents. A blocked call records
-`Unscoreable`, which keeps a refused judgement out of the pass total instead of
+`Inconclusive`, which keeps a refused grade out of the pass total instead of
 turning it into a low score.

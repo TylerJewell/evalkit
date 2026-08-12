@@ -63,9 +63,9 @@ class PanelsTest {
             result(metered("tool-scope", "tool-permission"), Duration.ofSeconds(6),
                 new RunOutcome.Measured("tool-permission", 1, 0.5, 1.0, false)),
             result(judged("interac-offer"), Duration.ofSeconds(40),
-                new RunOutcome.Scored(Verdict.of("interac-offer", RUBRIC, 9, "clear"))),
+                new RunOutcome.Scored(Grade.of("interac-offer", RUBRIC, 9, "clear"))),
             result(judged("cash-country"), Duration.ofSeconds(50),
-                new RunOutcome.Scored(Verdict.of("cash-country", RUBRIC, 5, "borderline"))),
+                new RunOutcome.Scored(Grade.of("cash-country", RUBRIC, 5, "borderline"))),
             result(judged("escalation"), null,
                 new RunOutcome.NotReached(RunOutcome.Cause.NO_REPLY, "timed out",
                     new Precursor.None())));

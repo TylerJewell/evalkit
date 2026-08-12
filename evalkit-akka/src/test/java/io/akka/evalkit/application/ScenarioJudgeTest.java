@@ -87,7 +87,7 @@ class ScenarioJudgeTest extends TestKitSupport {
     @Test
     @DisplayName("a judge that returns no score fails the run rather than defaulting it")
     void noScore() {
-        // The alternative is a fabricated judgement quietly shifting a band distribution.
+        // The alternative is a fabricated finding quietly shifting a band distribution.
         model.fixedResponse("I am unable to assess this conversation.");
 
         assertThatThrownBy(this::judge)
@@ -102,7 +102,7 @@ class ScenarioJudgeTest extends TestKitSupport {
         var result = judgeUnder(REASONED);
 
         assertThat(result.score()).isEqualTo(9);
-        assertThat(result.reason()).isEqualTo("The agent named Interac e-transfer.");
+        assertThat(result.statedExplanation()).isEqualTo("The agent named Interac e-transfer.");
         assertThat(result.explanation()).contains("scenario-judge v3");
     }
 
@@ -111,7 +111,7 @@ class ScenarioJudgeTest extends TestKitSupport {
     void bareRubricCarriesNoReason() {
         model.fixedResponse("9");
 
-        assertThat(judge().reason()).isEmpty();
+        assertThat(judge().statedExplanation()).isEmpty();
     }
 
     @Test
@@ -125,16 +125,16 @@ class ScenarioJudgeTest extends TestKitSupport {
     }
 
     @Test
-    @DisplayName("the verdict carries the judge's reason, not the assembled explanation")
+    @DisplayName("the grade carries the judge's reason, not the assembled explanation")
     void asJudgeRecordsTheReason() {
         var outcome = ScenarioJudge.asJudge((transcript, rubric) -> new ScenarioJudge.Result(
                 "FAITHFUL (9/10) under scenario-judge v3", true, 9, Band.FAITHFUL,
                 "The agent named Interac e-transfer."))
             .score(TRANSCRIPT, REASONED);
 
-        var verdict = ((RunOutcome.Scored) outcome).verdict();
-        assertThat(verdict.reason()).isEqualTo("The agent named Interac e-transfer.");
-        assertThat(verdict.rubricVersion()).isEqualTo(3);
+        var grade = ((RunOutcome.Scored) outcome).grade();
+        assertThat(grade.explanation()).isEqualTo("The agent named Interac e-transfer.");
+        assertThat(grade.rubricVersion()).isEqualTo(3);
     }
 
     @Test

@@ -122,7 +122,7 @@ not comparable with a score recorded by DeepEval for a run that hit it.
    carries no plan. ToolCorrectnessMetric scores 1 when no tools were expected
    and none were called. ArgumentCorrectnessMetric scores 1 when there were no
    tool calls to judge. Here PlanQuality, PlanAdherence, StepEfficiency and
-   ArgumentCorrectness return RunOutcome.Unscoreable for those runs, which keeps
+   ArgumentCorrectness return RunOutcome.Inconclusive for those runs, which keeps
    them out of the pass rate rather than counting them toward it.
 
 ToolCorrectness also omits upstream's tool-selection score, which takes the lower

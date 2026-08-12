@@ -1,6 +1,6 @@
 package io.akka.evalkit.metric;
 
-import io.akka.evalkit.domain.NoVerdict;
+import io.akka.evalkit.domain.InconclusiveScore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,12 +24,12 @@ import java.util.regex.Pattern;
  * REASON: no passage mentions shipping
  * }</pre>
  *
- * <p>A reply carrying no block at all produces {@link NoVerdict}. An empty judgement list
+ * <p>A reply carrying no block at all produces {@link InconclusiveScore}. An empty finding list
  * means the run had nothing to judge, and a model that answered unreadably is a different
  * fact from a run with nothing in it. Reading one as the other would score a metric 1 on the
  * strength of a reply nobody could parse.
  */
-public final class JudgementReply {
+public final class FindingsReply {
 
     // Asterisks because a model asked for "VERDICT:" returns "**VERDICT:**" often enough to
     // matter, and a run lost to markdown is a run lost to nothing.
@@ -39,27 +39,27 @@ public final class JudgementReply {
             + "(?:.*?^\\s*\\**\\s*REASON\\s*\\**\\s*:\\s*(.+?)\\s*$)?"
             + "(?=\\s*^\\s*\\**\\s*SUBJECT\\s*\\**\\s*:|\\z)");
 
-    private JudgementReply() {}
+    private FindingsReply() {}
 
     /**
-     * The judgements the reply states.
+     * The findings the reply states.
      *
-     * @throws NoVerdict when the reply names no subject, which is a model that did not answer
+     * @throws InconclusiveScore when the reply names no subject, which is a model that did not answer
      */
-    public static List<Judgement> read(String reply) {
+    public static List<Finding> read(String reply) {
         if (reply == null || reply.isBlank()) {
-            throw new NoVerdict("the judge returned nothing to read");
+            throw new InconclusiveScore("the judge returned nothing to read");
         }
         var matcher = BLOCK.matcher(reply);
-        var out = new ArrayList<Judgement>();
+        var out = new ArrayList<Finding>();
         while (matcher.find()) {
             String subject = strip(matcher.group(1));
             String verdict = matcher.group(2).strip().toLowerCase(Locale.ROOT);
             String reason = matcher.group(3) == null ? "" : strip(matcher.group(3));
-            out.add(new Judgement(subject, affirmed(verdict), reason));
+            out.add(new Finding(subject, affirmed(verdict), reason));
         }
         if (out.isEmpty()) {
-            throw new NoVerdict("the judge named no subject: " + abbreviate(reply));
+            throw new InconclusiveScore("the judge named no subject: " + abbreviate(reply));
         }
         return List.copyOf(out);
     }

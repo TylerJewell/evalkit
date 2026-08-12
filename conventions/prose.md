@@ -198,8 +198,8 @@ never landed. `CampaignPlan.check` rejects a plan naming a fixture the target ca
 The banned forms:
 
 - *`X exists to …` and `X exists because …`* Say what X does, or say what was happening
-  before X was added. "Unscoreable was added after a content filter refused to score a
-  transcript during calibration" reports an event; "Unscoreable exists because…" reports a
+  before X was added. "Inconclusive was added after a content filter refused to score a
+  transcript during calibration" reports an event; "Inconclusive exists because…" reports a
   purpose nobody witnessed.
 - *`X is there to …`, `the reason X exists`, `what X is for`.* Same shape, longer.
 - *Collective abstract subjects.* "every capability", "each feature", "all of the rules",

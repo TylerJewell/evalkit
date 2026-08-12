@@ -8,7 +8,7 @@ import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.domain.Scenario;
 import io.akka.evalkit.domain.ScenarioSource;
 import io.akka.evalkit.domain.SystemUnderTest;
-import io.akka.evalkit.domain.Verdict;
+import io.akka.evalkit.domain.Grade;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,7 +91,7 @@ public class TestHarnessSetup implements ServiceSetup {
                                 io.akka.evalkit.domain.Rubric rubric) {
             judged.incrementAndGet();
             return new RunOutcome.Scored(
-                Verdict.of(transcript.scenarioName(), rubric, score, ""));
+                Grade.of(transcript.scenarioName(), rubric, score, ""));
         }
     }
 

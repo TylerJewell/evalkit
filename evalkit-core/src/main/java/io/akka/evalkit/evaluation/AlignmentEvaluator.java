@@ -19,7 +19,7 @@ import java.util.Objects;
  *
  * <p>{@code PlanQuality} and {@code PlanAdherence} read the plan from
  * {@link akka.javasdk.ledger.ModelResponse#thinking()}. A provider with reasoning switched
- * off records none, and both metrics return {@code Unscoreable} rather than scoring a run
+ * off records none, and both metrics return {@code Inconclusive} rather than scoring a run
  * that surfaced no plan.
  */
 public abstract class AlignmentEvaluator extends ScorerEvaluator {

@@ -33,7 +33,7 @@ public interface ScorerRouter {
      * expectation in prose, which only a judge can read.
      *
      * <p>A scenario naming a metric this campaign did not register produces
-     * {@link RunOutcome.Unscoreable} at run time, because a scorer that cannot run
+     * {@link RunOutcome.Inconclusive} at run time, because a scorer that cannot run
      * produced no evidence and the run is not a finding about the service.
      *
      * @param judge   settles the scenarios that name neither a node nor a metric
@@ -52,7 +52,7 @@ public interface ScorerRouter {
                 MetricRef ref = scenario.metric().orElseThrow();
                 Scorer scorer = byRef.get(ref);
                 return Optional.of(scorer != null ? scorer
-                    : recording -> new RunOutcome.Unscoreable(
+                    : observation -> new RunOutcome.Inconclusive(
                         "no metric registered for " + ref.label()));
             }
             return Optional.of(judge);

@@ -5,15 +5,15 @@ import java.util.List;
 /**
  * The share of exchanges in a conversation whose reply answered what was asked.
  *
- * <p>One judgement per user-and-assistant exchange, never per raw turn. A trailing user
+ * <p>One finding per user-and-assistant exchange, never per raw turn. A trailing user
  * message with no reply yet is not an exchange and is excluded before this metric sees
  * anything, so a conversation ending on a question does not score itself down.
  *
- * <p>Producing the judgements needs a model. The arithmetic here does not, which is why
+ * <p>Producing the findings needs a model. The arithmetic here does not, which is why
  * {@link #aggregate} is the half under test.
  *
  * <p>Ported from DeepEval's {@code TurnRelevancyMetric}, Apache 2.0. The score table and
- * the empty-judgement fallback come from
+ * the empty-finding fallback come from
  * {@code tests/test_metrics/test_turn_relevancy_aggregation.py} at commit bd10fa6, and
  * {@code TurnRelevancyConformanceTest} pins both.
  */
@@ -53,7 +53,7 @@ public final class TurnRelevancy implements Metric {
      * a service as irrelevant on the strength of a judge that never answered.
      */
     @Override
-    public double aggregate(List<Judgement> judgements) {
-        return Metric.shareAffirmed(judgements);
+    public double aggregate(List<Finding> findings) {
+        return Metric.shareAffirmed(findings);
     }
 }

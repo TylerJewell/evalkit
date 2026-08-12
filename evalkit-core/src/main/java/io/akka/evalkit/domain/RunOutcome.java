@@ -3,20 +3,20 @@ package io.akka.evalkit.domain;
 /**
  * What happened to one scenario run, which is not always "it got a score".
  *
- * <p>Three of these are not judgements about the system, and folding them into a low score
+ * <p>Three of these are not conclusions about the system, and folding them into a low score
  * is the most consequential mistake this harness can make &mdash; each one would report a
  * broken harness, a refused judge, or an undecidable rubric as a failing product.
  *
  * <p>Both non-scored variants are evidence-backed rather than defensive. {@link NotReached}
- * exists because 502 scenarios need setup that can fail. {@link Unscoreable} exists because
+ * exists because 502 scenarios need setup that can fail. {@link Inconclusive} exists because
  * it already happened: during calibration Gemini's content filter refused to score a
  * GenUC-02 identification-failure transcript, and a harness that dropped it silently would
  * have reported better agreement than it earned.
  */
 public sealed interface RunOutcome {
 
-    /** The judge returned a verdict. */
-    record Scored(Verdict verdict) implements RunOutcome {}
+    /** The judge reached a grade. */
+    record Scored(Grade grade) implements RunOutcome {}
 
     /**
      * Settled by comparison rather than by a model.
@@ -42,12 +42,16 @@ public sealed interface RunOutcome {
      * what that number means.
      *
      * <p>The metric id and version travel with the result for the reason a rubric version
-     * travels with a verdict: raising a threshold from 0.75 to 0.80 turns passing runs
+     * travels with a grade: raising a threshold from 0.75 to 0.80 turns passing runs
      * into failing ones with no change to the system under test, and a bare number six
      * weeks later cannot tell the two apart.
+     *
+     * @param explanation why the subject landed where it did. A measurement reaches a
+     *                   conclusion, so what it carries is an explanation; {@code reason} is
+     *                   reserved for the variants that reached none
      */
     record Measured(String metricId, int metricVersion, double value,
-                    double threshold, boolean withinThreshold, String reason)
+                    double threshold, boolean withinThreshold, String explanation)
         implements RunOutcome {
 
         public Measured {
@@ -55,7 +59,7 @@ public sealed interface RunOutcome {
                 throw new IllegalArgumentException("measured outcome needs a metric id");
             }
             if (metricVersion < 1) throw new IllegalArgumentException("metric version starts at 1");
-            reason = reason == null ? "" : reason.strip();
+            explanation = explanation == null ? "" : explanation.strip();
         }
 
         /**
@@ -63,16 +67,16 @@ public sealed interface RunOutcome {
          *
          * <p>Which is most of them. A metric that counts set membership has no reasoning to
          * report past the count, and a metric that asked a model for one score has the
-         * model's sentence &mdash; the same rule {@link io.akka.evalkit.metric.Judgement}
-         * states for a single judgement.
+         * model's sentence &mdash; the same rule {@link io.akka.evalkit.metric.Finding}
+         * states for a single finding.
          */
         public Measured(String metricId, int metricVersion, double value,
                         double threshold, boolean withinThreshold) {
             this(metricId, metricVersion, value, threshold, withinThreshold, "");
         }
 
-        public boolean statesReason() {
-            return !reason.isEmpty();
+        public boolean statesExplanation() {
+            return !explanation.isEmpty();
         }
     }
 
@@ -88,12 +92,12 @@ public sealed interface RunOutcome {
     record NotReached(Cause cause, String reason, Precursor precursor) implements RunOutcome {}
 
     /** The judge could not or would not answer: a filter, a timeout, an unparseable reply. */
-    record Unscoreable(String reason) implements RunOutcome {}
+    record Inconclusive(String reason) implements RunOutcome {}
 
     /**
-     * The scorer itself broke, so no judgement was ever reached.
+     * The scorer itself broke, so no conclusion was ever reached.
      *
-     * <p>Distinct from {@link Unscoreable}, which is a scorer that ran and declined. A judge
+     * <p>Distinct from {@link Inconclusive}, which is a scorer that ran and declined. A judge
      * refusing a transcript is a fact about the transcript; a metric throwing a
      * {@code NullPointerException} is a fact about this kit. Reporting both as "the judge did
      * not answer" hides a defect here inside a caveat about the subject, and a defect that
@@ -103,7 +107,7 @@ public sealed interface RunOutcome {
      * unscored runs are all this variant is recognisable as a broken campaign rather than a
      * difficult dataset.
      */
-    record ScorerFailed(String reason) implements RunOutcome {}
+    record Failed(String reason) implements RunOutcome {}
 
     /**
      * Whether this counts toward a pass rate at all.
@@ -118,41 +122,41 @@ public sealed interface RunOutcome {
 
     default boolean passed() {
         return switch (this) {
-            case Scored s -> s.verdict().passed();
+            case Scored s -> s.grade().passed();
             case Asserted a -> a.passed();
             case Measured m -> m.withinThreshold();
             case NotReached ignored -> false;
-            case Unscoreable ignored -> false;
-            case ScorerFailed ignored -> false;
+            case Inconclusive ignored -> false;
+            case Failed ignored -> false;
         };
     }
 
     default boolean needsReview() {
-        return this instanceof Scored s && s.verdict().band().needsReview();
+        return this instanceof Scored s && s.grade().band().needsReview();
     }
 
     /** A row's detail, with whatever the producer stated appended to it. */
-    private static String with(String detail, String reason) {
-        return reason.isEmpty() ? detail : detail + " — " + reason;
+    private static String with(String detail, String stated) {
+        return stated.isEmpty() ? detail : detail + " — " + stated;
     }
 
     default String describe() {
         return switch (this) {
             // The band and the score, which is the whole of what a rubric asking for a bare
-            // number returns. A rubric that asks for a reason adds the judge's sentence.
+            // number returns. A rubric that asks for an explanation adds the judge's sentence.
             case Scored s -> with(
-                s.verdict().band() + " (" + s.verdict().score() + "/10)", s.verdict().reason());
+                s.grade().band() + " (" + s.grade().score() + "/10)", s.grade().explanation());
             case Asserted a -> a.passed()
                 ? "matched " + a.expected()
                 : "expected " + a.expected() + ", found " + a.actual();
             case Measured m -> with("%s v%d: %.2f against %.2f".formatted(
-                m.metricId(), m.metricVersion(), m.value(), m.threshold()), m.reason());
+                m.metricId(), m.metricVersion(), m.value(), m.threshold()), m.explanation());
             case NotReached n -> switch (n.cause()) {
                 case SETUP_FAILED -> "never reached the question — " + n.reason();
                 case NO_REPLY -> "no reply — " + n.reason();
             };
-            case Unscoreable u -> "unscoreable — " + u.reason();
-            case ScorerFailed f -> "the scorer failed — " + f.reason();
+            case Inconclusive u -> "inconclusive — " + u.reason();
+            case Failed f -> "the scorer failed — " + f.reason();
         };
     }
 }

@@ -7,7 +7,7 @@ This document is a proposal, and nothing in it is implemented.
 `akka.javasdk.evaluation.Evaluator` becomes the way a scorer is packaged and triggered, and
 `akka.javasdk.ledger.InteractionRecord` becomes the evidence every scorer reads.
 `evalkit-core` takes a dependency on `akka-javasdk`, and the evalkit records that mirror SDK
-types are deleted. `Verdict`, `RunOutcome` and `Band` stay, because each one holds an
+types are deleted. `Grade`, `RunOutcome` and `Band` stay, because each one holds an
 invariant no SDK type holds. The SDK ships no counterpart for `SystemUnderTest`,
 `CampaignPlan` or `CampaignReport`. This proposal leaves `SystemUnderTest`, `CampaignPlan`
 and `CampaignReport` unchanged.
@@ -97,20 +97,21 @@ terminal call on `Effect.Builder`:
 
 | `RunOutcome` variant | `Effect` call | Resulting `EvaluationRecord.Outcome` |
 |---|---|---|
-| `Scored(Verdict)` | `complete(Evaluation)` | `Verdict` |
+| `Scored(Grade)` | `complete(Evaluation)` | `Verdict` |
 | `Asserted(passed, expectedNode, actualNode)` | `complete(Evaluation)` | `Verdict` |
-| `Measured(metricId, version, value, threshold, withinThreshold, reason)` | `complete(Evaluation)` | `Verdict` |
-| `Unscoreable(reason)` | `inconclusive(reason)` | `Inconclusive` |
-| `ScorerFailed(reason)` | no builder call | `Failed`, on a thrown exception |
+| `Measured(metricId, version, value, threshold, withinThreshold, explanation)` | `complete(Evaluation)` | `Verdict` |
+| `Inconclusive(reason)` | `inconclusive(reason)` | `Inconclusive` |
+| `Failed(reason)` | no builder call | `Failed`, on a thrown exception |
 | `NotReached(cause, reason, precursor)` | no builder call | none |
 
-`Unscoreable` and `inconclusive` carry the same fact and the same payload. The separation of
-a declining scorer from a broken one, recorded in `design-history.md` under "What each
-outcome records", survives the mapping for five of the six variants.
+`RunOutcome.Inconclusive` and the `inconclusive` effect carry the same fact, the same
+payload and now the same name. The separation of a declining scorer from a broken one,
+recorded in `design-history.md` under "What each outcome records", survives the mapping for
+five of the six variants.
 
-`Verdict` maps onto `Evaluation` field for field:
+`Grade` maps onto `Evaluation` field for field:
 
-| `Verdict` | `Evaluation` |
+| `Grade` | `Evaluation` |
 |---|---|
 | `band().passed()` | `passed` |
 | assembled band, score and rubric | `explanation` |
@@ -164,7 +165,7 @@ A scored run becomes durable without evalkit storing it. `EvaluationRecord` hold
 outcome, the evaluator component id, the trigger, the interaction id and the timestamp.
 
 A recorded interaction can be re-scored on a new rubric. `LedgerClient.getInteraction`
-returns the record, and `Scoring.compare` already refuses to compare verdicts from different
+returns the record, and `Scoring.compare` already refuses to compare grades from different
 rubrics.
 
 ## Fidelity risks
@@ -175,10 +176,10 @@ alone sees that band as a pass or a fail. `design-history.md` records the measur
 behind the middle band as 53 percent on borderline replies. Carrying the band in `label` and
 reading it back in evalkit's report keeps the third state.
 
-**`Evaluation.score` is an unbounded `Optional<Double>` and `Verdict.score` is an integer
-from 1 to 10 with a `Band` invariant.** A `Verdict` constructed from a ledger score outside
-that range throws. The adapter reading an `EvaluationRecord` back into a `Verdict` returns
-`Unscoreable` on an out-of-range score.
+**`Evaluation.score` is an unbounded `Optional<Double>` and `Grade.score` is an integer
+from 1 to 10 with a `Band` invariant.** A `Grade` constructed from a ledger score outside
+that range throws. The adapter reading an `EvaluationRecord` back into a `Grade` returns
+`Inconclusive` on an out-of-range score.
 
 **`Effect.Builder` has no `failed` call, and `EvaluationRecord.Outcome.Failed` exists.** The
 path from a broken scorer to a `Failed` outcome runs through a thrown exception, and the
@@ -186,8 +187,8 @@ branch's own tests hold both ends of it. `EvaluatorIntegrationTest.recordsFailed
 makes the judge call throw and asserts the recorded outcome is `Failed` carrying no
 evaluations; `EvaluatorIntegrationTest.recordsInconclusiveOutcome` returns
 `effects().inconclusive(reason)` and asserts `Inconclusive` carrying that reason. evalkit's
-distinction survives the boundary: `Unscoreable` maps onto `inconclusive`, and
-`ScorerFailed` onto a throw.
+distinction survives the boundary: `Inconclusive` maps onto `inconclusive`, and
+`Failed` onto a throw.
 
 **`EvaluationRecord` flattens deterministic and judged results into one
 `List<Evaluation>`.** `CampaignReport` prints them in separate columns and prints a dash in
@@ -228,12 +229,12 @@ invariant the SDK does not enforce.
 
 | evalkit type today | Under this proposal |
 |---|---|
-| `Evidence` | deleted, and `Recording` holds an `InteractionRecord` |
+| `Evidence` | deleted, and `Observation` holds an `InteractionRecord` |
 | `ModelCall` | deleted, and `ModelResponse` replaces it |
 | `ToolCall` | deleted, and `akka.javasdk.ledger.ToolCall` replaces it |
 | `Failure` | deleted, and `akka.javasdk.ledger.Failure` replaces it |
 | `Transcript` | kept for `replayHistory` and `expectedOutcome` |
-| `Verdict` | kept for the 1-to-10 score and the `Band` invariant |
+| `Grade` | kept for the 1-to-10 score and the `Band` invariant |
 | `Band` | kept, and `Evaluation` has no third state |
 | `RunOutcome` | kept, and `NotReached` has no ledger counterpart |
 | `SdkContract` | deleted |
@@ -244,22 +245,24 @@ and `SdkContractReflectionTest` are deleted with it.
 
 `Evidence` holds two components no `InteractionRecord` carries. `Evidence.node` names the
 specification node an answer came from. `Evidence.latency` times the graded turn, and
-`InteractionMetadata` supplies `callStartedAt` and `callFinishedAt`. `Recording` keeps `node`
+`InteractionMetadata` supplies `callStartedAt` and `callFinishedAt`. `Observation` keeps `node`
 and derives `latency` from the metadata.
 
-## Where a stated reason lands
+## Where a stated explanation lands
 
-`Verdict.reason` holds the judge's own sentence under rubric v3 as a string.
-`Judgement.reason` holds why a metric affirmed or denied a subject. `RunOutcome.Measured.reason`
-holds the same for a measured outcome.
+`Grade.explanation` holds the judge's own sentence under rubric v3 as a string.
+`Finding.explanation` holds why a metric affirmed or denied a claim.
+`RunOutcome.Measured.explanation` holds the same for a measured outcome. `reason` is not a
+synonym here: it names why nothing was concluded, and lives on `Inconclusive`, `Failed` and
+`NotReached` alone.
 
 `Evaluation.explanation` is a string and takes `RunOutcome.describe()`, which renders the
 band, the score and the judge's sentence in one line. `Evaluation.attributes` takes
 `scenarioName`, `rubricId`, `rubricVersion`, `metricId`, `metricVersion` and `threshold`.
-`Evaluation.attributes` carries no reason.
+`Evaluation.attributes` carries no explanation.
 
 `design-history.md` records a transcript scored 10 and `FAITHFUL` under both rubrics, where
-the v3 reason claimed a refusal the transcript does not contain. The reason travels in
+the v3 explanation claimed a refusal the transcript does not contain. It travels in
 `explanation` so a ledger reader can check that claim against the interaction.
 
 ## Parsing tool arguments
@@ -271,11 +274,11 @@ a call carrying none. SDK `ToolCall.arguments` is a string, and a string has no 
 Adopting the SDK record adds `Arguments.parse(String)` returning a `Map<String, String>`.
 Jackson arrives on the classpath with `akka-javasdk`, so the parse reads JSON.
 
-A call whose arguments do not parse produces `Unscoreable`. A zero would report a wrong call,
+A call whose arguments do not parse produces `Inconclusive`. A zero would report a wrong call,
 and the failure is in the parse.
 
 Tests this change needs: a case asserting that a call with unparseable arguments returns
-`Unscoreable`, and a case asserting that a call carrying three of four expected arguments
+`Inconclusive`, and a case asserting that a call carrying three of four expected arguments
 scores above a call carrying none.
 
 ## Proposed design
@@ -288,9 +291,9 @@ section of `CLAUDE.md` and the Build section of the README.
 
 Tests this phase needs: `mvn -B install` from the aggregator root, which has never run green.
 
-### Phase 2 — Recording holds an InteractionRecord
+### Phase 2 — Observation holds an InteractionRecord
 
-Change `Recording` to `Recording(Transcript transcript, InteractionRecord interaction,
+Change `Observation` to `Observation(Transcript transcript, InteractionRecord interaction,
 Optional<String> node)`. Delete `Evidence`, `ModelCall`, `ToolCall` and `Failure`. Repoint
 the 17 metric sources at the record.
 
@@ -299,7 +302,7 @@ the 17 metric sources at the record.
 unaccounted-call count from `totalInputTokens()` and `totalOutputTokens()`.
 
 Tests this phase needs: a case per metric asserting the value came from the record, and a
-case asserting that a record with no `modelResponses` produces `Unscoreable` from
+case asserting that a record with no `modelResponses` produces `Inconclusive` from
 `PlanQuality`. A metric that scores an empty record proves nothing, and `design-history.md`
 records an empty search space passing an audit twice.
 
@@ -318,12 +321,12 @@ public abstract class ScorerEvaluator extends Evaluator {
 }
 ```
 
-`evaluate` fetches the interaction, builds a `Recording`, runs the scorer, and switches on
-the `RunOutcome` with no `default` branch. `Unscoreable` calls `inconclusive`.
-`ScorerFailed` rethrows.
+`evaluate` fetches the interaction, builds a `Observation`, runs the scorer, and switches on
+the `RunOutcome` with no `default` branch. `Inconclusive` calls `inconclusive`.
+`Failed` rethrows.
 
 Tests this phase needs: a test per `RunOutcome` variant asserting the terminal call, and a
-test asserting that a scorer throwing `NoVerdict` with the declining reason produces
+test asserting that a scorer throwing `InconclusiveScore` with the declining reason produces
 `inconclusive`.
 
 ### Phase 4 — the reference-free metric evaluators
@@ -334,7 +337,7 @@ Each one carries a `@Component` id that a user names in
 `akka.javasdk.evaluation.evaluators`.
 
 Tests this phase needs: a test asserting that a metric reading an interaction with no tool
-call returns `Unscoreable`. `design-history.md` records that DeepEval scores an interaction
+call returns `Inconclusive`. `design-history.md` records that DeepEval scores an interaction
 with no tool call 1 and passes it.
 
 ### Phase 5 — reading the ledger back into a report
@@ -342,8 +345,8 @@ with no tool call 1 and passes it.
 Add a `SystemUnderTest` implementation that reads recorded interactions through
 `LedgerClient` and causes none. `CampaignReport` then covers runs evalkit did not execute.
 
-Tests this phase needs: a test asserting that a `Verdict` built from an `Evaluation` with a
-score outside 1 to 10 returns `Unscoreable`.
+Tests this phase needs: a test asserting that a `Grade` built from an `Evaluation` with a
+score outside 1 to 10 returns `Inconclusive`.
 
 ### Phase 6 — CampaignWorkflow against WorkflowEvaluator
 

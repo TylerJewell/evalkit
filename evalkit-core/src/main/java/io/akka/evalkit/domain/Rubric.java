@@ -9,11 +9,11 @@ import java.util.List;
  * A judge's prompt, as versioned data.
  *
  * <p>The prompt lives in {@code resources/rubrics/} and loads by id and version, so an
- * old version can still be applied to stored recordings. A rubric compiled into a judge
+ * old version can still be applied to stored observations. A rubric compiled into a judge
  * cannot be. Changing its wording redefines every score already recorded under its name,
  * and the history cannot be re-scored on the wording that produced it.
  *
- * <p>Every {@link Verdict} carries the id and version that produced it.
+ * <p>Every {@link Grade} carries the id and version that produced it.
  */
 public record Rubric(String id, int version, String promptTemplate) {
 
@@ -102,12 +102,17 @@ public record Rubric(String id, int version, String promptTemplate) {
      * and a declaration kept anywhere else can disagree with the text the model was sent.
      *
      * <p>What this decides is how a reply is read. A rubric asking for a bare number is read
-     * by {@link Verdict#parseScore}, which takes the first integer in range from anywhere in
+     * by {@link Grade#parseScore}, which takes the first integer in range from anywhere in
      * the reply; a rubric asking for two fields is read by {@link ModelReply}, which requires
      * the label. Choosing the reader by what was asked is what stops a reply that lost its
-     * reason from being read as though the reason was never wanted.
+     * explanation from being read as though none was wanted.
+     *
+     * <p>Two labels name the second field. {@code scenario-judge} v3 asks for {@code REASON}
+     * and v4 asks for {@code EXPLANATION}, and both are read, because a rubric is held
+     * verbatim for as long as scores recorded under it are still read back.
      */
-    public boolean statesReason() {
-        return promptTemplate.contains("SCORE:") && promptTemplate.contains("REASON:");
+    public boolean statesExplanation() {
+        return promptTemplate.contains("SCORE:")
+            && (promptTemplate.contains("REASON:") || promptTemplate.contains("EXPLANATION:"));
     }
 }

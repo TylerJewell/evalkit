@@ -116,11 +116,11 @@ class RecordedInteractionsTest {
     }
 
     /**
-     * {@code Evaluation.score} is an unbounded double and {@code Verdict} pairs a 1-to-10
+     * {@code Evaluation.score} is an unbounded double and {@code Grade} pairs a 1-to-10
      * score with its band, so a score outside that range is absent evidence.
      */
     @Test
-    @DisplayName("an evaluation scoring outside 1 to 10 reads back as unscoreable")
+    @DisplayName("an evaluation scoring outside 1 to 10 reads back as inconclusive")
     void anOutOfRangeScoreIsUnscoreable() {
         var evaluation = Evaluation.of(true, "scored elsewhere")
             .withScore(42.0)
@@ -128,12 +128,12 @@ class RecordedInteractionsTest {
 
         var outcome = Evaluations.read(evaluation);
 
-        assertThat(outcome).isInstanceOf(RunOutcome.Unscoreable.class);
+        assertThat(outcome).isInstanceOf(RunOutcome.Inconclusive.class);
         assertThat(outcome.describe()).contains("outside the 1 to 10");
     }
 
     @Test
-    @DisplayName("an evaluation inside the band range reads back as a verdict")
+    @DisplayName("an evaluation inside the band range reads back as a grade")
     void anInRangeScoreIsAVerdict() {
         var evaluation = Evaluation.of(true, "the agent stated the window")
             .withScore(9.0)
@@ -145,18 +145,18 @@ class RecordedInteractionsTest {
         var outcome = Evaluations.read(evaluation);
 
         assertThat(outcome).isInstanceOf(RunOutcome.Scored.class);
-        var verdict = ((RunOutcome.Scored) outcome).verdict();
-        assertThat(verdict.score()).isEqualTo(9);
-        assertThat(verdict.rubricId()).isEqualTo("scenario-judge");
-        assertThat(verdict.scenarioName()).isEqualTo("refund-window");
+        var grade = ((RunOutcome.Scored) outcome).grade();
+        assertThat(grade.score()).isEqualTo(9);
+        assertThat(grade.rubricId()).isEqualTo("scenario-judge");
+        assertThat(grade.scenarioName()).isEqualTo("refund-window");
     }
 
-    /** A comparison carries no score, so reading one back as a judgement would invent it. */
+    /** A comparison carries no score, so reading one back as a finding would invent it. */
     @Test
-    @DisplayName("an asserted evaluation is not read back as a model judgement")
+    @DisplayName("an asserted evaluation is not read back as a model finding")
     void anAssertedEvaluationIsNotAVerdict() {
         var evaluation = Evaluations.of(new RunOutcome.Asserted(true, "REFUND-004", "REFUND-004"));
 
-        assertThat(Evaluations.read(evaluation)).isInstanceOf(RunOutcome.Unscoreable.class);
+        assertThat(Evaluations.read(evaluation)).isInstanceOf(RunOutcome.Inconclusive.class);
     }
 }

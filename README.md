@@ -263,7 +263,7 @@ System.out.println(result.report().summary());
 
 ```
 1 judged of 1 (1 asserted, 0 scored) — 1 passed, 0 need review, 0 failed;
-0 not reached, 0 unscoreable, 0 scorer failures
+0 not reached, 0 inconclusive, 0 scorer failures
 ```
 
 Connecting a service takes one small adapter, which
@@ -336,7 +336,7 @@ campaign scores those files under a new rubric without reaching the service agai
 // after a campaign, write down what it recorded
 var dataset = FileLedger.open(Path.of("src/eval/resources/datasets"));
 result.completed().forEach(completed ->
-    completed.recording().ifPresent(recording -> dataset.save(recording.interaction())));
+    completed.observation().ifPresent(observation -> dataset.save(observation.interaction())));
 
 // any time later, score those files instead of a service
 var rescored = CampaignRunner.run(plan, new RecordedInteractions(dataset, dataset.fixtures()),
@@ -518,7 +518,7 @@ so Java 21 alone no longer builds it.
 
 ## Roadmap
 
-- [x] Scoring by named requirement, by metric, and by model judgement
+- [x] Scoring by named requirement, by metric, and by model grade
 - [x] Agentic, retrieval and conversation metrics
 - [x] Decision graphs
 - [x] Versioned rubrics that return the reason beside the score

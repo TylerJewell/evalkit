@@ -94,7 +94,7 @@ public final class Samples {
 
         return new Domain("refunds", Policy.load("refund-desk", 1), scenarios,
             List.of("refund-actually-issued needs a target that reports state; it is "
-                + "unscoreable against one that does not"));
+                + "inconclusive against one that does not"));
     }
 
     /** Booking changes: a fee, a cut-off, and a tool the agent must never call. */

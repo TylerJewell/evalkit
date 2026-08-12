@@ -69,11 +69,11 @@ class FileLedgerTest {
     void aDatasetIsRecordedOnceAndScoredAgain(@TempDir Path datasetDirectory) {
         var service = new CountingService();
         var first = CampaignRunner.run(plan(), service,
-            ScorerRouter.judgingEverything(recording -> new RunOutcome.Unscoreable("not judged")));
+            ScorerRouter.judgingEverything(observation -> new RunOutcome.Inconclusive("not judged")));
 
         var dataset = FileLedger.open(datasetDirectory);
         first.completed().forEach(completed ->
-            completed.recording().ifPresent(recording -> dataset.save(recording.interaction())));
+            completed.observation().ifPresent(observation -> dataset.save(observation.interaction())));
 
         assertThat(service.calls.get()).isEqualTo(1);
         assertThat(dataset.ids()).containsExactly("refund-timing");
@@ -88,7 +88,7 @@ class FileLedgerTest {
                     "when do I get my refund?", "States the 30-day window")),
                 Lanes.of(1), Rubric.load("scenario-judge", 3)),
             recorded,
-            ScorerRouter.judgingEverything(recording ->
+            ScorerRouter.judgingEverything(observation ->
                 new RunOutcome.Measured("rescored", 1, 1.0, 0.5, true)));
 
         assertThat(service.calls.get()).isEqualTo(1);
@@ -100,10 +100,10 @@ class FileLedgerTest {
     @DisplayName("a saved interaction keeps its tools and its answer")
     void aSavedInteractionKeepsWhatTheRunDid(@TempDir Path datasetDirectory) {
         var result = CampaignRunner.run(plan(), new CountingService(),
-            ScorerRouter.judgingEverything(recording -> new RunOutcome.Unscoreable("not judged")));
+            ScorerRouter.judgingEverything(observation -> new RunOutcome.Inconclusive("not judged")));
         var dataset = FileLedger.open(datasetDirectory);
         result.completed().forEach(completed ->
-            completed.recording().ifPresent(recording -> dataset.save(recording.interaction())));
+            completed.observation().ifPresent(observation -> dataset.save(observation.interaction())));
 
         var reopened = FileLedger.open(datasetDirectory);
         var record = reopened.getInteraction("refund-timing");

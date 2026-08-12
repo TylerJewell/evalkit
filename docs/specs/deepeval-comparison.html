@@ -307,13 +307,13 @@ for golden in dataset.evals_iterator(metrics=[correctness]): …</code></pre>
         <p>Given a <code>criteria</code> string with no <code>evaluation_steps</code> supplied, G-Eval first generates the steps by chain-of-thought prompting. G-Eval then scores between 1 and 5, takes the probabilities of the output tokens, and uses their weighted summation as the score, divided to a 0 to 1 scale. The weighting requires a provider that exposes token probabilities, and DeepEval falls back to plain scoring for custom models.</p>
 
         <h3>The DAG metric fixes the score and lets the model choose the branch</h3>
-        <p>A DAG metric is a decision tree built from three node types. <code>TaskNode</code> extracts structured evidence and assigns no score. <code>BinaryJudgementNode</code> and <code>NonBinaryJudgementNode</code> classify evidence and branch on the result. Every path terminates at a verdict registered with <code>add_verdict()</code>, and the score attached to that verdict is fixed in code.</p>
+        <p>A DAG metric is a decision tree built from three node types. <code>TaskNode</code> extracts structured evidence and assigns no score. <code>BinaryJudgementNode</code> and <code>NonBinaryJudgementNode</code> classify evidence and branch on the result. Every path terminates at a grade registered with <code>add_verdict()</code>, and the score attached to that grade is fixed in code.</p>
 
         <pre><code>correctness = BinaryJudgementNode(
     criteria="Is the actual output correct for the input?",
     evaluation_params=[SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT])
-correctness.add_verdict(verdict=True,  score=10)
-correctness.add_verdict(verdict=False, score=0)
+correctness.add_verdict(grade=True,  score=10)
+correctness.add_verdict(grade=False, score=0)
 
 metric = DAGMetric(name="Correctness",
                    dag=DeepAcyclicGraph(root_nodes=[correctness]))</code></pre>
@@ -338,10 +338,10 @@ metric = DAGMetric(name="Correctness",
 
       <!-- ================= 3 ================= -->
       <section id="contract">
-        <h2 class="sec">The metric contract returns a float, so an unscoreable run has no representation</h2>
+        <h2 class="sec">The metric contract returns a float, so an inconclusive run has no representation</h2>
         <p class="answer">A DeepEval metric produces a score or raises. The documented handling for a judge that refuses or returns unparseable output is <code>ErrorConfig(ignore_errors=True)</code>, and for a case missing a field, <code>skip_on_missing_params=True</code>. Both remove the run from the result set. evalkit names the missing result and keeps it in the report.</p>
 
-        <p>A content filter refused to score a <code>GenUC-02</code> identification-failure transcript during calibration of this kit. Dropping that run would have raised the reported agreement between the judge and the human reviewer above the figure the run earned. <code>RunOutcome</code> is a sealed interface with four variants, and two of the four are not verdicts on the system under test.</p>
+        <p>A content filter refused to score a <code>GenUC-02</code> identification-failure transcript during calibration of this kit. Dropping that run would have raised the reported agreement between the judge and the human reviewer above the figure the run earned. <code>RunOutcome</code> is a sealed interface with four variants, and two of the four are not grades on the system under test.</p>
 
         <div class="table-wrap"><table>
           <thead><tr><th>Outcome</th><th>Meaning</th><th>Counted</th></tr></thead>
@@ -349,7 +349,7 @@ metric = DAGMetric(name="Correctness",
             <tr><td class="lbl akka">Scored</td><td>A judge read the reply and gave it a score</td><td class="akka">Yes</td></tr>
             <tr><td class="lbl akka">Asserted</td><td>The reply was compared against a stated answer, with no model involved</td><td class="akka">Yes</td></tr>
             <tr><td class="lbl">NotReached</td><td>The setup failed, or the service sent nothing back</td><td>No</td></tr>
-            <tr><td class="lbl">Unscoreable</td><td>The judge timed out, refused, or returned something unreadable</td><td>No</td></tr>
+            <tr><td class="lbl">Inconclusive</td><td>The judge timed out, refused, or returned something unreadable</td><td>No</td></tr>
           </tbody>
         </table></div>
 
@@ -357,7 +357,7 @@ metric = DAGMetric(name="Correctness",
 
         <h3>A criteria string carries no version, so scores change meaning silently</h3>
         <p>Editing a <code>criteria=</code> string in DeepEval changes what every subsequent score means, and nothing records that the change happened. Scores taken before and after the edit are not commensurable and look identical in a report.</p>
-        <p>evalkit loads <code>Rubric(id, version, prompt)</code> from <code>resources/rubrics/</code>, stamps the id and version onto every <code>Verdict</code>, and throws from <code>Scoring.compare</code> when two verdict sets carry different rubric versions. Comparing across versions attributes a change in the rubric to the service being measured.</p>
+        <p>evalkit loads <code>Rubric(id, version, prompt)</code> from <code>resources/rubrics/</code>, stamps the id and version onto every <code>Grade</code>, and throws from <code>Scoring.compare</code> when two grade sets carry different rubric versions. Comparing across versions attributes a change in the rubric to the service being measured.</p>
 
         <h3>A continuous score invites an average the dataset does not support</h3>
         <p>Identical runs of this dataset scored 7, 8, 9 and 10 on the same as-specified scenarios. Measured agreement between the judge and an independent reviewer is 89 to 91 percent on clear-cut replies and 53 percent on borderline ones. A mean over scores that unstable describes the judge.</p>
@@ -388,7 +388,7 @@ metric = DAGMetric(name="Correctness",
 
         <h3>A judge panel converts the 53 percent agreement figure into a per-transcript measurement</h3>
         <p>The borderline agreement figure is currently a sentence in the report. Multi-agent orchestration makes it a measurement on each transcript. Running several judges over one transcript, on different models or under different rubric lenses, produces a distribution of scores for that transcript.</p>
-        <p>Judges that agree produce <code>Scored</code>, and the report states that the panel was unanimous. Judges that disagree produce the undecided band, which already carries that meaning. A panel that cannot reach its quorum, because judges timed out or refused, produces <code>Unscoreable</code> on the same terms as a single judge. An undecided verdict then reports a measured disagreement about one transcript, in place of a band boundary someone chose.</p>
+        <p>Judges that agree produce <code>Scored</code>, and the report states that the panel was unanimous. Judges that disagree produce the undecided band, which already carries that meaning. A panel that cannot reach its quorum, because judges timed out or refused, produces <code>Inconclusive</code> on the same terms as a single judge. An undecided grade then reports a measured disagreement about one transcript, in place of a band boundary someone chose.</p>
 
         <h3>Calibration becomes a gate on the campaign</h3>
         <p><code>JudgeCalibrationTest</code> exists as a test today. As a durable component it re-measures the judge against a held-out human-labelled set, stores the agreement figure, and refuses a campaign whose judge has drifted below a stated threshold. DeepEval holds no state between runs, so it cannot compare a judge's agreement today against its agreement last month. The figure answers the question a reader of any eval report should ask about the judge and cannot answer from the report itself.</p>
@@ -461,7 +461,7 @@ class RefundPolicyEval {
         <pre><code><span class="k">public interface</span> Scorer {
     RunOutcome score(Transcript transcript, Rubric rubric);
 }</code></pre>
-        <p>A <code>double</code> return type can express a low score and cannot express the absence of a score. The number it returns instead lands in someone's pass rate. Returning <code>RunOutcome</code> keeps <code>Unscoreable</code> reachable from a metric.</p>
+        <p>A <code>double</code> return type can express a low score and cannot express the absence of a score. The number it returns instead lands in someone's pass rate. Returning <code>RunOutcome</code> keeps <code>Inconclusive</code> reachable from a metric.</p>
       </section>
 
       <!-- ================= 6 ================= -->
@@ -474,7 +474,7 @@ class RefundPolicyEval {
           <tbody>
             <tr>
               <td class="lbl">DAG node model</td>
-              <td class="rival">Four node types with verdict edges, evaluated inside one metric call.</td>
+              <td class="rival">Four node types with grade edges, evaluated inside one metric call.</td>
               <td class="akka">Take. Maps onto a sealed interface, and reduces judge calls at branch points.</td>
             </tr>
             <tr>
@@ -485,7 +485,7 @@ class RefundPolicyEval {
             <tr>
               <td class="lbl">Agentic metric layer</td>
               <td class="rival">Six trace-level metrics covering plan quality, plan adherence, tool correctness, argument correctness, task completion and step efficiency. No test in the repository asserts a score for any of them.</td>
-              <td class="akka">Take the definitions and record that no fixture reproduces an upstream value. Task completion, step efficiency, plan quality and plan adherence each carry one model-produced score. Those four metrics return an outcome from the score, and they aggregate no judgements.</td>
+              <td class="akka">Take the definitions and record that no fixture reproduces an upstream value. Task completion, step efficiency, plan quality and plan adherence each carry one model-produced score. Those four metrics return an outcome from the score, and they aggregate no findings.</td>
             </tr>
             <tr>
               <td class="lbl">Dataset format</td>
@@ -606,7 +606,7 @@ class RefundPolicyEval {
 
         <p>Nothing here establishes that either kit judges more accurately. Every difference argued above concerns cost, recovery, and which numbers a report prints. Accuracy is measured against human labels, and the figure for this dataset remains 89 to 91 percent agreement on clear-cut replies and 53 percent on borderline ones. A judge panel is proposed to improve the second figure and has not been measured.</p>
 
-        <p>The adoption difference is real and none of this addresses it. DeepEval has the Python framework integrations, the tutorials and the download volume. evalkit returns <code>Scored</code>, <code>Asserted</code>, <code>NotReached</code> or <code>Unscoreable</code> where DeepEval returns a float, and throws on a comparison across rubric versions where DeepEval permits one.</p>
+        <p>The adoption difference is real and none of this addresses it. DeepEval has the Python framework integrations, the tutorials and the download volume. evalkit returns <code>Scored</code>, <code>Asserted</code>, <code>NotReached</code> or <code>Inconclusive</code> where DeepEval returns a float, and throws on a comparison across rubric versions where DeepEval permits one.</p>
       </section>
 
       <footer>

@@ -3,7 +3,7 @@ package io.akka.evalkit.ledger;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.akka.evalkit.domain.NoVerdict;
+import io.akka.evalkit.domain.InconclusiveScore;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -16,7 +16,7 @@ import java.util.Optional;
  * {@link io.akka.evalkit.metric.ToolCorrectness} credits a call by the share of keys both
  * sides name with the same value, and a string has no keys, so a comparison parses first.
  *
- * <p>A string that does not parse produces {@link NoVerdict}. Scoring it zero would report a
+ * <p>A string that does not parse produces {@link InconclusiveScore}. Scoring it zero would report a
  * call made with wrong arguments, and the failure is in the parse.
  *
  * <p>Values are read as text. A number, a boolean and a nested object each become the
@@ -28,9 +28,9 @@ public final class Arguments {
 
     private Arguments() {}
 
-    /** The arguments, or {@link NoVerdict} when the string is not a JSON object. */
+    /** The arguments, or {@link InconclusiveScore} when the string is not a JSON object. */
     public static Map<String, String> parse(String json) {
-        return read(json).orElseThrow(() -> new NoVerdict(
+        return read(json).orElseThrow(() -> new InconclusiveScore(
             "tool arguments are not readable as JSON: " + json));
     }
 

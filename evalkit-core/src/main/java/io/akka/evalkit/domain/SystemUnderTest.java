@@ -143,7 +143,7 @@ public interface SystemUnderTest {
      * it can, and a scenario names the keys it cares about.
      *
      * <p>Empty means the target cannot see its state, and a scenario scoring one yields
-     * {@link RunOutcome.Unscoreable} rather than a failure.
+     * {@link RunOutcome.Inconclusive} rather than a failure.
      */
     default java.util.Map<String, String> stateAfter(String sessionId) {
         return java.util.Map.of();

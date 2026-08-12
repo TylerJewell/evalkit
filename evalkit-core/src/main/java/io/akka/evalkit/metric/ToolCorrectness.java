@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * Whether an agent called the tools a scenario expected it to call.
  *
- * <p>Deterministic. The judgements come from matching what was called against what was
+ * <p>Deterministic. The findings come from matching what was called against what was
  * expected, and the score comes from the credit those matches carry, so a campaign of these
  * costs nothing and returns the same answer on every run.
  *
@@ -131,16 +131,16 @@ public final class ToolCorrectness implements Metric {
     }
 
     /**
-     * One judgement per expected tool, naming the tool that was expected.
+     * One finding per expected tool, naming the tool that was expected.
      *
-     * <p>A campaign that expected nothing and got a call produces the single judgement
+     * <p>A campaign that expected nothing and got a call produces the single finding
      * below instead, because there is no expected tool to hang it on and a run with no
-     * judgements is a run that scores 1.
+     * findings is a run that scores 1.
      */
-    public List<Judgement> judge(List<ToolCall> called) {
+    public List<Finding> judge(List<ToolCall> called) {
         if (expected.isEmpty()) {
             return called.isEmpty() ? List.of()
-                : List.of(Judgement.denied("no tool expected",
+                : List.of(Finding.denied("no tool expected",
                     "called " + names(called) + " when the scenario expected none"));
         }
         return switch (match) {
@@ -150,12 +150,12 @@ public final class ToolCorrectness implements Metric {
         };
     }
 
-    private List<Judgement> judgeExactly(List<ToolCall> called) {
+    private List<Finding> judgeExactly(List<ToolCall> called) {
         if (called.size() != expected.size()) {
-            return List.of(Judgement.denied("tool sequence",
+            return List.of(Finding.denied("tool sequence",
                 "expected " + names(expected) + ", called " + names(called)));
         }
-        var judgements = new ArrayList<Judgement>();
+        var findings = new ArrayList<Finding>();
         for (int i = 0; i < expected.size(); i++) {
             ToolCall want = expected.get(i);
             ToolCall got = called.get(i);
@@ -165,10 +165,10 @@ public final class ToolCorrectness implements Metric {
                 && (!comparingArguments
                     || Arguments.parse(want.arguments()).equals(Arguments.parse(got.arguments())))
                 && (!comparingOutput || want.response().equals(got.response()));
-            judgements.add(same ? Judgement.affirmed(want.name())
-                : Judgement.denied(want.name(), "position " + (i + 1) + " called " + got.name()));
+            findings.add(same ? Finding.affirmed(want.name())
+                : Finding.denied(want.name(), "position " + (i + 1) + " called " + got.name()));
         }
-        return judgements;
+        return findings;
     }
 
     /**
@@ -177,9 +177,9 @@ public final class ToolCorrectness implements Metric {
      * <p>Spending a called tool stops one call satisfying two expectations, which is what
      * upstream does by removing a matched call from the pool.
      */
-    private List<Judgement> judgeAnywhere(List<ToolCall> called) {
+    private List<Finding> judgeAnywhere(List<ToolCall> called) {
         var spent = new HashSet<Integer>();
-        var judgements = new ArrayList<Judgement>();
+        var findings = new ArrayList<Finding>();
         for (ToolCall want : expected) {
             double best = 0;
             int bestAt = -1;
@@ -192,9 +192,9 @@ public final class ToolCorrectness implements Metric {
                 }
             }
             if (bestAt >= 0) spent.add(bestAt);
-            judgements.add(judgement(want, best, called));
+            findings.add(finding(want, best, called));
         }
-        return judgements;
+        return findings;
     }
 
     /**
@@ -204,7 +204,7 @@ public final class ToolCorrectness implements Metric {
      * to the total when the trace walked back through it. A tool that was called but out of
      * sequence adds nothing, which is the difference between this mode and the one above.
      */
-    private List<Judgement> judgeInOrder(List<ToolCall> called) {
+    private List<Finding> judgeInOrder(List<ToolCall> called) {
         int rows = expected.size();
         int columns = called.size();
         var best = new double[rows + 1][columns + 1];
@@ -234,20 +234,20 @@ public final class ToolCorrectness implements Metric {
             }
         }
 
-        var judgements = new ArrayList<Judgement>();
+        var findings = new ArrayList<Finding>();
         for (int at = 0; at < rows; at++) {
-            judgements.add(judgement(expected.get(at), earned[at], called));
+            findings.add(finding(expected.get(at), earned[at], called));
         }
-        return judgements;
+        return findings;
     }
 
-    private Judgement judgement(ToolCall want, double credit, List<ToolCall> called) {
-        if (credit >= 1.0) return Judgement.affirmed(want.name());
+    private Finding finding(ToolCall want, double credit, List<ToolCall> called) {
+        if (credit >= 1.0) return Finding.affirmed(want.name());
         if (credit > 0) {
-            return Judgement.partial(want.name(), credit,
+            return Finding.partial(want.name(), credit,
                 "called with different arguments than expected");
         }
-        return Judgement.denied(want.name(), "not among " + names(called));
+        return Finding.denied(want.name(), "not among " + names(called));
     }
 
     /** How much one call satisfies one expectation, once the names already agree. */
@@ -288,26 +288,26 @@ public final class ToolCorrectness implements Metric {
      * gives: a scenario that expected no tools and saw none called found nothing wrong.
      */
     @Override
-    public double aggregate(List<Judgement> judgements) {
-        double score = raw(judgements);
+    public double aggregate(List<Finding> findings) {
+        double score = raw(findings);
         return strict && score < threshold ? 0.0 : score;
     }
 
-    private double raw(List<Judgement> judgements) {
-        if (judgements.isEmpty()) return 1.0;
+    private double raw(List<Finding> findings) {
+        if (findings.isEmpty()) return 1.0;
         if (match == Match.EXACT) {
             // All or nothing. A sequence that got three of four positions right is not
             // three quarters of an exact match; it is not an exact match.
-            return judgements.stream().allMatch(Judgement::affirmed) ? 1.0 : 0.0;
+            return findings.stream().allMatch(Finding::affirmed) ? 1.0 : 0.0;
         }
-        return judgements.stream().mapToDouble(Judgement::credit).sum() / judgements.size();
+        return findings.stream().mapToDouble(Finding::credit).sum() / findings.size();
     }
 
     /** The expected tools a run did not call, for the report row. */
-    public static List<String> missing(List<Judgement> judgements) {
-        return judgements.stream()
-            .filter(judgement -> judgement.credit() == 0)
-            .map(Judgement::subject)
+    public static List<String> missing(List<Finding> findings) {
+        return findings.stream()
+            .filter(finding -> finding.credit() == 0)
+            .map(Finding::claim)
             .toList();
     }
 

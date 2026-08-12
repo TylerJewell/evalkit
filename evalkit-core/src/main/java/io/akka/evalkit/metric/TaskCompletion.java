@@ -1,6 +1,6 @@
 package io.akka.evalkit.metric;
 
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.Observation;
 
 import java.util.Optional;
 
@@ -33,9 +33,9 @@ public final class TaskCompletion extends AlignmentMetric {
     }
 
     @Override
-    protected Optional<Question> ask(Recording recording) {
-        String task = recording.transcript().expectedOutcome();
-        String outcome = outcomeOf(recording);
+    protected Optional<Question> ask(Observation observation) {
+        String task = observation.transcript().expectedOutcome();
+        String outcome = outcomeOf(observation);
         return task.isBlank() || outcome.isBlank() ? Optional.empty()
             : Optional.of(new Question("task against outcome", task, outcome));
     }

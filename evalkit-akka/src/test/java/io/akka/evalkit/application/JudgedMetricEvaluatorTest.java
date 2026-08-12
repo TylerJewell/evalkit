@@ -6,8 +6,8 @@ import akka.javasdk.ledger.LedgerClient;
 import akka.javasdk.testkit.TestKit;
 import akka.javasdk.testkit.TestKitSupport;
 import akka.javasdk.testkit.TestModelProvider;
-import io.akka.evalkit.domain.NoVerdict;
-import io.akka.evalkit.domain.Recording;
+import io.akka.evalkit.domain.InconclusiveScore;
+import io.akka.evalkit.domain.Observation;
 import io.akka.evalkit.domain.RunOutcome;
 import io.akka.evalkit.ledger.Interactions;
 import org.junit.jupiter.api.DisplayName;
@@ -160,7 +160,7 @@ class JudgedMetricEvaluatorTest extends TestKitSupport {
     /**
      * A judge that answered unreadably is absent evidence, never a score.
      *
-     * <p>Reading it as an empty judgement list would score the metric 1 and report a clean
+     * <p>Reading it as an empty finding list would score the metric 1 and report a clean
      * run on the strength of a reply nobody could parse.
      */
     @Test
@@ -171,7 +171,7 @@ class JudgedMetricEvaluatorTest extends TestKitSupport {
         var evaluator = new TurnRelevancyEvaluator(ledgerOf(record), componentClient);
 
         assertThatThrownBy(() -> evaluator.score(record))
-            .isInstanceOf(NoVerdict.class);
+            .isInstanceOf(InconclusiveScore.class);
     }
 
     /** A metric reads what the run did, so no scenario states an expected outcome. */
